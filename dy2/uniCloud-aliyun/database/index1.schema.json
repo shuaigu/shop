@@ -1,0 +1,30 @@
+{
+	"bsonType": "object",
+	"required": [],
+	"permission": {
+		"read": false,
+		"create": false,
+		"update": false,
+		"delete": false
+	},
+	"properties": {
+		"_id": {
+			"description": "ID，系统自动生成"
+		},
+		"showHomeButton": {
+			"bsonType": "bool",
+			"description": "是否显示返回首页按钮",
+			"defaultValue": false
+		},
+		"homeButtonText": {
+			"bsonType": "string",
+			"description": "首页按钮文本",
+			"defaultValue": "返回首页"
+		},
+		"homeButtonIcon": {
+			"bsonType": "string",
+			"description": "首页按钮图标",
+			"defaultValue": "🏠"
+		}
+	}
+}

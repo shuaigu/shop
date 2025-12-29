@@ -1,0 +1,1 @@
+{"version":3,"file":"qiniuyun.js","sources":["../../1软件下载/HBuilderX/plugins/uniapp-cli-vite/uniPage:/cGFnZXMvZmFidS9xaW5pdXl1bi9xaW5pdXl1bi52dWU"],"sourcesContent":["import MiniProgramPage from 'D:/douyin/dy2/pages/fabu/qiniuyun/qiniuyun.vue'\ntt.createPage(MiniProgramPage)"],"names":[],"mappings":";;;;;;;AACA,GAAG,WAAW,eAAe;"}

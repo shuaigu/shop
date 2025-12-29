@@ -1,0 +1,180 @@
+/* uni.scss */
+/* 主题色 */
+/* 页面背景颜色 */
+/* 边框颜色 -- 分割线  */
+/*功能设置*/
+/*文字渐变*/
+/*页面默认样式*/
+/*信息默认样式*/
+.loginPages.data-v-e4e4508d {
+  height: 100vh;
+  background: linear-gradient(to top, #ccd8f7, #fff);
+  /*标题*/
+  /*授权登录*/
+  /*授权弹框*/
+}
+.loginPages .bg.data-v-e4e4508d {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 600rpx;
+  background: linear-gradient(to right, #ccd8f7, #fce1e2);
+  -webkit-mask-image: linear-gradient(to bottom, black 30%, rgba(0, 0, 0, 0) 70%);
+  mask-image: linear-gradient(to bottom, black 30%, rgba(0, 0, 0, 0) 70%);
+}
+.loginPages .title.data-v-e4e4508d {
+  position: fixed;
+  left: 50%;
+  top: 20%;
+  transform: translateX(-50%);
+}
+.loginPages .title .logo.data-v-e4e4508d {
+  margin-bottom: 40rpx;
+  height: 100rpx;
+  width: 400rpx;
+}
+.loginPages .title .wenben.data-v-e4e4508d {
+  text-align: center;
+  font-size: 36rpx;
+  color: #555555;
+}
+.loginPages .authLogin.data-v-e4e4508d {
+  width: 100%;
+  /*同意*/
+  /*登录*/
+}
+.loginPages .authLogin .agree.data-v-e4e4508d {
+  display: flex;
+  align-items: center;
+  padding-top: 600rpx;
+  margin: auto;
+  width: -webkit-fit-content;
+  width: fit-content;
+  font-size: 24rpx;
+  color: #999999;
+}
+.loginPages .authLogin .agree .checkbox.data-v-e4e4508d {
+  margin-right: 8rpx;
+}
+.loginPages .authLogin .agree .checkbox.data-v-e4e4508d .u-checkbox__icon-wrap--checked {
+  opacity: 1;
+}
+.loginPages .authLogin .agree .text-wrapper.data-v-e4e4508d {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.loginPages .authLogin .agree .text-wrapper .normal-text.data-v-e4e4508d {
+  font-size: 24rpx;
+  color: #999999;
+  padding: 0 4rpx;
+}
+.loginPages .authLogin .agree .text-wrapper .link-text.data-v-e4e4508d {
+  color: #399bfe;
+  font-size: 28rpx;
+  padding: 4rpx 8rpx;
+  text-decoration: underline;
+}
+.loginPages .authLogin .agree .text-wrapper .link-text.data-v-e4e4508d:active {
+  opacity: 0.7;
+}
+.loginPages .authLogin .login.data-v-e4e4508d {
+  padding: 40rpx;
+  background: rgba(0, 0, 0, 0);
+}
+.loginPages .authLogin .login .btn.data-v-e4e4508d {
+  background-color: #399bfe;
+  border: none;
+  color: #fff;
+  border-radius: 64rpx;
+  width: 70%;
+  margin: 0 auto;
+}
+.loginPages .mobileLoginModel.data-v-e4e4508d {
+  position: fixed;
+  left: 0;
+  top: 0;
+  height: 100vh;
+  width: 100%;
+  background: rgba(0, 0, 0, 0.2);
+}
+.loginPages .mobileLoginModel .model.data-v-e4e4508d {
+  display: flex;
+  flex-direction: column;
+  width: 560rpx;
+  background-color: #fff;
+  border-radius: 32rpx;
+  margin: 300rpx auto;
+  overflow: hidden;
+  /*按钮*/
+}
+.loginPages .mobileLoginModel .model .close-btn.data-v-e4e4508d {
+  position: absolute;
+  right: 20rpx;
+  top: 20rpx;
+  width: 90rpx;
+  height: 90rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.loginPages .mobileLoginModel .model .close-btn .close-icon.data-v-e4e4508d {
+  font-size: 48rpx;
+  color: #999;
+}
+.loginPages .mobileLoginModel .model .close-btn.data-v-e4e4508d:active {
+  opacity: 0.7;
+}
+.loginPages .mobileLoginModel .model .icon-wrapper.data-v-e4e4508d {
+  display: flex;
+  justify-content: center;
+  padding: 60rpx 0 20rpx;
+}
+.loginPages .mobileLoginModel .model .icon-wrapper .default-avatar.data-v-e4e4508d {
+  width: 120rpx;
+  height: 120rpx;
+  border-radius: 50%;
+  border: 4rpx solid #f0f0f0;
+  box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.1);
+}
+.loginPages .mobileLoginModel .model .textValue.data-v-e4e4508d {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 40rpx 40rpx 40rpx;
+}
+.loginPages .mobileLoginModel .model .textValue .titleModel.data-v-e4e4508d {
+  font-size: 32rpx;
+  font-weight: 500;
+  color: #333333;
+}
+.loginPages .mobileLoginModel .model .textValue .contentModel.data-v-e4e4508d {
+  margin-top: 20rpx;
+  font-size: 28rpx;
+  color: #999999;
+}
+.loginPages .mobileLoginModel .model .caozuo.data-v-e4e4508d {
+  display: flex;
+  padding: 0 40rpx 40rpx;
+}
+.loginPages .mobileLoginModel .model .caozuo .confirm.data-v-e4e4508d {
+  flex: 1;
+  height: 88rpx;
+  line-height: 88rpx;
+  background-color: #399bfe;
+  border-radius: 44rpx;
+  font-size: 32rpx;
+  color: #fff;
+  border: none;
+}
+.loginPages .mobileLoginModel .model .caozuo .confirm.data-v-e4e4508d::after {
+  border: none;
+}
+.loginPages .mobileLoginModel .model .caozuo .confirm .btn-text.data-v-e4e4508d {
+  font-weight: 500;
+}
+.loginPages .mobileLoginModel .model .caozuo .confirm.data-v-e4e4508d:active {
+  opacity: 0.9;
+}

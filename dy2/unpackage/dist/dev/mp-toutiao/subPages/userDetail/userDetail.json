@@ -1,0 +1,6 @@
+{
+  "navigationBarTitleText": "用户详情",
+  "usingComponents": {
+    "page-meta": "../../node-modules/@dcloudio/uni-components/lib/page-meta/page-meta"
+  }
+}

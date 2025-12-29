@@ -1,0 +1,6 @@
+{
+  "navigationBarTitleText": "反馈管理",
+  "usingComponents": {
+    "up-loading-page": "../../uni_modules/uview-plus/components/u-loading-page/u-loading-page"
+  }
+}

@@ -1,0 +1,156 @@
+/* uni.scss */
+/* 主题色 */
+/* 页面背景颜色 */
+/* 边框颜色 -- 分割线  */
+/*功能设置*/
+/*文字渐变*/
+/*页面默认样式*/
+/*信息默认样式*/
+.profile-container.data-v-badd6e76 {
+  min-height: 100vh;
+  padding: 0 30rpx;
+  background-color: #fff;
+}
+.page-header.data-v-badd6e76 {
+  position: relative;
+  height: 100rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.page-header .back-btn.data-v-badd6e76 {
+  position: absolute;
+  left: 0;
+  width: 80rpx;
+  height: 80rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.page-header .back-btn .back-icon.data-v-badd6e76 {
+  font-size: 40rpx;
+  color: #333;
+}
+.page-header .header-title.data-v-badd6e76 {
+  font-size: 34rpx;
+  font-weight: 500;
+  color: #333;
+}
+.avatar-section.data-v-badd6e76 {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 60rpx 0;
+}
+.avatar-section .avatar-wrapper.data-v-badd6e76 {
+  position: relative;
+  width: 180rpx;
+  height: 180rpx;
+  border-radius: 90rpx;
+  overflow: hidden;
+}
+.avatar-section .avatar-wrapper .avatar-image.data-v-badd6e76 {
+  width: 100%;
+  height: 100%;
+}
+.avatar-section .avatar-wrapper .avatar-edit.data-v-badd6e76 {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 50rpx;
+  height: 50rpx;
+  border-radius: 25rpx;
+  background-color: #399bfe;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.avatar-section .avatar-wrapper .avatar-edit .edit-icon.data-v-badd6e76 {
+  color: #fff;
+  font-size: 30rpx;
+}
+.avatar-section .avatar-tip.data-v-badd6e76 {
+  margin-top: 20rpx;
+  font-size: 26rpx;
+  color: #999;
+}
+.form-section.data-v-badd6e76 {
+  margin-top: 40rpx;
+}
+.form-section .form-item.data-v-badd6e76 {
+  margin-bottom: 40rpx;
+}
+.form-section .form-item .form-label.data-v-badd6e76 {
+  display: block;
+  font-size: 28rpx;
+  color: #333;
+  margin-bottom: 20rpx;
+}
+.form-section .form-item .form-input.data-v-badd6e76 {
+  width: 100%;
+  height: 80rpx;
+  border-radius: 12rpx;
+  background-color: #f8f8f8;
+  padding: 0 20rpx;
+  font-size: 28rpx;
+  color: #333;
+}
+.form-section .form-item .phone-section.data-v-badd6e76 {
+  display: flex;
+  align-items: center;
+  height: 80rpx;
+  background-color: #f8f8f8;
+  border-radius: 12rpx;
+  padding: 0 20rpx;
+}
+.form-section .form-item .phone-section .phone-text.data-v-badd6e76, .form-section .form-item .phone-section .phone-placeholder.data-v-badd6e76 {
+  flex: 1;
+  font-size: 28rpx;
+}
+.form-section .form-item .phone-section .phone-text.data-v-badd6e76 {
+  color: #333;
+}
+.form-section .form-item .phone-section .phone-placeholder.data-v-badd6e76 {
+  color: #999;
+}
+.form-section .form-item .phone-section .phone-btn.data-v-badd6e76 {
+  width: 120rpx;
+  height: 60rpx;
+  line-height: 60rpx;
+  background-color: #399bfe;
+  color: #fff;
+  font-size: 26rpx;
+  padding: 0;
+  margin: 0;
+  border-radius: 30rpx;
+}
+.submit-section.data-v-badd6e76 {
+  margin-top: 80rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.submit-section .submit-btn.data-v-badd6e76 {
+  width: 80%;
+  height: 88rpx;
+  line-height: 88rpx;
+  background-color: #399bfe;
+  color: #fff;
+  font-size: 32rpx;
+  border-radius: 44rpx;
+}
+.submit-section .submit-btn[disabled].data-v-badd6e76 {
+  background-color: #ccc;
+  color: #fff;
+}
+.submit-section .skip-btn.data-v-badd6e76 {
+  margin-top: 30rpx;
+  font-size: 28rpx;
+  color: #999;
+  text-decoration: underline;
+}
+.error-message.data-v-badd6e76 {
+  font-size: 24rpx;
+  color: #ff4d4f;
+  margin-top: 10rpx;
+}

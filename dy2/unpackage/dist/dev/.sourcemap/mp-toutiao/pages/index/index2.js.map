@@ -1,0 +1,1 @@
+{"version":3,"file":"index2.js","sources":["D:/代码测试/HBuilderX.4.45.2025010502/HBuilderX/plugins/uniapp-cli-vite/uniPage:/cGFnZXMvaW5kZXgvaW5kZXgyLnZ1ZQ"],"sourcesContent":["import MiniProgramPage from 'E:/dy2/pages/index/index2.vue'\ntt.createPage(MiniProgramPage)"],"names":[],"mappings":";;;;;;;AACA,GAAG,WAAW,eAAe;"}

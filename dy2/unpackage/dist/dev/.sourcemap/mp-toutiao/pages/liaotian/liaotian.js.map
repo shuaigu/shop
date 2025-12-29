@@ -1,0 +1,1 @@
+{"version":3,"file":"liaotian.js","sources":["D:/代码测试/HBuilderX.4.45.2025010502/HBuilderX/plugins/uniapp-cli-vite/uniPage:/cGFnZXMvbGlhb3RpYW4vbGlhb3RpYW4udnVl"],"sourcesContent":["import MiniProgramPage from 'E:/dy2/pages/liaotian/liaotian.vue'\ntt.createPage(MiniProgramPage)"],"names":[],"mappings":";;;;;;;AACA,GAAG,WAAW,eAAe;"}

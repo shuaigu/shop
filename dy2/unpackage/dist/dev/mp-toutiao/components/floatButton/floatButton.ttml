@@ -1,0 +1,1 @@
+<view class="float-button data-v-c199bce7" style="{{'width:' + a + ';' + ('height:' + b) + ';' + ('bottom:' + c) + ';' + ('right:' + d)}}" bindtap="{{e}}"><view class="plus data-v-c199bce7">+</view></view>

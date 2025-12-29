@@ -1,0 +1,84 @@
+{
+  "pages": [
+    "pages/index/index1",
+    "pages/my/my",
+    "pages/login/login",
+    "pages/webview/webview",
+    "pages/article/articleDetail",
+    "pages/userArticleList/userArticleList",
+    "pages/fabu/fabu",
+    "pages/video-preview/video-preview",
+    "pages/liaotian/liaotian",
+    "pages/article/fenxiang",
+    "pages/index/index",
+    "pages/userProfile/userProfile",
+    "pages/fabu/qiniuyun",
+    "pages/index/index2",
+    "pages/qunliao/qunliao"
+  ],
+  "subPackages": [
+    {
+      "root": "subPages",
+      "pages": [
+        "contarct/contarct",
+        "feedBack/feedBack",
+        "adminManage/adminManage",
+        "cateManage/cateManage",
+        "articleManage/articleManage",
+        "feedManage/feedManage",
+        "companyInfo/companyInfo",
+        "userInfoQuery/userInfoQuery",
+        "userDetail/userDetail",
+        "userRoleManage/userRoleManage",
+        "qiniuyun/qiniuyun",
+        "subChoujiang/subChoujiang"
+      ]
+    }
+  ],
+  "window": {
+    "navigationBarTextStyle": "white",
+    "navigationBarTitleText": "酒旅圈圈",
+    "navigationBarBackgroundColor": "#399bfe",
+    "backgroundColor": "#F8F8F8"
+  },
+  "tabBar": {
+    "color": "#cccccc",
+    "selectedColor": "#399bfe",
+    "borderStyle": "black",
+    "list": [
+      {
+        "iconPath": "static/tabBar/info.png",
+        "selectedIconPath": "static/tabBar/info_selected.png",
+        "pagePath": "pages/index/index",
+        "text": "信息"
+      },
+      {
+        "iconPath": "static/tabBar/my.png",
+        "selectedIconPath": "static/tabBar/my_selected.png",
+        "pagePath": "pages/my/my",
+        "text": "我的"
+      }
+    ]
+  },
+  "permission": {
+    "scope.userLocation": {
+      "desc": "获取您的位置信息，用于展示附近的信息"
+    },
+    "scope.camera": {
+      "desc": "使用相机拍摄照片上传"
+    },
+    "scope.album": {
+      "desc": "访问相册选择照片上传"
+    }
+  },
+  "requiredPrivateInfos": [
+    "getLocation",
+    "chooseLocation",
+    "makePhoneCall"
+  ],
+  "privacyDesc": {
+    "phoneCall": "用于拨打电话联系发布人",
+    "userLocation": "获取您的位置信息，用于展示附近的信息"
+  },
+  "usingComponents": {}
+}

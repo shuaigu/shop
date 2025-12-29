@@ -1,0 +1,16 @@
+{
+    "setting": {
+        "urlCheck": false,
+        "es6": true,
+        "postcss": false,
+        "minified": true,
+        "newFeature": true
+    },
+    "appid": "tt38944e29a7a1e48d01",
+    "projectname": "weixin-2",
+    "condition": {
+        "miniprogram": {
+            "current": -1
+        }
+    }
+}

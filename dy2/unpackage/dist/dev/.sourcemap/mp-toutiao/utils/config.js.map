@@ -1,0 +1,12 @@
+{
+    "version": 3,
+    "file": "config.js",
+    "sources": [
+        "utils/config.js"
+    ],
+    "sourcesContent": [
+        "// API 基础URL\r\nexport const BASE_URL = 'https://api.example.com'; // 替换为您的实际API地址\r\n\r\n// 抖音小程序相关配置\r\nexport const TOUTIAO_CONFIG = {\r\n  appid: 'tt38944e29a7a1e48d01', // 从manifest.json获取\r\n  secret: 'YOUR_SECRET_KEY' // 这个值应该保存在服务器端，前端不应该暴露\r\n};\r\n\r\n// 其他配置\r\nexport const APP_CONFIG = {\r\n  version: '1.0.0',\r\n  name: '抖音小程序示例'\r\n}; "
+    ],
+    "names": [],
+    "mappings": ";AACY,MAAC,WAAW;;"
+}

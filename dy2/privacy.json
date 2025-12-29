@@ -1,0 +1,23 @@
+{
+  "privacyInfo": {
+    "platform": "toutiao",
+    "version": "1.0",
+    "scopes": {
+      "phoneCall": {
+        "desc": "用于拨打电话联系发布人"
+      },
+      "userLocation": {
+        "desc": "获取您的位置信息，用于展示附近的信息和发布内容时标记位置"
+      },
+      "camera": {
+        "desc": "使用相机拍摄照片上传"
+      },
+      "album": {
+        "desc": "访问相册选择照片上传"
+      },
+      "getPhoneNumber": {
+        "desc": "获取手机号码用于登录和身份验证"
+      }
+    }
+  }
+} 
