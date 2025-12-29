@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>智能按钮功能演示</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+            background: linear-gradient(135deg, #46b0fe, #6385ff);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .demo-container {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+            text-align: center;
+            max-width: 500px;
+            width: 90%;
+        }
+
+        .title {
+            font-size: 24px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 20px;
+        }
+
+        .description {
+            color: #666;
+            margin-bottom: 30px;
+            line-height: 1.5;
+        }
+
+        .feature-list {
+            text-align: left;
+            margin-bottom: 30px;
+        }
+
+        .feature-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            border-left: 4px solid #46b0fe;
+        }
+
+        .feature-icon {
+            background: #46b0fe;
+            color: white;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            margin-right: 15px;
+            flex-shrink: 0;
+        }
+
+        .demo-btn {
+            background: linear-gradient(135deg, #46b0fe, #6385ff);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 25px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-bottom: 20px;
+        }
+
+        .demo-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(70, 176, 254, 0.3);
+        }
+
+        .popup-preview {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 20px;
+            margin: 20px 0;
+            border: 2px dashed #dee2e6;
+        }
+
+        .popup-content-preview {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .avatar-preview {
+            width: 60px;
+            height: 60px;
+            background: #46b0fe;
+            border-radius: 50%;
+            margin: 0 auto 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 20px;
+        }
+
+        .input-preview {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #e8e8e8;
+            border-radius: 6px;
+            margin-bottom: 15px;
+            font-size: 14px;
+        }
+
+        .button-preview {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .smart-btn-preview {
+            background: linear-gradient(135deg, #ff6b6b, #ee5a52);
+            color: white;
+            border: none;
+            padding: 12px;
+            border-radius: 6px;
+            font-size: 14px;
+            cursor: pointer;
+        }
+
+        .button-row-preview {
+            display: flex;
+            gap: 10px;
+        }
+
+        .cancel-btn-preview {
+            background: #f5f5f5;
+            color: #666;
+            border: none;
+            padding: 12px;
+            border-radius: 6px;
+            flex: 1;
+            font-size: 14px;
+            cursor: pointer;
+        }
+
+        .confirm-btn-preview {
+            background: linear-gradient(135deg, #46b0fe, #6385ff);
+            color: white;
+            border: none;
+            padding: 12px;
+            border-radius: 6px;
+            flex: 1;
+            font-size: 14px;
+            cursor: pointer;
+        }
+
+        .success-badge {
+            display: inline-block;
+            background: #52c41a;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            margin-top: 10px;
+        }
+
+        .highlight {
+            background: #fff3cd;
+            color: #856404;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+    <div class="demo-container">
+        <h1 class="title">🎯 智能操作按钮功能</h1>
+        <p class="description">
+            我已经为您的个人信息弹窗添加了智能操作按钮！这个按钮可以交替执行头像和昵称的操作。
+        </p>
+
+        <div class="popup-preview">
+            <div class="popup-content-preview">
+                <h4 style="text-align: center; margin-bottom: 15px;">弹窗预览</h4>
+                
+                <div class="avatar-preview">头</div>
+                
+                <input type="text" class="input-preview" placeholder="请输入昵称" value="匿名AJs87">
+                
+                <div class="button-preview">
+                    <button class="smart-btn-preview" id="smartBtn">点击修改头像</button>
+                    <div class="button-row-preview">
+                        <button class="cancel-btn-preview">取消</button>
+                        <button class="confirm-btn-preview">保存</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="feature-list">
+            <h3 style="margin-bottom: 15px; color: #333;">🎉 新增功能特性</h3>
+            
+            <div class="feature-item">
+                <div class="feature-icon">1</div>
+                <span>添加了<span class="highlight">智能操作按钮</span>，一个按钮实现两个功能</span>
+            </div>
+            
+            <div class="feature-item">
+                <div class="feature-icon">2</div>
+                <span>第一次点击按钮 → <span class="highlight">选择头像</span></span>
+            </div>
+            
+            <div class="feature-item">
+                <div class="feature-icon">3</div>
+                <span>第二次点击按钮 → <span class="highlight">聚焦昵称输入框</span></span>
+            </div>
+            
+            <div class="feature-item">
+                <div class="feature-icon">4</div>
+                <span>按钮文字会<span class="highlight">动态显示</span>当前可执行的操作</span>
+            </div>
+            
+            <div class="feature-item">
+                <div class="feature-icon">5</div>
+                <span>保持原有的<span class="highlight">取消和保存按钮</span>正常功能</span>
+            </div>
+        </div>
+
+        <button class="demo-btn" onclick="simulateClick()">
+            体验智能按钮 🎮
+        </button>
+
+        <div class="success-badge">✨ 功能已实现并集成到弹窗组件中</div>
+    </div>
+
+    <script>
+        let isNextClickAvatar = true;
+        
+        function simulateClick() {
+            const smartBtn = document.getElementById('smartBtn');
+            
+            if (isNextClickAvatar) {
+                // 模拟点击头像
+                alert('模拟：打开相册选择头像');
+                smartBtn.textContent = '点击修改昵称';
+                isNextClickAvatar = false;
+            } else {
+                // 模拟点击昵称
+                alert('模拟：聚焦到昵称输入框');
+                const input = document.querySelector('.input-preview');
+                input.focus();
+                input.select();
+                smartBtn.textContent = '点击修改头像';
+                isNextClickAvatar = true;
+            }
+        }
+    </script>
+</body>
+</html>

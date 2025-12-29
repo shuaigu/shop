@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>头像显示问题修复说明</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 32px;
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+
+        .header p {
+            font-size: 16px;
+            opacity: 0.9;
+        }
+
+        .content {
+            padding: 40px 30px;
+        }
+
+        .section {
+            margin-bottom: 40px;
+        }
+
+        .section h2 {
+            font-size: 24px;
+            color: #667eea;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+
+        .problem-box {
+            background: #fff5f5;
+            border-left: 4px solid #fc5c7d;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+        }
+
+        .problem-box h3 {
+            color: #fc5c7d;
+            margin-bottom: 10px;
+        }
+
+        .solution-box {
+            background: #f0f9ff;
+            border-left: 4px solid #667eea;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+        }
+
+        .solution-box h3 {
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+
+        .step {
+            background: #f8f9fa;
+            padding: 15px;
+            margin-bottom: 15px;
+            border-radius: 8px;
+            border-left: 3px solid #667eea;
+        }
+
+        .step-number {
+            display: inline-block;
+            background: #667eea;
+            color: white;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            text-align: center;
+            line-height: 28px;
+            margin-right: 10px;
+            font-weight: bold;
+        }
+
+        .code-block {
+            background: #282c34;
+            color: #abb2bf;
+            padding: 20px;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin: 15px 0;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+        }
+
+        .action-button {
+            display: block;
+            width: 100%;
+            padding: 15px 30px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            margin: 20px 0;
+        }
+
+        .action-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .action-button:active {
+            transform: translateY(0);
+        }
+
+        .checklist {
+            list-style: none;
+            padding: 0;
+        }
+
+        .checklist li {
+            padding: 12px;
+            margin-bottom: 10px;
+            background: #f8f9fa;
+            border-radius: 6px;
+            position: relative;
+            padding-left: 40px;
+        }
+
+        .checklist li:before {
+            content: '✓';
+            position: absolute;
+            left: 12px;
+            color: #10b981;
+            font-weight: bold;
+            font-size: 18px;
+        }
+
+        .warning {
+            background: #fffbeb;
+            border-left: 4px solid #f59e0b;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+
+        .warning strong {
+            color: #f59e0b;
+        }
+
+        .result-box {
+            background: #f0fdf4;
+            border: 2px solid #10b981;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            display: none;
+        }
+
+        .result-box.show {
+            display: block;
+        }
+
+        .result-box h3 {
+            color: #10b981;
+            margin-bottom: 15px;
+        }
+
+        .result-item {
+            padding: 10px;
+            background: white;
+            margin: 10px 0;
+            border-radius: 6px;
+            border-left: 3px solid #10b981;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .loading.show {
+            display: block;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .footer {
+            background: #f8f9fa;
+            padding: 20px 30px;
+            text-align: center;
+            color: #6c757d;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔧 头像显示问题修复</h1>
+            <p>解决小程序头像不显示的问题</p>
+        </div>
+
+        <div class="content">
+            <!-- 问题说明 -->
+            <div class="section">
+                <h2>📋 问题现象</h2>
+                <div class="problem-box">
+                    <h3>主要问题</h3>
+                    <ul>
+                        <li>用户头像在小程序中显示为空白方块</li>
+                        <li>控制台出现404错误：<code>wxfile://tmp_...</code></li>
+                        <li>临时文件路径导致图片无法加载</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- 修复方案 -->
+            <div class="section">
+                <h2>🛠️ 修复方案</h2>
+                <div class="solution-box">
+                    <h3>已完成的修复</h3>
+                    <ul class="checklist">
+                        <li>增强前端头像URL处理逻辑，自动过滤临时路径</li>
+                        <li>改进图片加载错误处理，失败时回退到默认头像</li>
+                        <li>添加缓存机制，提升性能</li>
+                        <li>创建数据库清理脚本，清除临时头像路径</li>
+                        <li>云函数增加临时文件检测，防止写入数据库</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- 操作步骤 -->
+            <div class="section">
+                <h2>🚀 修复步骤</h2>
+                
+                <div class="step">
+                    <span class="step-number">1</span>
+                    <strong>上传云函数</strong><br>
+                    右键点击 <code>uniCloud-aliyun/cloudfunctions/articleWx</code> 文件夹，选择"上传部署"
+                </div>
+
+                <div class="step">
+                    <span class="step-number">2</span>
+                    <strong>执行数据库清理</strong><br>
+                    点击下方按钮清理数据库中的临时头像路径
+                </div>
+
+                <button class="action-button" onclick="cleanDatabase()">
+                    🧹 执行数据库清理
+                </button>
+
+                <div class="loading" id="loading">
+                    <div class="spinner"></div>
+                    <p>正在清理数据库，请稍候...</p>
+                </div>
+
+                <div class="result-box" id="result">
+                    <h3>✅ 清理结果</h3>
+                    <div id="resultContent"></div>
+                </div>
+
+                <div class="step">
+                    <span class="step-number">3</span>
+                    <strong>重新编译运行</strong><br>
+                    在微信开发者工具中重新编译小程序
+                </div>
+
+                <div class="step">
+                    <span class="step-number">4</span>
+                    <strong>验证修复效果</strong><br>
+                    在小程序中查看首页文章列表，确认头像正常显示
+                </div>
+            </div>
+
+            <!-- 技术细节 -->
+            <div class="section">
+                <h2>💡 技术细节</h2>
+                
+                <h3>前端修复 - articleItem.vue</h3>
+                <div class="code-block">
+const userAvatarUrl = computed(() => {
+    const userInfo = props.item || {};
+    let avatarUrl = userInfo.user_avatarUrl || 
+                    userInfo.avatarUrl || 
+                    (userInfo.author?.avatar_file?.url);
+    
+    // 检测并过滤临时文件路径
+    if (!avatarUrl || 
+        avatarUrl.includes('tmp_') || 
+        avatarUrl.includes('tmp/') || 
+        avatarUrl.startsWith('http://tmp/') || 
+        avatarUrl.startsWith('wxfile://')) {
+        return '/static/images/touxiang.png';
+    }
+    
+    return fixImageUrl(avatarUrl, 'avatar');
+});
+                </div>
+
+                <h3>云函数修复 - index.obj.js</h3>
+                <div class="code-block">
+// 防止临时文件写入数据库
+let validAvatarUrl = user_avatarUrl || '/static/images/touxiang.png'
+if (validAvatarUrl.startsWith('http://tmp/') || 
+    validAvatarUrl.startsWith('wxfile://')) {
+    console.warn('检测到临时头像，使用默认头像')
+    validAvatarUrl = '/static/images/touxiang.png'
+}
+                </div>
+            </div>
+
+            <!-- 注意事项 -->
+            <div class="section">
+                <h2>⚠️ 注意事项</h2>
+                <div class="warning">
+                    <strong>重要提示：</strong>
+                    <ul>
+                        <li>执行数据库清理前，建议先备份数据</li>
+                        <li>清理操作会将所有临时路径头像替换为默认头像</li>
+                        <li>用户下次上传头像时会更新为新的永久链接</li>
+                        <li>修复后需要重新编译小程序才能生效</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p>头像显示问题修复工具 - 2025</p>
+        </div>
+    </div>
+
+    <script>
+        // 注意：这个脚本需要在uniCloud环境中运行
+        // 在实际项目中，你需要通过小程序端调用云函数
+        
+        async function cleanDatabase() {
+            const loading = document.getElementById('loading');
+            const result = document.getElementById('result');
+            const resultContent = document.getElementById('resultContent');
+            
+            // 显示加载动画
+            loading.classList.add('show');
+            result.classList.remove('show');
+            
+            try {
+                // 提示：在实际使用中，需要通过小程序调用云函数
+                console.log('提示：请在小程序中调用云函数执行清理');
+                console.log('示例代码：');
+                console.log(`
+const articleApi = uniCloud.importObject('articleWx', { customUI: true });
+const result = await articleApi.cleanTempAvatars();
+console.log('清理结果:', result);
+                `);
+                
+                // 模拟延迟
+                await new Promise(resolve => setTimeout(resolve, 2000));
+                
+                // 显示结果（模拟数据）
+                resultContent.innerHTML = `
+                    <div class="result-item">
+                        <strong>文章列表：</strong>已清理 X 条临时头像记录
+                    </div>
+                    <div class="result-item">
+                        <strong>浏览记录：</strong>已清理 X 条临时头像记录
+                    </div>
+                    <div class="result-item">
+                        <strong>用户表：</strong>已清理 X 条临时头像记录
+                    </div>
+                    <p style="margin-top: 15px; color: #6c757d;">
+                        ℹ️ 实际清理需要在小程序中执行云函数调用
+                    </p>
+                `;
+                
+                result.classList.add('show');
+            } catch (error) {
+                console.error('清理失败:', error);
+                alert('清理失败: ' + error.message);
+            } finally {
+                loading.classList.remove('show');
+            }
+        }
+        
+        // 页面加载时显示提示
+        window.addEventListener('load', function() {
+            console.log('%c头像显示问题修复工具', 'color: #667eea; font-size: 20px; font-weight: bold;');
+            console.log('%c请按照页面说明执行修复步骤', 'color: #666; font-size: 14px;');
+        });
+    </script>
+</body>
+</html>

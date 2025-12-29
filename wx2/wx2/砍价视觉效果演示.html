@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>砍价功能视觉效果展示</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            width: 100%;
+        }
+
+        .title {
+            text-align: center;
+            color: white;
+            font-size: 32px;
+            margin-bottom: 30px;
+            text-shadow: 0 2px 10px rgba(0,0,0,0.2);
+        }
+
+        .demo-card {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            margin-bottom: 20px;
+        }
+
+        .stage-title {
+            font-size: 20px;
+            color: #333;
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+
+        .bargain-component {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            position: relative;
+            padding: 20px;
+            background: #f9f9f9;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.25s;
+            user-select: none;
+        }
+
+        .bargain-component:active {
+            opacity: 0.65;
+            transform: scale(0.92);
+        }
+
+        .bargain-header {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            width: 100%;
+        }
+
+        .original-price {
+            font-size: 14px;
+            color: #999;
+        }
+
+        .original-price .price-text {
+            text-decoration: line-through;
+        }
+
+        .current-price-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .icon {
+            width: 24px;
+            height: 24px;
+            fill: #ff6b6b;
+        }
+
+        .bargain-price {
+            font-size: 32px;
+            font-weight: 600;
+            color: #ff6b6b;
+        }
+
+        .bargained-amount {
+            font-size: 16px;
+            color: #666;
+            font-weight: 500;
+        }
+
+        .bargained-amount .amount-text {
+            color: #ff6b6b;
+            font-weight: 600;
+            font-size: 18px;
+        }
+
+        .button-text {
+            font-size: 16px;
+            color: #333;
+            margin-top: 8px;
+        }
+
+        .remaining-times {
+            font-size: 13px;
+            color: #999;
+            margin-top: 4px;
+        }
+
+        .bargain-progress-wrapper {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            margin-top: 8px;
+        }
+
+        .bargain-progress {
+            width: 200px;
+            height: 12px;
+            background-color: #f0f0f0;
+            border-radius: 6px;
+            overflow: hidden;
+            box-shadow: inset 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #ff6b6b, #ff8787);
+            transition: width 0.3s ease;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+
+        .progress-text {
+            font-size: 10px;
+            color: white;
+            font-weight: 600;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.2);
+        }
+
+        .progress-label {
+            font-size: 12px;
+            color: #666;
+            font-weight: 500;
+        }
+
+        .bargain-float-text {
+            position: absolute;
+            top: -60px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 32px;
+            font-weight: 700;
+            color: #ff6b6b;
+            pointer-events: none;
+            opacity: 0;
+            text-shadow: 0 2px 8px rgba(255, 107, 107, 0.3);
+        }
+
+        .bargain-float-text.float-animation {
+            animation: floatUp 1.5s ease-out forwards;
+        }
+
+        @keyframes floatUp {
+            0% {
+                opacity: 1;
+                transform: translateX(-50%) translateY(0);
+            }
+            100% {
+                opacity: 0;
+                transform: translateX(-50%) translateY(-80px);
+            }
+        }
+
+        .complete-icon {
+            width: 32px;
+            height: 32px;
+            fill: #52c41a;
+        }
+
+        .complete-price {
+            color: #52c41a !important;
+        }
+
+        .complete-text {
+            color: #52c41a !important;
+        }
+
+        .info-box {
+            background: #f0f7ff;
+            border-left: 4px solid #1890ff;
+            padding: 15px;
+            margin-top: 20px;
+            border-radius: 4px;
+        }
+
+        .info-box h4 {
+            color: #1890ff;
+            margin-bottom: 8px;
+        }
+
+        .info-box ul {
+            list-style: none;
+            color: #666;
+        }
+
+        .info-box li {
+            margin: 5px 0;
+            padding-left: 20px;
+            position: relative;
+        }
+
+        .info-box li:before {
+            content: "✓";
+            position: absolute;
+            left: 0;
+            color: #52c41a;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="title">🎯 砍价功能视觉效果展示</h1>
+        
+        <!-- 初始状态 -->
+        <div class="demo-card">
+            <div class="stage-title">① 初始状态（未砍价）</div>
+            <div class="bargain-component">
+                <div class="bargain-header">
+                    <div class="original-price">
+                        原价: <span class="price-text">¥1000.00</span>
+                    </div>
+                    <div class="current-price-wrapper">
+                        <svg class="icon" viewBox="0 0 1024 1024">
+                            <path d="M725.333333 128H298.666667c-94.293333 0-170.666667 76.373333-170.666667 170.666667v426.666666c0 94.293333 76.373333 170.666667 170.666667 170.666667h426.666666c94.293333 0 170.666667-76.373333 170.666667-170.666667V298.666667c0-94.293333-76.373333-170.666667-170.666667-170.666667z m-213.333333 554.666667c-70.613333 0-128-57.386667-128-128s57.386667-128 128-128 128 57.386667 128 128-57.386667 128-128 128z"/>
+                        </svg>
+                        <div class="bargain-price">¥1000.00</div>
+                    </div>
+                </div>
+                <div class="button-text">帮砍一刀</div>
+                <div class="remaining-times">今日剩余 3 次</div>
+                <div class="bargain-progress-wrapper">
+                    <div class="bargain-progress">
+                        <div class="progress-bar" style="width: 0%"></div>
+                    </div>
+                    <div class="progress-label">0%</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 砍价中 -->
+        <div class="demo-card">
+            <div class="stage-title">② 砍价中（已砍30%）</div>
+            <div class="bargain-component">
+                <div class="bargain-header">
+                    <div class="original-price">
+                        原价: <span class="price-text">¥1000.00</span>
+                    </div>
+                    <div class="current-price-wrapper">
+                        <svg class="icon" viewBox="0 0 1024 1024">
+                            <path d="M725.333333 128H298.666667c-94.293333 0-170.666667 76.373333-170.666667 170.666667v426.666666c0 94.293333 76.373333 170.666667 170.666667 170.666667h426.666666c94.293333 0 170.666667-76.373333 170.666667-170.666667V298.666667c0-94.293333-76.373333-170.666667-170.666667-170.666667z m-213.333333 554.666667c-70.613333 0-128-57.386667-128-128s57.386667-128 128-128 128 57.386667 128 128-57.386667 128-128 128z"/>
+                        </svg>
+                        <div class="bargain-price">¥700.00</div>
+                    </div>
+                    <div class="bargained-amount">
+                        已砍: <span class="amount-text">¥300.00</span>
+                    </div>
+                </div>
+                <div class="button-text">帮砍一刀</div>
+                <div class="remaining-times">今日剩余 2 次</div>
+                <div class="bargain-progress-wrapper">
+                    <div class="bargain-progress">
+                        <div class="progress-bar" style="width: 30%">
+                            <span class="progress-text">30%</span>
+                        </div>
+                    </div>
+                    <div class="progress-label">30%</div>
+                </div>
+                <div class="bargain-float-text float-animation">-¥10.00</div>
+            </div>
+        </div>
+
+        <!-- 砍价完成 -->
+        <div class="demo-card">
+            <div class="stage-title">③ 砍价完成</div>
+            <div class="bargain-component">
+                <div class="bargain-header">
+                    <div class="current-price-wrapper">
+                        <svg class="complete-icon" viewBox="0 0 1024 1024">
+                            <path d="M512 64C264.6 64 64 264.6 64 512s200.6 448 448 448 448-200.6 448-448S759.4 64 512 64z m193.5 301.7l-210.6 292c-12.7 17.7-39 17.7-51.7 0L318.5 484.9c-3.8-5.3 0-12.7 6.5-12.7h46.9c10.2 0 19.9 4.9 25.9 13.3l71.2 98.8 157.2-218c6-8.3 15.6-13.3 25.9-13.3H699c6.5 0 10.3 7.4 6.5 12.7z"/>
+                        </svg>
+                        <div class="bargain-price complete-price">¥0.00</div>
+                    </div>
+                    <div class="bargained-amount">
+                        已砍: <span class="amount-text">¥1000.00</span>
+                    </div>
+                </div>
+                <div class="button-text complete-text">砍价成功</div>
+                <div class="bargain-progress-wrapper">
+                    <div class="bargain-progress">
+                        <div class="progress-bar" style="width: 100%">
+                            <span class="progress-text">100%</span>
+                        </div>
+                    </div>
+                    <div class="progress-label">100%</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 功能说明 -->
+        <div class="demo-card">
+            <div class="info-box">
+                <h4>💡 关键视觉元素</h4>
+                <ul>
+                    <li><strong>原价展示</strong>：灰色删除线，让用户感知价值</li>
+                    <li><strong>当前价格</strong>：大字红色突出，实时更新</li>
+                    <li><strong>已砍金额</strong>：红色醒目，直观显示成果</li>
+                    <li><strong>剩余次数</strong>：提醒用户合理规划</li>
+                    <li><strong>进度条</strong>：可视化砍价进度，带百分比</li>
+                    <li><strong>飘红动画</strong>：每次砍价显示 -¥XX.XX 向上飘动</li>
+                    <li><strong>完成图标</strong>：绿色对勾，表示成功</li>
+                </ul>
+            </div>
+
+            <div class="info-box" style="margin-top: 20px; background: #fff7e6; border-left-color: #fa8c16;">
+                <h4 style="color: #fa8c16;">🎨 设计原则</h4>
+                <ul>
+                    <li><strong>对比强烈</strong>：原价 vs 当前价，突出优惠</li>
+                    <li><strong>即时反馈</strong>：飘红动画提供操作确认</li>
+                    <li><strong>进度可视</strong>：进度条让用户清楚距离目标的距离</li>
+                    <li><strong>信息层次</strong>：主次分明，关键信息突出</li>
+                    <li><strong>情感激励</strong>：红色+动画营造成就感</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

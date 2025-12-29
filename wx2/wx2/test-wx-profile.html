@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>测试微信信息获取功能</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        
+        .container {
+            background-color: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .title {
+            text-align: center;
+            color: #333;
+            margin-bottom: 30px;
+            font-size: 24px;
+        }
+        
+        .user-info {
+            background-color: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .info-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .info-label {
+            width: 120px;
+            font-weight: bold;
+            color: #666;
+        }
+        
+        .avatar {
+            width: 50px;
+            height: 50px;
+            border-radius: 25px;
+            border: 2px solid #ddd;
+        }
+        
+        .btn {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #52c41a, #389e0d);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-bottom: 10px;
+            transition: all 0.3s;
+        }
+        
+        .btn:hover {
+            opacity: 0.9;
+            transform: translateY(-1px);
+        }
+        
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .log {
+            background-color: #000;
+            color: #0f0;
+            padding: 15px;
+            border-radius: 5px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            height: 300px;
+            overflow-y: auto;
+            margin-top: 20px;
+        }
+        
+        .result {
+            background-color: #e6f7ff;
+            border: 1px solid #91d5ff;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 15px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="title">🎯 测试微信信息获取功能</h1>
+        <p style="text-align: center; color: #666;">
+            模拟微信点击更改头像、点击更改昵称的方式进行获取
+        </p>
+        
+        <div class="user-info">
+            <div class="info-item">
+                <span class="info-label">当前头像：</span>
+                <img id="currentAvatar" src="/static/images/default.png" alt="头像" class="avatar">
+            </div>
+            <div class="info-item">
+                <span class="info-label">当前昵称：</span>
+                <span id="currentNickname">测试用户</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">微信状态：</span>
+                <span id="wxStatus">已绑定微信</span>
+            </div>
+        </div>
+        
+        <button id="testBtn" class="btn" onclick="testWxProfileUpdate()">
+            🔄 模拟获取微信信息
+        </button>
+        
+        <button class="btn" onclick="resetUserInfo()" style="background: #f5222d;">
+            🔧 重置用户信息
+        </button>
+        
+        <div id="result" class="result" style="display: none;"></div>
+        
+        <div id="log" class="log"></div>
+    </div>
+
+    <script>
+        let testUserData = {
+            _id: 'test_user_123',
+            nickName: '测试用户',
+            avatarUrl: '/static/images/default.png',
+            openid_wx: 'test_openid_123',
+            session_key: 'test_session_key'
+        };
+
+        // 日志功能
+        function log(message) {
+            const logElement = document.getElementById('log');
+            const timestamp = new Date().toLocaleTimeString();
+            logElement.innerHTML += `[${timestamp}] ${message}\n`;
+            logElement.scrollTop = logElement.scrollHeight;
+        }
+
+        // 模拟云函数的 getMockWxUserInfo 方法
+        function getMockWxUserInfo(userData) {
+            log('=== 模拟微信头像昵称填写组件操作 ===');
+            log(`当前用户信息: ${JSON.stringify(userData)}`);
+            
+            // 模拟微信头像昵称填写组件的行为
+            // 1. 模拟点击头像更改操作
+            const simulateAvatarChange = () => {
+                const mockAvatars = [
+                    'https://thirdwx.qlogo.cn/mmopen/avatar1.jpg',
+                    'https://thirdwx.qlogo.cn/mmopen/avatar2.jpg', 
+                    'https://thirdwx.qlogo.cn/mmopen/avatar3.jpg',
+                    'https://wx.qlogo.cn/mmopen/mock_avatar_' + Date.now() + '.jpg'
+                ];
+                const randomAvatar = mockAvatars[Math.floor(Math.random() * mockAvatars.length)];
+                log(`模拟点击头像更改操作，新头像: ${randomAvatar}`);
+                return randomAvatar;
+            };
+            
+            // 2. 模拟点击昵称更改操作
+            const simulateNicknameChange = () => {
+                const mockNicknames = [
+                    '微信昵称_' + Math.random().toString(36).substr(2, 4),
+                    'WX用户_' + Date.now().toString().slice(-4),
+                    userData.nickName && userData.nickName.includes('微信') ? userData.nickName : '微信_' + userData.nickName,
+                    '新微信昵称'
+                ];
+                const randomNickname = mockNicknames[Math.floor(Math.random() * mockNicknames.length)];
+                log(`模拟点击昵称更改操作，新昵称: ${randomNickname}`);
+                return randomNickname;
+            };
+            
+            // 模拟微信用户操作行为
+            let mockResult = {};
+            
+            // 如果用户已有完整信息，模拟有一定概率的更新
+            if (userData.nickName && userData.avatarUrl) {
+                log('用户已有完整信息，模拟可能的更新操作...');
+                
+                // 60% 概率保持原信息（用户没有进行更改操作）
+                if (Math.random() < 0.6) {
+                    log('模拟结果：用户未进行更改操作，保持原信息');
+                    mockResult = {
+                        nickName: userData.nickName,
+                        avatarUrl: userData.avatarUrl
+                    };
+                }
+                // 25% 概率只更改头像
+                else if (Math.random() < 0.85) {
+                    log('模拟结果：用户点击更改了头像');
+                    mockResult = {
+                        nickName: userData.nickName,
+                        avatarUrl: simulateAvatarChange()
+                    };
+                }
+                // 10% 概率只更改昵称
+                else if (Math.random() < 0.95) {
+                    log('模拟结果：用户点击更改了昵称');
+                    mockResult = {
+                        nickName: simulateNicknameChange(),
+                        avatarUrl: userData.avatarUrl
+                    };
+                }
+                // 5% 概率两者都更改
+                else {
+                    log('模拟结果：用户点击更改了头像和昵称');
+                    mockResult = {
+                        nickName: simulateNicknameChange(),
+                        avatarUrl: simulateAvatarChange()
+                    };
+                }
+            } else {
+                // 如果用户信息不完整，模拟首次设置
+                log('用户信息不完整，模拟首次通过微信设置头像昵称...');
+                mockResult = {
+                    nickName: simulateNicknameChange(),
+                    avatarUrl: simulateAvatarChange()
+                };
+            }
+            
+            log('=== 模拟微信操作完成 ===');
+            log(`最终模拟结果: ${JSON.stringify(mockResult)}`);
+            return mockResult;
+        }
+
+        // 测试微信信息更新
+        async function testWxProfileUpdate() {
+            const btn = document.getElementById('testBtn');
+            btn.disabled = true;
+            btn.textContent = '🔄 获取中...';
+            
+            log('🚀 开始测试微信信息获取功能...');
+            
+            try {
+                // 模拟获取微信信息
+                const wxResult = getMockWxUserInfo(testUserData);
+                
+                // 检查是否有更新
+                const hasUpdate = 
+                    (wxResult.nickName && wxResult.nickName !== testUserData.nickName) ||
+                    (wxResult.avatarUrl && wxResult.avatarUrl !== testUserData.avatarUrl);
+                
+                log(`更新检查结果: ${hasUpdate ? '有更新' : '无更新'}`);
+                
+                if (hasUpdate) {
+                    // 更新测试数据
+                    if (wxResult.nickName !== testUserData.nickName) {
+                        log(`昵称更新: ${testUserData.nickName} -> ${wxResult.nickName}`);
+                        testUserData.nickName = wxResult.nickName;
+                    }
+                    if (wxResult.avatarUrl !== testUserData.avatarUrl) {
+                        log(`头像更新: ${testUserData.avatarUrl} -> ${wxResult.avatarUrl}`);
+                        testUserData.avatarUrl = wxResult.avatarUrl;
+                    }
+                    
+                    // 更新页面显示
+                    updateUI();
+                    
+                    showResult('✅ 成功获取并更新微信用户信息', wxResult, 'success');
+                } else {
+                    showResult('ℹ️ 当前信息已是最新，无需更新', wxResult, 'info');
+                }
+                
+            } catch (error) {
+                log(`❌ 获取微信信息失败: ${error.message}`);
+                showResult('❌ 获取微信信息失败', { error: error.message }, 'error');
+            }
+            
+            btn.disabled = false;
+            btn.textContent = '🔄 模拟获取微信信息';
+        }
+
+        // 重置用户信息
+        function resetUserInfo() {
+            testUserData = {
+                _id: 'test_user_123',
+                nickName: '测试用户_' + Date.now().toString().slice(-4),
+                avatarUrl: '/static/images/default.png',
+                openid_wx: 'test_openid_123',
+                session_key: 'test_session_key'
+            };
+            updateUI();
+            document.getElementById('result').style.display = 'none';
+            log('🔧 用户信息已重置');
+        }
+
+        // 更新UI显示
+        function updateUI() {
+            document.getElementById('currentNickname').textContent = testUserData.nickName;
+            document.getElementById('currentAvatar').src = testUserData.avatarUrl;
+        }
+
+        // 显示结果
+        function showResult(message, data, type) {
+            const resultDiv = document.getElementById('result');
+            resultDiv.style.display = 'block';
+            
+            let bgColor, borderColor;
+            switch(type) {
+                case 'success':
+                    bgColor = '#f6ffed';
+                    borderColor = '#b7eb8f';
+                    break;
+                case 'error':
+                    bgColor = '#fff2f0';
+                    borderColor = '#ffccc7';
+                    break;
+                default:
+                    bgColor = '#e6f7ff';
+                    borderColor = '#91d5ff';
+            }
+            
+            resultDiv.style.backgroundColor = bgColor;
+            resultDiv.style.borderColor = borderColor;
+            resultDiv.innerHTML = `
+                <h4>${message}</h4>
+                <pre>${JSON.stringify(data, null, 2)}</pre>
+            `;
+        }
+
+        // 初始化
+        log('🎯 微信信息获取功能测试页面加载完成');
+        log('点击 "模拟获取微信信息" 按钮开始测试');
+        updateUI();
+    </script>
+</body>
+</html>

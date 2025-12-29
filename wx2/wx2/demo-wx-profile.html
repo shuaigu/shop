@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>微信信息拉取功能演示</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+            background: linear-gradient(135deg, #46b0fe, #6385ff);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .demo-container {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+            text-align: center;
+            max-width: 600px;
+            width: 90%;
+        }
+
+        .title {
+            font-size: 24px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 20px;
+        }
+
+        .description {
+            color: #666;
+            margin-bottom: 30px;
+            line-height: 1.5;
+        }
+
+        .feature-list {
+            text-align: left;
+            margin-bottom: 30px;
+        }
+
+        .feature-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            border-left: 4px solid #46b0fe;
+        }
+
+        .feature-icon {
+            background: #46b0fe;
+            color: white;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            margin-right: 15px;
+            flex-shrink: 0;
+            font-weight: bold;
+        }
+
+        .demo-steps {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 20px;
+            margin: 20px 0;
+            text-align: left;
+        }
+
+        .step {
+            display: flex;
+            align-items: flex-start;
+            margin-bottom: 15px;
+            padding: 10px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .step-number {
+            background: linear-gradient(135deg, #ff6b6b, #ee5a52);
+            color: white;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            margin-right: 15px;
+            flex-shrink: 0;
+        }
+
+        .step.step-2 .step-number {
+            background: linear-gradient(135deg, #46b0fe, #6385ff);
+        }
+
+        .step.step-3 .step-number {
+            background: linear-gradient(135deg, #52c41a, #389e0d);
+        }
+
+        .step-content {
+            flex: 1;
+        }
+
+        .step-title {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 5px;
+        }
+
+        .step-desc {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .success-badge {
+            display: inline-block;
+            background: #52c41a;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 14px;
+            margin-top: 20px;
+        }
+
+        .highlight {
+            background: #fff3cd;
+            color: #856404;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-weight: 600;
+        }
+
+        .wx-features {
+            background: #e8f4f8;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+            border-left: 4px solid #1890ff;
+        }
+
+        .wx-features h4 {
+            color: #1890ff;
+            margin-bottom: 15px;
+            font-size: 16px;
+        }
+
+        .wx-feature-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+            color: #333;
+        }
+
+        .wx-feature-item::before {
+            content: "📱";
+            margin-right: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="demo-container">
+        <h1 class="title">📲 微信信息拉取功能</h1>
+        <p class="description">
+            智能按钮现在支持三种操作模式：修改头像、修改昵称、拉取微信信息！
+            一个按钮，三种功能，循环使用。
+        </p>
+
+        <div class="wx-features">
+            <h4>🎯 新增功能特性</h4>
+            <div class="wx-feature-item">从云端获取用户的完整信息</div>
+            <div class="wx-feature-item">自动同步微信头像和昵称</div>
+            <div class="wx-feature-item">智能检测信息是否需要更新</div>
+            <div class="wx-feature-item">三种操作模式循环切换</div>
+        </div>
+
+        <div class="demo-steps">
+            <h3 style="text-align: center; margin-bottom: 20px; color: #333;">🎮 使用步骤</h3>
+            
+            <div class="step step-1">
+                <div class="step-number">1</div>
+                <div class="step-content">
+                    <div class="step-title">修改头像</div>
+                    <div class="step-desc">第一次点击红色按钮，触发头像选择功能</div>
+                </div>
+            </div>
+            
+            <div class="step step-2">
+                <div class="step-number">2</div>
+                <div class="step-content">
+                    <div class="step-title">修改昵称</div>
+                    <div class="step-desc">第二次点击蓝色按钮，提示修改昵称</div>
+                </div>
+            </div>
+            
+            <div class="step step-3">
+                <div class="step-number">3</div>
+                <div class="step-content">
+                    <div class="step-title">拉取微信信息</div>
+                    <div class="step-desc">第三次点击绿色按钮，从云端获取最新的用户信息</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="feature-list">
+            <h3 style="margin-bottom: 15px; color: #333;">✨ 技术特性</h3>
+            
+            <div class="feature-item">
+                <div class="feature-icon">🔄</div>
+                <span><span class="highlight">智能循环</span>：三种功能循环切换，按钮颜色和文字动态更新</span>
+            </div>
+            
+            <div class="feature-item">
+                <div class="feature-icon">☁️</div>
+                <span><span class="highlight">云端同步</span>：从uniCloud获取用户的最新信息</span>
+            </div>
+            
+            <div class="feature-item">
+                <div class="feature-icon">🎨</div>
+                <span><span class="highlight">视觉反馈</span>：按钮颜色随功能变化（红→蓝→绿）</span>
+            </div>
+            
+            <div class="feature-item">
+                <div class="feature-icon">🔍</div>
+                <span><span class="highlight">智能检测</span>：自动对比信息是否需要更新</span>
+            </div>
+            
+            <div class="feature-item">
+                <div class="feature-icon">💾</div>
+                <span><span class="highlight">本地预览</span>：获取信息后在弹窗中预览，需手动保存</span>
+            </div>
+        </div>
+
+        <div class="success-badge">✨ 功能已完成并测试</div>
+        
+        <p style="margin-top: 20px; color: #666; font-size: 14px;">
+            现在可以在个人中心 → 编辑 → 智能按钮中体验完整功能！
+        </p>
+    </div>
+</body>
+</html>

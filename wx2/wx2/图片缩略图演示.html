@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>图片缩略图渐进加载演示</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+            background: linear-gradient(135deg, #f5f7fa, #c3cfe2);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .demo-container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 16px;
+            padding: 30px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.1);
+        }
+
+        .title {
+            font-size: 28px;
+            font-weight: 700;
+            color: #333;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+
+        .subtitle {
+            color: #666;
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 16px;
+        }
+
+        .demo-section {
+            margin-bottom: 40px;
+        }
+
+        .section-title {
+            font-size: 20px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 20px;
+            border-left: 4px solid #46b0fe;
+            padding-left: 15px;
+        }
+
+        .image-demo {
+            display: flex;
+            gap: 20px;
+            align-items: flex-start;
+            margin-bottom: 30px;
+        }
+
+        .image-container {
+            position: relative;
+            width: 200px;
+            height: 200px;
+            border-radius: 12px;
+            overflow: hidden;
+            border: 2px solid #eee;
+        }
+
+        .image-item {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: opacity 0.3s ease;
+        }
+
+        .thumbnail {
+            filter: blur(2px);
+            opacity: 1;
+        }
+
+        .high-quality {
+            position: absolute;
+            top: 0;
+            left: 0;
+            opacity: 0;
+            z-index: 1;
+        }
+
+        .high-quality.visible {
+            opacity: 1;
+        }
+
+        .demo-info {
+            flex: 1;
+            padding-left: 20px;
+        }
+
+        .demo-steps {
+            list-style: none;
+            padding: 0;
+        }
+
+        .demo-steps li {
+            margin-bottom: 10px;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 3px solid #46b0fe;
+        }
+
+        .demo-steps li strong {
+            color: #46b0fe;
+        }
+
+        .status-indicator {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 500;
+            margin-left: 10px;
+        }
+
+        .loading {
+            background: #fff7e6;
+            color: #d48806;
+        }
+
+        .loaded {
+            background: #f6ffed;
+            color: #52c41a;
+        }
+
+        .grid-demo {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .grid-item-container {
+            position: relative;
+            width: 100%;
+            height: 120px;
+            border-radius: 8px;
+            overflow: hidden;
+            border: 1px solid #eee;
+        }
+
+        .grid-item {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: opacity 0.3s ease;
+        }
+
+        .control-panel {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+
+        .demo-btn {
+            background: linear-gradient(135deg, #46b0fe, #6385ff);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+
+        .demo-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(70, 176, 254, 0.3);
+        }
+
+        .feature-list {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 20px;
+        }
+
+        .feature-item {
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+        }
+
+        .feature-icon {
+            width: 20px;
+            height: 20px;
+            background: #52c41a;
+            border-radius: 50%;
+            margin-right: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .code-example {
+            background: #2d3748;
+            color: #e2e8f0;
+            padding: 20px;
+            border-radius: 8px;
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+            font-size: 14px;
+            overflow-x: auto;
+            margin-top: 20px;
+        }
+
+        .highlight {
+            color: #68d391;
+        }
+
+        .comment {
+            color: #a0aec0;
+        }
+    </style>
+</head>
+<body>
+    <div class="demo-container">
+        <h1 class="title">📸 图片缩略图渐进加载</h1>
+        <p class="subtitle">
+            优化首页图片加载体验，先显示缩略图再加载高清图
+        </p>
+
+        <!-- 单图演示 -->
+        <div class="demo-section">
+            <h2 class="section-title">🖼️ 单张图片演示</h2>
+            <div class="image-demo">
+                <div class="image-container">
+                    <img class="image-item thumbnail" id="singleThumbnail" 
+                         src="https://picsum.photos/200/200?blur=2" alt="缩略图">
+                    <img class="image-item high-quality" id="singleHighQuality" 
+                         src="https://picsum.photos/400/400" alt="高清图">
+                </div>
+                <div class="demo-info">
+                    <ol class="demo-steps">
+                        <li><strong>步骤1:</strong> 首先显示模糊的缩略图 <span class="status-indicator loading" id="step1">加载中</span></li>
+                        <li><strong>步骤2:</strong> 缩略图加载完成后开始预加载高清图 <span class="status-indicator loading" id="step2">等待中</span></li>
+                        <li><strong>步骤3:</strong> 高清图加载完成后平滑切换 <span class="status-indicator loading" id="step3">等待中</span></li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+
+        <!-- 多图网格演示 -->
+        <div class="demo-section">
+            <h2 class="section-title">🎨 多图网格演示</h2>
+            <div class="grid-demo" id="gridDemo">
+                <!-- 将通过JS动态生成 -->
+            </div>
+        </div>
+
+        <!-- 控制面板 -->
+        <div class="demo-section">
+            <h2 class="section-title">🎮 演示控制</h2>
+            <div class="control-panel">
+                <button class="demo-btn" onclick="resetDemo()">🔄 重新演示</button>
+                <button class="demo-btn" onclick="simulateSlowNetwork()">🐌 模拟慢网络</button>
+                <button class="demo-btn" onclick="simulateFastNetwork()">⚡ 模拟快网络</button>
+                <button class="demo-btn" onclick="showTechnicalDetails()">🛠️ 技术详情</button>
+            </div>
+        </div>
+
+        <!-- 功能特性 -->
+        <div class="demo-section">
+            <h2 class="section-title">✨ 功能特性</h2>
+            <div class="feature-list">
+                <div class="feature-item">
+                    <div class="feature-icon">✓</div>
+                    <span><strong>双层结构:</strong> 缩略图层 + 高清图层，无缝切换</span>
+                </div>
+                
+                <div class="feature-item">
+                    <div class="feature-icon">✓</div>
+                    <span><strong>渐进增强:</strong> 先快速显示内容，再提升清晰度</span>
+                </div>
+                
+                <div class="feature-item">
+                    <div class="feature-icon">✓</div>
+                    <span><strong>平滑过渡:</strong> CSS transition实现淡入效果</span>
+                </div>
+                
+                <div class="feature-item">
+                    <div class="feature-icon">✓</div>
+                    <span><strong>错误处理:</strong> 加载失败时显示默认图片</span>
+                </div>
+                
+                <div class="feature-item">
+                    <div class="feature-icon">✓</div>
+                    <span><strong>跨平台:</strong> H5/小程序/APP多端兼容</span>
+                </div>
+                
+                <div class="feature-item">
+                    <div class="feature-icon">✓</div>
+                    <span><strong>七牛云CDN:</strong> 自动生成缩略图参数</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 技术详情 -->
+        <div class="demo-section" id="technicalDetails" style="display: none;">
+            <h2 class="section-title">🛠️ 技术实现</h2>
+            <div class="code-example">
+<span class="comment">// 缩略图URL生成</span>
+<span class="highlight">getThumbnailUrl</span>(url, <span class="highlight">'150x150'</span>, <span class="highlight">50</span>)
+<span class="comment">// 七牛云参数: ?imageMogr2/thumbnail/!150x150r/format/webp/quality/50</span>
+
+<span class="comment">// 图片状态管理</span>
+<span class="highlight">const</span> imageLoadStates = <span class="highlight">ref</span>(<span class="highlight">new Map</span>())
+
+<span class="comment">// 预加载高清图片</span>
+<span class="highlight">const</span> preloadHighQualityImage = (index) => {
+  <span class="highlight">uni.getImageInfo</span>({
+    src: img.processedUrl,
+    success: () => {
+      <span class="comment">// 延时切换，实现平滑过渡</span>
+      <span class="highlight">setTimeout</span>(() => {
+        state.showHighQuality = <span class="highlight">true</span>
+      }, <span class="highlight">100</span>)
+    }
+  })
+}
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let networkSpeed = 'normal';
+        
+        // 初始化演示
+        function initDemo() {
+            // 创建多图网格
+            const gridDemo = document.getElementById('gridDemo');
+            gridDemo.innerHTML = '';
+            
+            for (let i = 0; i < 6; i++) {
+                const container = document.createElement('div');
+                container.className = 'grid-item-container';
+                
+                const thumbnail = document.createElement('img');
+                thumbnail.className = 'grid-item thumbnail';
+                thumbnail.src = `https://picsum.photos/150/150?random=${i}&blur=1`;
+                
+                const highQuality = document.createElement('img');
+                highQuality.className = 'grid-item high-quality';
+                highQuality.src = `https://picsum.photos/300/300?random=${i}`;
+                
+                container.appendChild(thumbnail);
+                container.appendChild(highQuality);
+                gridDemo.appendChild(container);
+                
+                // 模拟缩略图加载完成后加载高清图
+                thumbnail.onload = () => {
+                    setTimeout(() => {
+                        highQuality.onload = () => {
+                            setTimeout(() => {
+                                highQuality.classList.add('visible');
+                            }, 100);
+                        };
+                    }, 500 + i * 200);
+                };
+            }
+            
+            // 单图演示
+            simulateSingleImageLoad();
+        }
+        
+        function simulateSingleImageLoad() {
+            const step1 = document.getElementById('step1');
+            const step2 = document.getElementById('step2');
+            const step3 = document.getElementById('step3');
+            const singleHighQuality = document.getElementById('singleHighQuality');
+            
+            // 重置状态
+            step1.textContent = '加载中';
+            step1.className = 'status-indicator loading';
+            step2.textContent = '等待中';
+            step2.className = 'status-indicator loading';
+            step3.textContent = '等待中';
+            step3.className = 'status-indicator loading';
+            singleHighQuality.classList.remove('visible');
+            
+            // 步骤1: 缩略图加载完成
+            setTimeout(() => {
+                step1.textContent = '已完成';
+                step1.className = 'status-indicator loaded';
+                step2.textContent = '预加载中';
+                step2.className = 'status-indicator loading';
+            }, 800);
+            
+            // 步骤2: 开始预加载高清图
+            setTimeout(() => {
+                step2.textContent = '已完成';
+                step2.className = 'status-indicator loaded';
+                step3.textContent = '切换中';
+                step3.className = 'status-indicator loading';
+            }, 1500);
+            
+            // 步骤3: 切换到高清图
+            setTimeout(() => {
+                singleHighQuality.classList.add('visible');
+                step3.textContent = '已完成';
+                step3.className = 'status-indicator loaded';
+            }, 2000);
+        }
+        
+        function resetDemo() {
+            initDemo();
+        }
+        
+        function simulateSlowNetwork() {
+            networkSpeed = 'slow';
+            alert('已切换到慢网络模式，重新开始演示');
+            resetDemo();
+        }
+        
+        function simulateFastNetwork() {
+            networkSpeed = 'fast';
+            alert('已切换到快网络模式，重新开始演示');
+            resetDemo();
+        }
+        
+        function showTechnicalDetails() {
+            const details = document.getElementById('technicalDetails');
+            if (details.style.display === 'none') {
+                details.style.display = 'block';
+                details.scrollIntoView({ behavior: 'smooth' });
+            } else {
+                details.style.display = 'none';
+            }
+        }
+        
+        // 页面加载时初始化演示
+        window.onload = function() {
+            initDemo();
+        };
+    </script>
+</body>
+</html>

@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>个人中心功能演示</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            background: #f7f7f7;
+            min-height: 100vh;
+        }
+
+        .demo-container {
+            max-width: 375px;
+            margin: 20px auto;
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .title {
+            text-align: center;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            font-size: 20px;
+            font-weight: 600;
+        }
+
+        .my-head {
+            display: flex;
+            align-items: center;
+            padding: 20px 15px;
+            background: linear-gradient(135deg, #46b0fe, #6385ff);
+            color: white;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .my-head::before {
+            content: '';
+            position: absolute;
+            top: -50px;
+            right: -50px;
+            width: 200px;
+            height: 200px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .avatar {
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
+            overflow: hidden;
+            margin-right: 15px;
+            position: relative;
+            border: 2px solid rgba(255, 255, 255, 0.6);
+            z-index: 1;
+        }
+
+        .avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .avatar::after {
+            content: '📷';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 20px;
+            background: rgba(0, 0, 0, 0.4);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 12px;
+        }
+
+        .user-info {
+            flex: 1;
+            z-index: 1;
+        }
+
+        .nickname {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+
+        .mobile {
+            font-size: 14px;
+            opacity: 0.8;
+        }
+
+        .menu-list {
+            padding: 0;
+        }
+
+        .menu-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 15px;
+            border-bottom: 1px solid #f0f0f0;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        .menu-item:hover {
+            background-color: #f8f9fa;
+        }
+
+        .menu-item:last-child {
+            border-bottom: none;
+        }
+
+        .left {
+            display: flex;
+            align-items: center;
+        }
+
+        .icon {
+            width: 22px;
+            height: 22px;
+            margin-right: 12px;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+        }
+
+        .icon.avatar-icon {
+            background: #ff7875;
+            color: white;
+        }
+
+        .icon.nickname-icon {
+            background: #52c41a;
+            color: white;
+        }
+
+        .icon.info-icon {
+            background: #46b0fe;
+            color: white;
+        }
+
+        .icon.feedback-icon {
+            background: #46b0fe;
+            color: white;
+        }
+
+        .icon.logout-icon {
+            background: #ff6b6b;
+            color: white;
+        }
+
+        .value {
+            font-size: 16px;
+            color: #333;
+        }
+
+        .arrow {
+            color: #ccc;
+            font-size: 18px;
+        }
+
+        .success-badge {
+            background: #f6ffed;
+            border: 1px solid #b7eb8f;
+            color: #52c41a;
+            padding: 15px;
+            margin: 20px;
+            border-radius: 8px;
+            text-align: center;
+            line-height: 1.5;
+        }
+
+        .feature-highlight {
+            background: #fff7e6;
+            border: 1px solid #ffd591;
+            color: #d46b08;
+            padding: 15px;
+            margin: 20px;
+            border-radius: 8px;
+            line-height: 1.5;
+        }
+
+        .demo-btn {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 20px;
+            margin: 10px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .version-info {
+            text-align: center;
+            padding: 20px;
+            color: #999;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="demo-container">
+        <div class="title">🎯 个人中心功能演示</div>
+        
+        <!-- 个人中心头部 -->
+        <div class="my-head">
+            <div class="avatar">
+                <img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNzAiIGhlaWdodD0iNzAiIHZpZXdCb3g9IjAgMCA3MCA3MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGNpcmNsZSBjeD0iMzUiIGN5PSIzNSIgcj0iMzUiIGZpbGw9IiNmMGYwZjAiLz4KPHN2ZyB4PSIyMCIgeT0iMTUiIHdpZHRoPSIzMCIgaGVpZ2h0PSI0MCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSIjOTk5Ij4KICA8cGF0aCBkPSJNMTIgMTJjMi4yMSAwIDQtMS43OSA0LTRzLTEuNzktNC00LTQtNCAxLjc5LTQgNCAxLjc5IDQgNCA0em0wIDJjLTIuNjcgMC04IDEuMzQtOCA0djJoMTZ2LTJjMC0yLjY2LTUuMzMtNC04LTR6Ii8+Cjwvc3ZnPgo8L3N2Zz4=" alt="头像">
+            </div>
+            <div class="user-info">
+                <div class="nickname">匿名AJs87</div>
+                <div class="mobile">手机号：153****5340</div>
+            </div>
+        </div>
+        
+        <!-- 菜单列表 -->
+        <div class="menu-list">
+            <!-- 获取头像 -->
+            <div class="menu-item" onclick="handleGetAvatar()">
+                <div class="left">
+                    <div class="icon avatar-icon">📷</div>
+                    <span class="value">获取头像</span>
+                </div>
+                <span class="arrow">›</span>
+            </div>
+            
+            <!-- 获取昵称 -->
+            <div class="menu-item" onclick="handleGetNickname()">
+                <div class="left">
+                    <div class="icon nickname-icon">✏️</div>
+                    <span class="value">获取昵称</span>
+                </div>
+                <span class="arrow">›</span>
+            </div>
+            
+            <!-- 信息公示 -->
+            <div class="menu-item">
+                <div class="left">
+                    <div class="icon info-icon">💼</div>
+                    <span class="value">信息公示</span>
+                </div>
+                <span class="arrow">›</span>
+            </div>
+            
+            <!-- 意见反馈 -->
+            <div class="menu-item">
+                <div class="left">
+                    <div class="icon feedback-icon">💬</div>
+                    <span class="value">意见反馈</span>
+                </div>
+                <span class="arrow">›</span>
+            </div>
+            
+            <!-- 退出登录 -->
+            <div class="menu-item">
+                <div class="left">
+                    <div class="icon logout-icon">🚪</div>
+                    <span class="value">退出登录</span>
+                </div>
+                <span class="arrow">›</span>
+            </div>
+        </div>
+
+        <!-- 版本信息 -->
+        <div class="version-info">酒旅圈圈 v1.0.0</div>
+    </div>
+
+    <div class="success-badge">
+        ✅ 弹窗已成功移除！现在直接在个人中心菜单中实现了获取头像和昵称的功能。
+        <br><br>
+        <strong>主要改进：</strong><br>
+        • 去掉了弹窗层级，操作更直接<br>
+        • 功能直接显示在菜单中，更易发现<br>
+        • 与其他菜单项风格统一<br>
+        • 在微信环境下会智能引导用户使用原生组件
+    </div>
+
+    <div class="feature-highlight">
+        <strong>🎯 功能说明：</strong><br>
+        • <strong>获取头像</strong>：红色图标，点击后在微信环境提示用户点击上方头像，非微信环境直接选择图片<br>
+        • <strong>获取昵称</strong>：绿色图标，点击后在微信环境提示用户点击上方昵称框，非微信环境直接修改昵称<br>
+        • 原有的头像和昵称直接点击功能仍然保留
+    </div>
+
+    <script>
+        function handleGetAvatar() {
+            alert('🎉 获取头像功能！\n\n在微信环境：\n提示用户"请点击上方头像直接更换，这样可以使用微信的头像选择功能。"\n\n在其他环境：\n直接打开相册选择图片并上传');
+        }
+
+        function handleGetNickname() {
+            alert('🎉 获取昵称功能！\n\n在微信环境：\n提示用户"请点击上方昵称输入框直接修改，这样可以使用微信的昵称填写功能。"\n\n在其他环境：\n直接显示昵称修改对话框');
+        }
+    </script>
+</body>
+</html>
