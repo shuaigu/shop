@@ -1,0 +1,11 @@
+{
+  "navigationBarTitleText": "内容推荐",
+  "usingComponents": {
+    "up-loading-page": "../../uni_modules/uview-plus/components/u-loading-page/u-loading-page",
+    "uni-icons": "../../uni_modules/uni-icons/components/uni-icons/uni-icons",
+    "uni-load-more": "../../uni_modules/uni-load-more/components/uni-load-more/uni-load-more",
+    "comment-list": "../../components/comment-list/comment-list",
+    "tuijian": "../../components/tuijian/tuijian",
+    "tuouanyulan": "../../components/tuouanyulan/tuouanyulan"
+  }
+}

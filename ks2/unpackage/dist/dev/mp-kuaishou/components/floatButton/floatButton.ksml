@@ -1,0 +1,1 @@
+<view style="{{'width:' + a + ';' + ('height:' + b) + ';' + ('bottom:' + c) + ';' + ('right:' + d) + ';' + virtualHostStyle}}" bindtap="{{e}}" class="{{('float-button') + ' ' + 'data-v-c199bce7' + ' ' + virtualHostClass}}" hidden="{{virtualHostHidden || false}}" id="{{f}}"><view class="plus data-v-c199bce7">+</view></view>

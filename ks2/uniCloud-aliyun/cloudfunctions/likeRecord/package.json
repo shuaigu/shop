@@ -1,0 +1,7 @@
+{
+  "name": "likeRecord",
+  "dependencies": {},
+  "extensions": {
+    "uni-cloud-jql": {}
+  }
+}

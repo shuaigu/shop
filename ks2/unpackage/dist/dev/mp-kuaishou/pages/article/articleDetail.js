@@ -1,0 +1,836 @@
+"use strict";
+const common_vendor = require("../../common/vendor.js");
+const store_user = require("../../store/user.js");
+const utils_formatTime = require("../../utils/formatTime.js");
+if (!Array) {
+  const _easycom_up_loading_page2 = common_vendor.resolveComponent("up-loading-page");
+  const _easycom_uni_icons2 = common_vendor.resolveComponent("uni-icons");
+  const _easycom_uni_load_more2 = common_vendor.resolveComponent("uni-load-more");
+  const _easycom_comment_list2 = common_vendor.resolveComponent("comment-list");
+  (_easycom_up_loading_page2 + _easycom_uni_icons2 + _easycom_uni_load_more2 + _easycom_comment_list2)();
+}
+const _easycom_up_loading_page = () => "../../uni_modules/uview-plus/components/u-loading-page/u-loading-page.js";
+const _easycom_uni_icons = () => "../../uni_modules/uni-icons/components/uni-icons/uni-icons.js";
+const _easycom_uni_load_more = () => "../../uni_modules/uni-load-more/components/uni-load-more/uni-load-more.js";
+const _easycom_comment_list = () => "../../components/comment-list/comment-list.js";
+if (!Math) {
+  (_easycom_up_loading_page + _easycom_uni_icons + _easycom_uni_load_more + _easycom_comment_list + tuijian + Tuouanyulan)();
+}
+const tuijian = () => "../../components/tuijian/tuijian.js";
+const Tuouanyulan = () => "../../components/tuouanyulan/tuouanyulan.js";
+const _sfc_main = {
+  __name: "articleDetail",
+  props: {
+    article_id: String,
+    user_id: String
+  },
+  setup(__props) {
+    const props = __props;
+    const handlePageNavigation = async () => {
+      try {
+        const pages = getCurrentPages();
+        if (pages.length === 1) {
+          common_vendor.index.switchTab({
+            url: "/pages/index/index",
+            success: () => {
+              setTimeout(() => {
+                common_vendor.index.navigateTo({
+                  url: `/pages/article/articleDetail?article_id=${props.article_id}`,
+                  fail: (err) => {
+                    console.error("跳转回文章详情页失败:", err);
+                  }
+                });
+              }, 500);
+            },
+            fail: (err) => {
+              console.error("跳转到首页失败:", err);
+              try {
+                const cateApi = common_vendor.nr.importObject("cateKs", { customUI: true });
+                cateApi.get().catch((err2) => {
+                  console.warn("预加载首页数据失败", err2);
+                });
+              } catch (err2) {
+                console.warn("初始化首页数据失败", err2);
+              }
+            }
+          });
+          return true;
+        }
+        return false;
+      } catch (err) {
+        console.error("页面导航错误：", err);
+        return false;
+      }
+    };
+    const isLoading = common_vendor.ref(true);
+    const isSubmitting = common_vendor.ref(false);
+    const commentContent = common_vendor.ref("");
+    const isCommentsLoading = common_vendor.ref(true);
+    const userStore = store_user.useUserInfoStore();
+    const articleApi = common_vendor.nr.importObject("articleKs", { customUI: true });
+    const commentApi = common_vendor.nr.importObject("commentList", { customUI: true });
+    common_vendor.nr.importObject("likeRecord", { customUI: true });
+    const loginApi = common_vendor.nr.importObject("login", { customUI: true });
+    const articleDetail = common_vendor.ref({});
+    const articleComment = common_vendor.ref([]);
+    const commentCount = common_vendor.computed(() => {
+      return articleComment.value.length;
+    });
+    const isCheckingLogin = common_vendor.ref(false);
+    common_vendor.ref(0);
+    common_vendor.ref(false);
+    const isVideoLoading = common_vendor.ref(true);
+    const imageLoadStatus = common_vendor.ref({});
+    const isAnyImageLoading = common_vendor.ref(true);
+    const navInfo = common_vendor.ref(null);
+    const tuijianRef = common_vendor.ref(null);
+    common_vendor.ref(null);
+    common_vendor.ref(null);
+    common_vendor.ref(false);
+    common_vendor.ref(true);
+    common_vendor.ref(1e3);
+    const previewVisible = common_vendor.ref(false);
+    const previewImages = common_vendor.ref([]);
+    const previewCurrent = common_vendor.ref(0);
+    const videoContext = common_vendor.ref(null);
+    const videoLoadStatus = common_vendor.ref("loading");
+    const isPlaying = common_vendor.ref(true);
+    const getArticleDetail = async () => {
+      var _a;
+      try {
+        const needRedirect = await handlePageNavigation();
+        if (needRedirect) {
+          return;
+        }
+        if (!props.article_id) {
+          throw new Error("文章ID不能为空");
+        }
+        const res = await articleApi.getArticleDetal(props.article_id);
+        if (!res || !res.articleRes || !res.articleRes.data || !Array.isArray(res.articleRes.data)) {
+          throw new Error("获取文章详情失败：返回数据格式错误");
+        }
+        const articleData = res.articleRes.data[0];
+        if (!articleData.content) {
+          articleData.content = "暂无内容";
+        }
+        if (articleData.video && articleData.video.url) {
+          if (!articleData.video.compressedURL) {
+            articleData.video.compressedURL = articleData.video.url.startsWith("http") ? articleData.video.url : `https://aly2.jingle0350.cn${articleData.video.url}`;
+          }
+          articleData.videoURL = articleData.video.compressedURL || articleData.video.url;
+          videoLoadStatus.value = "loading";
+        }
+        if (articleData.cate_id) {
+          try {
+            const cateApi = common_vendor.nr.importObject("cateKs", { customUI: true });
+            const cateRes = await cateApi.get(articleData.cate_id);
+            if (cateRes.data && cateRes.data[0]) {
+              articleData.cate_name = cateRes.data[0].cate_name;
+            }
+          } catch (err) {
+            console.error("获取分类名称失败:", err);
+          }
+        }
+        if (articleData.user_id) {
+          try {
+            articleData.user = {
+              nickName: articleData.user_nickName || "未知用户",
+              avatarUrl: articleData.user_avatarUrl || "/static/images/default-avatar.png",
+              mobile: articleData.user_mobile || "未填写"
+            };
+            console.log("使用文章中的用户信息:", articleData.user);
+          } catch (err) {
+            console.error("处理用户信息失败:", err);
+            articleData.user = {
+              nickName: "未知用户",
+              avatarUrl: "/static/images/default-avatar.png",
+              mobile: "未填写"
+            };
+          }
+        }
+        articleDetail.value = articleData;
+        articleComment.value = res.comment || [];
+        if (articleData.images && articleData.images.length) {
+          articleData.images.forEach((_, index) => {
+            imageLoadStatus.value[index] = "loading";
+          });
+          isAnyImageLoading.value = true;
+        } else {
+          isAnyImageLoading.value = false;
+        }
+        try {
+          const configApi = common_vendor.nr.importObject("config", { customUI: true });
+          const configRes = await configApi.getConfig("commentDisplay");
+          navInfo.value = {
+            isVisible: ((_a = configRes == null ? void 0 : configRes.data) == null ? void 0 : _a.isVisible) ?? true,
+            // 默认显示
+            title: "评论区"
+          };
+        } catch (err) {
+          console.error("获取评论区显示状态失败:", err);
+          navInfo.value = {
+            isVisible: true,
+            title: "评论区"
+          };
+        }
+        if (articleData.videoURL) {
+          articleData.videoURL = processMediaURL(articleData.videoURL, "video");
+          videoLoadStatus.value = "loading";
+        }
+        if (articleDetail.value.videoURL) {
+          setTimeout(() => {
+            videoContext.value = common_vendor.index.createVideoContext("articleVideo");
+          }, 300);
+        }
+      } catch (err) {
+        console.error("获取文章详情失败：", err);
+        common_vendor.index.showToast({
+          title: "获取文章详情失败",
+          icon: "none"
+        });
+      }
+    };
+    const getCommentList = async () => {
+      var _a;
+      try {
+        if (!props.article_id) {
+          throw new Error("文章ID不能为空");
+        }
+        const result = await commentApi.getCommentList(props.article_id);
+        if (!result || result.code !== 0 || !Array.isArray(result.data)) {
+          throw new Error(result.message || "获取评论列表失败");
+        }
+        const articleDetail2 = await articleApi.getArticleDetal(props.article_id);
+        const commentLikes = ((_a = articleDetail2.articleRes.data[0]) == null ? void 0 : _a.comment_likes) || [];
+        const processedComments = result.data.map((comment) => ({
+          ...comment,
+          isLiked: commentLikes.some(
+            (like) => like.comment_id === comment._id && like.user_id === userStore.userInfo.uid
+          ),
+          likeCount: commentLikes.filter(
+            (like) => like.comment_id === comment._id
+          ).length,
+          formatted_time: utils_formatTime.formatTime(comment.create_time)
+        }));
+        articleComment.value = processedComments;
+        articleComment.value.sort((a, b) => b.create_time - a.create_time);
+      } catch (err) {
+        console.error("获取评论列表失败:", err);
+        common_vendor.index.showToast({
+          title: "获取评论列表失败",
+          icon: "none",
+          duration: 2e3
+        });
+      }
+    };
+    common_vendor.watch(() => articleComment.value.length, (newCount, oldCount) => {
+      console.log("评论数量变化:", {
+        oldCount,
+        newCount
+      });
+    });
+    const commentSubmit = async () => {
+      if (isSubmitting.value) {
+        console.log("[前端] 评论提交中，请勿重复提交");
+        return;
+      }
+      try {
+        if (!userStore.userInfo.uid || !userStore.userInfo.nickName) {
+          throw new Error("用户信息不完整，请重新登录");
+        }
+        const content = commentContent.value.trim();
+        if (!content) {
+          console.log("[前端] 评论内容为空");
+          return common_vendor.index.showToast({
+            title: "评论内容不能为空",
+            icon: "none",
+            duration: 2e3
+          });
+        }
+        console.log("[前端] 开始提交评论");
+        isSubmitting.value = true;
+        common_vendor.index.showLoading({
+          title: "提交中...",
+          mask: true
+        });
+        const commentData = {
+          article_id: articleDetail.value._id,
+          user_id: userStore.userInfo.uid,
+          content,
+          nickName: userStore.userInfo.nickName || "匿名用户",
+          avatarUrl: userStore.userInfo.avatarUrl || ""
+        };
+        console.log("[前端] 评论数据:", commentData);
+        const result = await commentApi.addComment(commentData);
+        console.log("[前端] 评论提交结果:", result);
+        if (result.code === 0) {
+          console.log("[前端] 评论成功");
+          commentContent.value = "";
+          await getCommentList();
+          common_vendor.index.showToast({
+            title: "评论成功",
+            icon: "success",
+            duration: 2e3
+          });
+        } else {
+          throw new Error(result.message || "评论失败");
+        }
+      } catch (err) {
+        console.error("[前端] 评论失败:", {
+          error: err,
+          message: err.message,
+          stack: err.stack
+        });
+        common_vendor.index.showToast({
+          title: err.message || "评论失败，请稍后重试",
+          icon: "none",
+          duration: 2e3
+        });
+      } finally {
+        common_vendor.index.hideLoading();
+        isSubmitting.value = false;
+        console.log("[前端] 评论提交完成");
+      }
+    };
+    const handelDelComment = async (commentId) => {
+      try {
+        const confirmRes = await common_vendor.index.showModal({
+          title: "提示",
+          content: "确定要删除这条评论吗？",
+          confirmText: "删除",
+          confirmColor: "#ff0000"
+        });
+        if (!confirmRes.confirm)
+          return;
+        common_vendor.index.showLoading({
+          title: "删除中...",
+          mask: true
+        });
+        const result = await articleApi.deleteComment(commentId);
+        if (result.code === 0) {
+          await getCommentList();
+          common_vendor.index.showToast({
+            title: "删除成功",
+            icon: "success"
+          });
+        } else {
+          throw new Error(result.message || "删除失败");
+        }
+      } catch (err) {
+        console.error("删除失败:", err);
+        common_vendor.index.showToast({
+          title: typeof err === "string" ? err : err.message || "删除失败",
+          icon: "none"
+        });
+      } finally {
+        common_vendor.index.hideLoading();
+      }
+    };
+    const handleCommentClick = async () => {
+      try {
+        const isLoggedIn = await customTestLogin();
+        if (!isLoggedIn) {
+          return;
+        }
+        common_vendor.index.showModal({
+          title: "发表评论",
+          editable: true,
+          placeholderText: "评论点什么...",
+          success: (res) => {
+            if (res.confirm && res.content.trim()) {
+              commentContent.value = res.content.trim();
+              setTimeout(() => {
+                commentSubmit().catch((err) => {
+                  console.error("评论提交失败:", err);
+                  common_vendor.index.showToast({
+                    title: "评论失败，请重试",
+                    icon: "none"
+                  });
+                });
+              }, 100);
+            }
+          }
+        });
+      } catch (err) {
+        console.error("评论点击处理失败:", err);
+        common_vendor.index.showToast({
+          title: "操作失败，请重试",
+          icon: "none"
+        });
+      }
+    };
+    const goToHome = () => {
+      common_vendor.index.switchTab({
+        url: "/pages/index/index"
+      });
+    };
+    const handleCall = async () => {
+      try {
+        const isLoggedIn = await customTestLogin();
+        if (!isLoggedIn) {
+          return;
+        }
+        if (articleDetail.value.user_mobile === "未填写") {
+          return common_vendor.index.showToast({
+            icon: "none",
+            title: "没有联系方式"
+          });
+        }
+        common_vendor.index.makePhoneCall({
+          phoneNumber: articleDetail.value.user_mobile,
+          fail: (err) => {
+            common_vendor.index.showToast({
+              title: "拨打电话失败",
+              icon: "none"
+            });
+          }
+        });
+      } catch (err) {
+        console.error("拨打电话失败:", err);
+        common_vendor.index.showToast({
+          title: "操作失败，请重试",
+          icon: "none"
+        });
+      }
+    };
+    const customTestLogin = async () => {
+      if (isCheckingLogin.value)
+        return false;
+      isCheckingLogin.value = true;
+      try {
+        if (userStore.userInfo.uid) {
+          return true;
+        }
+        const res = await loginApi.login();
+        if (res.code === 0) {
+          userStore.setUserInfo(res.data);
+          return true;
+        }
+        const currentRoute = `/pages/article/articleDetail?article_id=${props.article_id}`;
+        const redirectUrl = encodeURIComponent(currentRoute);
+        common_vendor.index.redirectTo({
+          // 改用 redirectTo 替代 navigateTo
+          url: `/pages/login/login?redirect=${redirectUrl}`
+        });
+        return false;
+      } catch (err) {
+        console.error("登录检查失败:", err);
+        const currentRoute = `/pages/article/articleDetail?article_id=${props.article_id}`;
+        const redirectUrl = encodeURIComponent(currentRoute);
+        common_vendor.index.redirectTo({
+          // 改用 redirectTo 替代 navigateTo
+          url: `/pages/login/login?redirect=${redirectUrl}`
+        });
+        return false;
+      } finally {
+        common_vendor.index.hideLoading();
+        isCheckingLogin.value = false;
+      }
+    };
+    const updatePageView = async () => {
+      try {
+        if (!articleDetail.value._id)
+          return;
+        const result = await articleApi.updateLookCount(articleDetail.value._id);
+        if (result.code === 0) {
+          articleDetail.value.look_count = (articleDetail.value.look_count || 0) + 1;
+          console.log("浏览量更新成功");
+          common_vendor.index.$emit("updateArticleLookCount", {
+            articleId: articleDetail.value._id,
+            lookCount: articleDetail.value.look_count
+          });
+        }
+      } catch (err) {
+        console.error("更新浏览量失败:", err);
+      }
+    };
+    common_vendor.onMounted(async () => {
+      var _a;
+      try {
+        common_vendor.index.pageScrollTo({
+          scrollTop: 0,
+          duration: 0
+        });
+        isLoading.value = true;
+        isCommentsLoading.value = true;
+        const pages = getCurrentPages();
+        const currentPage = pages[pages.length - 1];
+        const options = ((_a = currentPage.$page) == null ? void 0 : _a.options) || {};
+        const articleId = options.article_id || props.article_id;
+        if (!articleId) {
+          throw new Error("文章ID不能为空");
+        }
+        await getArticleDetail();
+        isLoading.value = false;
+        getCommentList().catch((err) => {
+          console.error("获取评论失败:", err);
+        }).finally(() => {
+          isCommentsLoading.value = false;
+        });
+        updatePageView().catch((err) => {
+          console.error("更新浏览量失败:", err);
+        });
+      } catch (err) {
+        console.error("页面初始化失败:", err);
+        common_vendor.index.showToast({
+          title: "加载失败，请重试",
+          icon: "none"
+        });
+        setTimeout(() => {
+          common_vendor.index.navigateBack();
+        }, 1500);
+      } finally {
+        isLoading.value = false;
+        isCommentsLoading.value = false;
+      }
+      common_vendor.index.showShareMenu({
+        withShareTicket: true
+      });
+      setTimeout(() => {
+        if (articleDetail.value && articleDetail.value.videoURL) {
+          videoContext.value = common_vendor.index.createVideoContext("articleVideo");
+        }
+      }, 500);
+      common_vendor.index.$on("updateCommentVisibility", (data) => {
+        if (navInfo.value) {
+          navInfo.value.isVisible = data.isVisible;
+        } else {
+          navInfo.value = {
+            isVisible: data.isVisible,
+            title: "评论区"
+          };
+        }
+      });
+    });
+    let commentRefreshTimer;
+    common_vendor.onMounted(() => {
+      commentRefreshTimer = setInterval(async () => {
+        await getCommentList();
+      }, 6e4);
+    });
+    common_vendor.onUnmounted(() => {
+      if (commentRefreshTimer) {
+        clearInterval(commentRefreshTimer);
+      }
+      if (articleDetail.value && articleDetail.value._id) {
+        common_vendor.index.$emit("updateArticleLookCount", {
+          articleId: articleDetail.value._id,
+          lookCount: articleDetail.value.look_count || 0
+        });
+      }
+      common_vendor.index.$off("updateCommentVisibility");
+    });
+    const previewImage = (current) => {
+      if (!articleDetail.value.images || !articleDetail.value.images.length)
+        return;
+      previewImages.value = articleDetail.value.images.map((img) => img.compressedURL);
+      if (typeof current === "number") {
+        previewCurrent.value = current;
+      } else {
+        const index = previewImages.value.findIndex((url) => url === current);
+        previewCurrent.value = index >= 0 ? index : 0;
+      }
+      previewVisible.value = true;
+    };
+    const closePreview = () => {
+      previewVisible.value = false;
+    };
+    const handlePreviewChange = (index) => {
+      previewCurrent.value = index;
+    };
+    const handleVideoError = (err) => {
+      console.error("视频播放错误:", err);
+      videoLoadStatus.value = "error";
+      common_vendor.index.showToast({
+        title: "视频加载失败",
+        icon: "none"
+      });
+    };
+    const handleVideoLoaded = () => {
+      videoLoadStatus.value = "loaded";
+      isVideoLoading.value = false;
+    };
+    const handleVideoWaiting = () => {
+      isVideoLoading.value = true;
+    };
+    const handleVideoCanPlay = () => {
+      isVideoLoading.value = false;
+    };
+    const toggleVideoPlay = () => {
+      if (videoContext.value) {
+        if (isPlaying.value) {
+          videoContext.value.pause();
+        } else {
+          videoContext.value.play();
+        }
+        isPlaying.value = !isPlaying.value;
+      } else {
+        videoContext.value = common_vendor.index.createVideoContext("articleVideo");
+      }
+    };
+    const hasVideo = common_vendor.computed(() => {
+      return articleDetail.value && articleDetail.value.videoURL;
+    });
+    const handleImageLoad = (index) => {
+      imageLoadStatus.value[index] = "loaded";
+      checkAllImagesLoaded();
+    };
+    const handleImageError = (index) => {
+      console.error("Image loading failed for index:", index);
+      imageLoadStatus.value[index] = "error";
+      checkAllImagesLoaded();
+    };
+    const checkAllImagesLoaded = () => {
+      if (!articleDetail.value || !articleDetail.value.images) {
+        isAnyImageLoading.value = false;
+        return;
+      }
+      const imageCount = articleDetail.value.images.length;
+      let loadedCount = 0;
+      for (let i = 0; i < imageCount; i++) {
+        if (imageLoadStatus.value[i] === "loaded" || imageLoadStatus.value[i] === "error") {
+          loadedCount++;
+        }
+      }
+      isAnyImageLoading.value = loadedCount < imageCount;
+    };
+    const handleArticleClick = (articleId) => {
+      if (articleId === props.article_id) {
+        return;
+      }
+      common_vendor.index.navigateTo({
+        url: `/pages/article/articleDetail?article_id=${articleId}`,
+        animationType: "slide-in-right",
+        animationDuration: 300,
+        success: () => {
+          console.log("跳转到文章详情页成功:", articleId);
+        },
+        fail: (err) => {
+          console.error("跳转到文章详情页失败:", err);
+          common_vendor.index.showToast({
+            title: "跳转失败",
+            icon: "none"
+          });
+        }
+      });
+    };
+    common_vendor.onReachBottom(() => {
+      console.log("触发页面触底事件");
+      if (tuijianRef.value) {
+        tuijianRef.value.loadMore();
+      }
+    });
+    common_vendor.ref(false);
+    common_vendor.ref(1);
+    common_vendor.ref({
+      avatar: "",
+      nickname: "用户"
+    });
+    const processMediaURL = (url, type = "image") => {
+      if (!url)
+        return "";
+      if (url.includes("jingle0350.cn")) {
+        if (type === "image") {
+          return processCDNImage(url);
+        }
+      }
+      if (url.includes("ixigua.com") || url.includes("aly2.")) {
+        return url.includes("?") ? `${url}&referer=no_referer` : `${url}?referer=no_referer`;
+      }
+      if (type === "video" && url.includes("baidu.com")) {
+        return url;
+      }
+      return url;
+    };
+    const handleVideoPlay = () => {
+      isPlaying.value = true;
+    };
+    const handleVideoPause = () => {
+      isPlaying.value = false;
+    };
+    const processCDNImage = (url) => {
+      if (!url)
+        return "";
+      if (url.includes("imageMogr2") || url.includes("watermark")) {
+        return url;
+      }
+      if (url.includes("?")) {
+        return `${url}&imageMogr2/thumbnail/!300x300r/format/webp/quality/70`;
+      } else {
+        return `${url}?imageMogr2/thumbnail/!300x300r/format/webp/quality/70`;
+      }
+    };
+    common_vendor.watch(() => articleDetail.value._id, (newVal) => {
+      if (newVal && articleDetail.value.videoURL) {
+        common_vendor.nextTick$1(() => {
+          setTimeout(() => {
+            videoContext.value = common_vendor.index.createVideoContext("articleVideo");
+            console.log("视频上下文已创建");
+          }, 300);
+        });
+      }
+    });
+    return (_ctx, _cache) => {
+      return common_vendor.e({
+        a: common_vendor.p({
+          loading: isLoading.value && !articleDetail.value._id
+        }),
+        b: articleDetail.value.user && articleDetail.value.user.avatarUrl || articleDetail.value.user_avatarUrl || articleDetail.value.avatarUrl || "/static/images/default-avatar.png",
+        c: common_vendor.t(articleDetail.value.user && articleDetail.value.user.nickName || articleDetail.value.user_nickName || articleDetail.value.nickName || articleDetail.value.user_name || "匿名用户"),
+        d: common_vendor.t(common_vendor.unref(utils_formatTime.formatTime)(articleDetail.value.create_time)),
+        e: common_vendor.t(articleDetail.value.look_count || 0),
+        f: common_vendor.p({
+          type: "phone-filled",
+          size: "24",
+          color: "#07C160"
+        }),
+        g: common_vendor.o(handleCall),
+        h: articleDetail.value.videoURL
+      }, articleDetail.value.videoURL ? common_vendor.e({
+        i: videoLoadStatus.value === "loading"
+      }, videoLoadStatus.value === "loading" ? {
+        j: common_vendor.p({
+          status: "loading",
+          contentText: {
+            contentrefresh: "视频加载中..."
+          }
+        })
+      } : {}, {
+        k: videoLoadStatus.value === "error"
+      }, videoLoadStatus.value === "error" ? {
+        l: common_vendor.p({
+          type: "videocam-slash",
+          size: "50",
+          color: "#CCCCCC"
+        })
+      } : {}, {
+        m: articleDetail.value.videoURL,
+        n: articleDetail.value.images && articleDetail.value.images[0] ? articleDetail.value.images[0].compressedURL : "",
+        o: common_vendor.o(handleVideoError),
+        p: common_vendor.o(handleVideoLoaded),
+        q: common_vendor.o(handleVideoWaiting),
+        r: common_vendor.o(handleVideoCanPlay),
+        s: common_vendor.o(handleVideoPlay),
+        t: common_vendor.o(handleVideoPause),
+        v: !isPlaying.value && videoLoadStatus.value === "loaded"
+      }, !isPlaying.value && videoLoadStatus.value === "loaded" ? {
+        w: common_vendor.p({
+          type: "videocam-filled",
+          size: "36",
+          color: "#FFFFFF"
+        }),
+        x: common_vendor.o(toggleVideoPlay)
+      } : {}) : {}, {
+        y: articleDetail.value.images && articleDetail.value.images.length
+      }, articleDetail.value.images && articleDetail.value.images.length ? common_vendor.e({
+        z: articleDetail.value.images.length > 1
+      }, articleDetail.value.images.length > 1 ? {
+        A: common_vendor.p({
+          type: "image",
+          size: "16",
+          color: "#FFFFFF"
+        }),
+        B: common_vendor.t(articleDetail.value.images.length)
+      } : {}, {
+        C: common_vendor.f(articleDetail.value.images.length > 9 ? articleDetail.value.images.slice(0, 9) : articleDetail.value.images, (item, index, i0) => {
+          return common_vendor.e({
+            a: item.compressedURL,
+            b: common_vendor.o(($event) => handleImageLoad(index)),
+            c: common_vendor.o(($event) => handleImageError(index)),
+            d: index === 8 && articleDetail.value.images.length > 9
+          }, index === 8 && articleDetail.value.images.length > 9 ? {
+            e: common_vendor.t(articleDetail.value.images.length - 9)
+          } : {}, {
+            f: index,
+            g: common_vendor.o(($event) => previewImage(index))
+          });
+        }),
+        D: common_vendor.n(`grid-${articleDetail.value.images.length > 9 ? 9 : articleDetail.value.images.length}`)
+      }) : {}, {
+        E: articleDetail.value.content
+      }, articleDetail.value.content ? {
+        F: common_vendor.t(articleDetail.value.content)
+      } : {}, {
+        G: articleDetail.value.images && articleDetail.value.images.length
+      }, articleDetail.value.images && articleDetail.value.images.length ? {
+        H: common_vendor.t(articleDetail.value.images.length)
+      } : {}, {
+        I: articleDetail.value.images && articleDetail.value.images.length
+      }, articleDetail.value.images && articleDetail.value.images.length ? {
+        J: common_vendor.f(articleDetail.value.images, (item, index, i0) => {
+          return {
+            a: index,
+            b: item.compressedURL,
+            c: common_vendor.o(($event) => previewImage(index))
+          };
+        })
+      } : {}, {
+        K: navInfo.value && navInfo.value.isVisible
+      }, navInfo.value && navInfo.value.isVisible ? common_vendor.e({
+        L: isCommentsLoading.value && !articleComment.value.length
+      }, isCommentsLoading.value && !articleComment.value.length ? {} : commentCount.value === 0 ? {
+        N: common_vendor.p({
+          type: "chat",
+          size: "50",
+          color: "#CCCCCC"
+        })
+      } : {}, {
+        M: commentCount.value === 0,
+        O: common_vendor.t(commentCount.value),
+        P: common_vendor.p({
+          type: "chat",
+          size: "20",
+          color: "#999"
+        }),
+        Q: common_vendor.o(handleCommentClick)
+      }) : {}, {
+        R: navInfo.value && navInfo.value.isVisible
+      }, navInfo.value && navInfo.value.isVisible ? {
+        S: common_vendor.j({
+          "delComment": common_vendor.o(handelDelComment)
+        }),
+        T: common_vendor.p({
+          comments: articleComment.value
+        })
+      } : {}, {
+        U: common_vendor.sr(tuijianRef, "786907d5-9", {
+          "k": "tuijianRef"
+        }),
+        V: common_vendor.j({
+          "click": common_vendor.o(handleArticleClick)
+        }),
+        W: common_vendor.p({
+          ["current-article-id"]: __props.article_id,
+          cate_id: articleDetail.value.cate_id
+        }),
+        X: !hasVideo.value ? 1 : "",
+        Y: common_vendor.o(($event) => {
+          var _a;
+          return (_a = tuijianRef.value) == null ? void 0 : _a.loadMore();
+        }),
+        Z: isLoading.value,
+        aa: common_vendor.o(getArticleDetail),
+        ab: common_vendor.p({
+          type: "home",
+          size: "24",
+          color: "#444444"
+        }),
+        ac: common_vendor.o(goToHome),
+        ad: common_vendor.o(handleCall),
+        ae: articleDetail.value._id,
+        af: common_vendor.j({
+          "close": common_vendor.o(closePreview),
+          "change": common_vendor.o(handlePreviewChange)
+        }),
+        ag: common_vendor.p({
+          visible: previewVisible.value,
+          images: previewImages.value,
+          current: previewCurrent.value
+        }),
+        ah: common_vendor.gei(_ctx, "")
+      });
+    };
+  }
+};
+const MiniProgramPage = /* @__PURE__ */ common_vendor._export_sfc(_sfc_main, [["__scopeId", "data-v-786907d5"]]);
+ks.createPage(MiniProgramPage);

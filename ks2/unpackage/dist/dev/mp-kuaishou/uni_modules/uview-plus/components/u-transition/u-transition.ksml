@@ -1,0 +1,1 @@
+<view ks:if="{{a}}" ref="u-transition" bindtap="{{b}}" class="{{('u-transition') + ' ' + 'data-v-5cec8177' + ' ' + c + ' ' + virtualHostClass}}" style="{{d + ';' + virtualHostStyle}}" bindtouchmove="{{e}}" hidden="{{virtualHostHidden || false}}" id="{{f}}"><slot/></view>

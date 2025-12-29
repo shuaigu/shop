@@ -1,0 +1,98 @@
+/* uni.scss */
+/* 主题色 */
+/* 页面背景颜色 */
+/* 边框颜色 -- 分割线  */
+/*功能设置*/
+/*文字渐变*/
+/*页面默认样式*/
+/*信息默认样式*/
+.my.data-v-2f1ef635 {
+  height: 100vh;
+  overflow: hidden;
+  /*头部*/
+  /*内容*/
+}
+.my .myHead.data-v-2f1ef635 {
+  display: flex;
+  align-items: center;
+  padding: 24rpx;
+  height: 300rpx;
+  color: #fff;
+  background: linear-gradient(to right, #d0d5db, #a3c4d3, #d0d5db);
+  /*头像*/
+  /*未登录*/
+  /*已登录*/
+}
+.my .myHead .avatar.data-v-2f1ef635 {
+  margin-right: 16rpx;
+  width: 120rpx;
+  height: 120rpx;
+  border-radius: 50%;
+  overflow: hidden;
+}
+.my .myHead .login.data-v-2f1ef635 {
+  font-size: 32rpx;
+}
+.my .myHead .userInfo .nickname.data-v-2f1ef635 {
+  font-size: 32rpx;
+  font-weight: 600;
+}
+.my .myHead .userInfo .mobile.data-v-2f1ef635 {
+  font-size: 24rpx;
+}
+.my .myContent.data-v-2f1ef635 {
+  position: relative;
+  padding: 24rpx;
+  height: calc(100vh - 360rpx);
+  transform: translateY(-60rpx);
+  border-radius: 32rpx 32rpx 0 0;
+  background-color: #fff;
+  color: #999999;
+  /*功能区域*/
+  /*icon的公共样式*/
+  /*意见反馈*/
+  /*后台管理*/
+  /*分割线提示信息*/
+}
+.my .myContent .contract.data-v-2f1ef635 {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 24rpx;
+  border-top: 1px solid rgba(0, 0, 0, 0.1);
+  border: none;
+}
+.my .myContent .left.data-v-2f1ef635 {
+  display: flex;
+  align-items: center;
+}
+.my .myContent .left .value.data-v-2f1ef635 {
+  margin-left: 8rpx;
+  font-size: 32rpx;
+}
+.my .myContent .feedBack.data-v-2f1ef635 {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 24rpx;
+  border-top: 1px solid rgba(0, 0, 0, 0.1);
+}
+.my .myContent .adminManage.data-v-2f1ef635 {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 24rpx;
+  border-top: 1px solid rgba(0, 0, 0, 0.1);
+}
+.my .myContent .loginOut.data-v-2f1ef635 {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 24rpx;
+  border-top: 1px solid rgba(0, 0, 0, 0.1);
+}
+.my .myContent .bottom-line.data-v-2f1ef635 {
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+}

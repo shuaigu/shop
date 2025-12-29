@@ -1,0 +1,75 @@
+{
+	"bsonType": "object",
+	"required": [ "article_id", "user_id", "content" ],
+	"permission": {
+		"read": true,
+		"create": true,
+		"update": true,
+		"delete": true
+	},
+	"properties": {
+		"_id": {
+			"description": "ID，系统自动生成"
+		},
+		"article_id": {
+			"bsonType": "string",
+			"description": "关联的文章ID",
+			"foreignKey": "articleList._id"
+		},
+		"user_id": {
+			"bsonType": "string",
+			"description": "评论用户ID",
+			"foreignKey": "user._id"
+		},
+		"reply_user_id": {
+			"bsonType": "string",
+			"description": "被回复的用户ID",
+			"foreignKey": "user._id"
+		},
+		"reply_comment_id": {
+			"bsonType": "string",
+			"description": "被回复的评论ID",
+			"foreignKey": "commentList._id"
+		},
+		"content": {
+			"bsonType": "string",
+			"description": "评论内容",
+			"trim": "both",
+			"maxLength": 500
+		},
+		"create_time": {
+			"bsonType": "timestamp",
+			"description": "评论时间",
+			"defaultValue": { "$env": "now" }
+		},
+		"nickName": {
+			"bsonType": "string",
+			"description": "评论者昵称"
+		},
+		"avatarUrl": {
+			"bsonType": "string",
+			"description": "评论者头像"
+		},
+		"reply_to": {
+			"bsonType": "object",
+			"description": "回复信息，直接评论时为null",
+			"defaultValue": null,
+			"properties": {
+				"comment_id": {
+					"bsonType": "string",
+					"description": "被回复的评论ID",
+					"foreignKey": "commentList._id"
+				},
+				"user_id": {
+					"bsonType": "string",
+					"description": "被回复者的用户ID",
+					"foreignKey": "user._id"
+				},
+				"nickName": {
+					"bsonType": "string",
+					"description": "被回复者的昵称"
+				}
+			}
+		}
+	}
+}
