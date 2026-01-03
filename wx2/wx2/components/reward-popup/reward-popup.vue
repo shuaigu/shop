@@ -1,88 +1,126 @@
 <template>
 	<!-- 自定义弹窗遮罩 -->
 	<view class="reward-mask" v-if="visible" @click="closePopup">
-		<view class="reward-popup" @click.stop>
-			<!-- 头部 -->
-			<view class="reward-header">
-				<text class="reward-title">打赏支持</text>
-				<view class="close-btn" @click="closePopup">
-					<text class="close-icon">×</text>
+		<!-- 抽奖样式界面 -->
+		<view class="lottery-popup" @click.stop v-if="currentStep === 'lottery'">
+			<!-- 礼物盒图标 -->
+			<view class="gift-icon">
+				<text class="gift-emoji">🎁</text>
+			</view>
+			
+			<!-- 标题 -->
+			<view class="lottery-title">
+				<text class="title-main">幸运大抽奖</text>
+				<text class="title-sub">一元参与，赢取大奖！</text>
+			</view>
+			
+			<!-- 统计信息卡片 -->
+			<view class="stats-cards">
+				<view class="stats-card stats-card-left">
+					<text class="card-label">参与人数</text>
+					<text class="card-value card-value-red">{{ statistics.userCount || 0 }}人</text>
+				</view>
+				<view class="stats-card stats-card-right">
+					<text class="card-label">奖池金额</text>
+					<text class="card-value card-value-gold">¥{{ (statistics.totalAmount / 100 || 0).toFixed(0) }}</text>
 				</view>
 			</view>
-
-			<!-- 作者信息 -->
-			<view class="author-info">
-				<image 
-					class="author-avatar" 
-					:src="authorAvatar || '/static/images/default-avatar.png'" 
-					mode="aspectFill"
-				></image>
-				<text class="author-name">{{ authorName || '匿名用户' }}</text>
+			
+			<!-- 编号选择区域 -->
+			<view class="number-select-section">
+				<view class="number-select-title">
+					<text class="select-label">选择你的幸运编号</text>
+					<text class="select-range">（1-100）</text>
+				</view>
+				
+				<view class="number-input-wrapper" @click="showNumberPicker">
+					<text class="number-display" :class="{ 'placeholder': !selectedNumber }">
+						{{ selectedNumber ? `编号：${selectedNumber}` : '点击选择编号' }}
+					</text>
+					<text class="arrow-icon">▼</text>
+				</view>
+				
+				<text class="number-hint" v-if="!selectedNumber">请选择一个1-100之间的编号</text>
 			</view>
-
-			<!-- 说明文字 -->
-			<view class="reward-desc">
-				<text>感谢作者的精彩分享，您的支持是作者创作的最大动力</text>
+			
+			<!-- 参与按钮 -->
+			<button 
+				class="lottery-btn" 
+				:class="{ 'disabled': !selectedNumber }"
+				:disabled="!selectedNumber"
+				@click="goToConfirm"
+			>
+				参与抽奖（¥1）
+			</button>
+		</view>
+		
+		<!-- 确认支付界面 -->
+		<view class="confirm-popup" @click.stop v-if="currentStep === 'confirm'">
+			<!-- 标题 -->
+			<view class="confirm-title">
+				<text>确认支付</text>
 			</view>
-
-			<!-- 金额选择 -->
-			<view class="amount-section">
-				<text class="section-title">选择金额</text>
-				<view class="amount-options">
-					<view 
-						v-for="(item, index) in amountOptions" 
-						:key="index"
-						class="amount-item"
-						:class="{ active: selectedAmount === item }"
-						@click="selectAmount(item)"
-					>
-						<text class="amount-text">{{ item / 100 }}元</text>
+			
+			<!-- 礼物盒图标 -->
+			<view class="confirm-gift-icon">
+				<text class="gift-emoji">🎁</text>
+			</view>
+			
+			<!-- 活动名称 -->
+			<view class="confirm-activity">
+				<text>幸运大抽奖</text>
+			</view>
+			
+			<!-- 选中的编号 -->
+			<view class="confirm-number">
+				<text>幸运编号：{{ selectedNumber }}</text>
+			</view>
+			
+			<!-- 金额 -->
+			<view class="confirm-amount">
+				<text>¥1.00</text>
+			</view>
+			
+			<!-- 按钮组 -->
+			<view class="confirm-buttons">
+				<button class="confirm-pay-btn" @click="handleReward">
+					确认支付
+				</button>
+				<button class="confirm-cancel-btn" @click="backToLottery">
+					取消
+				</button>
+			</view>
+		</view>
+		
+		<!-- 编号选择器弹窗 -->
+		<view class="number-picker-mask" v-if="showPicker" @click="hidePicker">
+			<view class="number-picker-popup" @click.stop>
+				<view class="picker-header">
+					<text class="picker-title">选择幸运编号</text>
+					<view class="picker-close" @click="hidePicker">
+						<text>×</text>
 					</view>
 				</view>
-			</view>
-
-			<!-- 自定义金额 -->
-			<view class="custom-amount">
-				<text class="section-title">自定义金额</text>
-				<view class="custom-input-wrapper">
-					<text class="currency-symbol">¥</text>
-					<input 
-						class="custom-input" 
-						type="digit"
-						:value="customAmountYuan"
-						@input="onCustomAmountInput"
-						placeholder="请输入金额"
-						placeholder-style="color: #999;"
-					/>
-					<text class="unit-text">元</text>
+				
+				<scroll-view class="number-grid-scroll" scroll-y>
+					<view class="number-grid">
+						<view 
+							v-for="num in 100" 
+							:key="num"
+							class="number-item"
+							:class="{ 'selected': selectedNumber === num }"
+							@click="selectNumber(num)"
+						>
+							<text>{{ num }}</text>
+						</view>
+					</view>
+				</scroll-view>
+				
+				<view class="picker-footer">
+					<button class="picker-confirm-btn" @click="confirmNumber">
+						确认选择
+					</button>
 				</view>
-			</view>
-
-			<!-- 打赏留言 -->
-			<view class="message-section">
-				<text class="section-title">留言（选填）</text>
-				<textarea 
-					class="message-input"
-					v-model="message"
-					placeholder="说点什么吧..."
-					placeholder-style="color: #999;"
-					maxlength="100"
-					:show-confirm-bar="false"
-				></textarea>
-				<text class="message-count">{{ message.length }}/100</text>
-			</view>
-
-			<!-- 打赏统计 -->
-			<view class="reward-stats" v-if="statistics.totalCount > 0">
-				<text class="stats-text">已有{{ statistics.userCount }}人打赏，共{{ (statistics.totalAmount / 100).toFixed(2) }}元</text>
-			</view>
-
-			<!-- 按钮组 -->
-			<view class="button-group">
-				<button class="cancel-btn" @click="closePopup">取消</button>
-				<button class="confirm-btn" @click="handleReward" :disabled="!canReward">
-					立即打赏{{ currentAmount > 0 ? `（¥${(currentAmount / 100).toFixed(2)}）` : '' }}
-				</button>
 			</view>
 		</view>
 	</view>
@@ -119,17 +157,26 @@ const emit = defineEmits(['success', 'close'])
 // 弹窗显示状态
 const visible = ref(false)
 
-// 预设金额选项（分）
-const amountOptions = ref([100, 500, 1000, 2000, 5000])
+// 当前步骤：lottery(抽奖页面) 或 confirm(确认支付页面)
+const currentStep = ref('lottery')
 
-// 选中的预设金额
-const selectedAmount = ref(0)
+// 预设金额选项（分）- 固定为1元
+const amountOptions = ref([100])
 
-// 自定义金额（元，字符串形式）
+// 选中的预设金额 - 固定为1元
+const selectedAmount = ref(100)
+
+// 自定义金额（元，字符串形式）- 不再使用
 const customAmountYuan = ref('')
 
-// 打赏留言
+// 打赏留言 - 不再使用
 const message = ref('')
+
+// 选中的编号（1-100）
+const selectedNumber = ref(0)
+
+// 是否显示编号选择器
+const showPicker = ref(false)
 
 // 打赏统计
 const statistics = ref({
@@ -138,53 +185,58 @@ const statistics = ref({
 	userCount: 0
 })
 
-// 当前选择的金额（分）
+// 当前选择的金额（分）- 固定为1元
 const currentAmount = computed(() => {
-	if (customAmountYuan.value) {
-		const yuan = parseFloat(customAmountYuan.value)
-		return Math.floor(yuan * 100)
-	}
-	return selectedAmount.value
+	return 100 // 固定1元 = 100分
 })
 
-// 是否可以打赏
+// 是否可以打赏 - 必须选择编号
 const canReward = computed(() => {
-	return currentAmount.value >= 100 && currentAmount.value <= 100000
+	return selectedNumber.value > 0 && selectedNumber.value <= 100
 })
 
-// 监听自定义金额输入，清除预设选择
-watch(customAmountYuan, (newVal) => {
-	if (newVal) {
-		selectedAmount.value = 0
-	}
-})
-
-// 选择预设金额
-const selectAmount = (amount) => {
-	selectedAmount.value = amount
-	customAmountYuan.value = ''
+// 显示编号选择器
+const showNumberPicker = () => {
+	showPicker.value = true
 }
 
-// 自定义金额输入
-const onCustomAmountInput = (e) => {
-	let value = e.detail.value
-	// 只保留数字和小数点
-	value = value.replace(/[^\d.]/g, '')
-	// 只保留一个小数点
-	const parts = value.split('.')
-	if (parts.length > 2) {
-		value = parts[0] + '.' + parts.slice(1).join('')
+// 隐藏编号选择器
+const hidePicker = () => {
+	showPicker.value = false
+}
+
+// 选择编号
+const selectNumber = (num) => {
+	selectedNumber.value = num
+}
+
+// 确认选择编号
+const confirmNumber = () => {
+	if (selectedNumber.value > 0) {
+		showPicker.value = false
+	} else {
+		uni.showToast({
+			title: '请选择一个编号',
+			icon: 'none'
+		})
 	}
-	// 小数点后最多2位
-	if (parts.length === 2 && parts[1].length > 2) {
-		value = parts[0] + '.' + parts[1].substring(0, 2)
+}
+
+// 前往确认支付页面
+const goToConfirm = () => {
+	if (!selectedNumber.value) {
+		uni.showToast({
+			title: '请先选择幸运编号',
+			icon: 'none'
+		})
+		return
 	}
-	// 最大金额1000元
-	const numValue = parseFloat(value)
-	if (numValue > 1000) {
-		value = '1000'
-	}
-	customAmountYuan.value = value
+	currentStep.value = 'confirm'
+}
+
+// 返回抽奖页面
+const backToLottery = () => {
+	currentStep.value = 'lottery'
 }
 
 // 打开弹窗
@@ -201,6 +253,9 @@ const open = async () => {
 	// 加载打赏统计
 	await loadStatistics()
 	
+	// 重置步骤为抽奖页面
+	currentStep.value = 'lottery'
+	
 	// 显示弹窗
 	visible.value = true
 }
@@ -209,9 +264,12 @@ const open = async () => {
 const closePopup = () => {
 	visible.value = false
 	// 重置数据
-	selectedAmount.value = 0
+	selectedAmount.value = 100
 	customAmountYuan.value = ''
 	message.value = ''
+	selectedNumber.value = 0
+	showPicker.value = false
+	currentStep.value = 'lottery'
 	emit('close')
 }
 
@@ -241,16 +299,8 @@ const handleReward = async () => {
 		return
 	}
 	
-	// 二次确认
-	uni.showModal({
-		title: '确认打赏',
-		content: `确认打赏 ¥${(currentAmount.value / 100).toFixed(2)} 元吗？`,
-		success: async (res) => {
-			if (res.confirm) {
-				await submitReward()
-			}
-		}
-	})
+	// 直接提交，不再二次确认（已在确认页面确认）
+	await submitReward()
 }
 
 // 提交打赏
@@ -275,7 +325,8 @@ const submitReward = async () => {
 			article_id: props.articleId,
 			amount: currentAmount.value,
 			message: message.value.trim(),
-			from_user_id: userId  // 测试模式：直接传递用户ID
+			from_user_id: userId,  // 测试模式：直接传递用户ID
+			lucky_number: selectedNumber.value  // 传递选中的幸运编号
 		})
 		
 		if (orderRes.code !== 0) {
@@ -473,236 +524,409 @@ defineExpose({
 	z-index: 9999;
 }
 
-.reward-popup {
-	width: 600rpx;
-	background: #fff;
-	border-radius: 24rpx;
-	overflow: hidden;
-	max-height: 90vh;
-	overflow-y: auto;
-}
-
-.reward-header {
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	position: relative;
-	padding: 32rpx 24rpx 24rpx;
-	border-bottom: 1px solid #f5f5f5;
-	
-	.reward-title {
-		font-size: 32rpx;
-		font-weight: 600;
-		color: #333;
-	}
-	
-	.close-btn {
-		position: absolute;
-		right: 24rpx;
-		top: 32rpx;
-		padding: 8rpx;
-		
-		.close-icon {
-			font-size: 48rpx;
-			color: #999;
-			line-height: 1;
-		}
-	}
-}
-
-.author-info {
+// ==================== 抽奖样式界面 ====================
+.lottery-popup {
+	width: 650rpx;
+	background: linear-gradient(135deg, #ffe8f0 0%, #ffd4e5 100%);
+	border-radius: 32rpx;
+	border: 4rpx solid #ffb3cc;
+	padding: 60rpx 40rpx 50rpx;
 	display: flex;
 	flex-direction: column;
 	align-items: center;
-	padding: 32rpx 24rpx 24rpx;
+	box-shadow: 0 8rpx 32rpx rgba(255, 107, 107, 0.3);
+}
+
+.gift-icon {
+	margin-bottom: 30rpx;
 	
-	.author-avatar {
-		width: 120rpx;
-		height: 120rpx;
-		border-radius: 60rpx;
-		margin-bottom: 16rpx;
-	}
-	
-	.author-name {
-		font-size: 28rpx;
-		color: #333;
-		font-weight: 500;
+	.gift-emoji {
+		font-size: 120rpx;
+		line-height: 1;
 	}
 }
 
-.reward-desc {
-	padding: 0 24rpx 24rpx;
+.lottery-title {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	margin-bottom: 40rpx;
+	
+	.title-main {
+		font-size: 52rpx;
+		font-weight: bold;
+		color: #333;
+		margin-bottom: 16rpx;
+		letter-spacing: 2rpx;
+	}
+	
+	.title-sub {
+		font-size: 28rpx;
+		color: #666;
+		line-height: 1.5;
+	}
+}
+
+.stats-cards {
+	width: 100%;
+	display: flex;
+	gap: 20rpx;
+	margin-bottom: 50rpx;
+}
+
+.stats-card {
+	flex: 1;
+	background: rgba(255, 255, 255, 0.9);
+	border-radius: 20rpx;
+	padding: 32rpx 20rpx;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.05);
+	
+	.card-label {
+		font-size: 26rpx;
+		color: #666;
+		margin-bottom: 12rpx;
+	}
+	
+	.card-value {
+		font-size: 48rpx;
+		font-weight: bold;
+		line-height: 1.2;
+	}
+	
+	.card-value-red {
+		color: #ff4757;
+	}
+	
+	.card-value-gold {
+		color: #ffa502;
+	}
+}
+
+.stats-card-left {
+	background: linear-gradient(135deg, #fff5f5 0%, #ffe5e5 100%);
+}
+
+.stats-card-right {
+	background: linear-gradient(135deg, #fffbf0 0%, #fff3d4 100%);
+}
+
+// 编号选择区域
+.number-select-section {
+	width: 100%;
+	margin-bottom: 40rpx;
+}
+
+.number-select-title {
+	display: flex;
+	align-items: baseline;
+	margin-bottom: 20rpx;
+	
+	.select-label {
+		font-size: 30rpx;
+		font-weight: 600;
+		color: #333;
+		margin-right: 8rpx;
+	}
+	
+	.select-range {
+		font-size: 24rpx;
+		color: #999;
+	}
+}
+
+.number-input-wrapper {
+	width: 100%;
+	height: 80rpx;
+	background: rgba(255, 255, 255, 0.9);
+	border-radius: 16rpx;
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: 0 24rpx;
+	box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.08);
+	border: 2rpx solid rgba(255, 107, 107, 0.2);
+	
+	.number-display {
+		font-size: 28rpx;
+		color: #333;
+		font-weight: 500;
+		
+		&.placeholder {
+			color: #999;
+			font-weight: 400;
+		}
+	}
+	
+	.arrow-icon {
+		font-size: 20rpx;
+		color: #666;
+	}
+}
+
+.number-hint {
+	font-size: 22rpx;
+	color: #ff6b6b;
+	margin-top: 12rpx;
+	display: block;
+}
+
+.lottery-btn {
+	width: 100%;
+	height: 100rpx;
+	background: linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%);
+	border-radius: 50rpx;
+	font-size: 36rpx;
+	color: #fff;
+	font-weight: bold;
+	border: none;
+	box-shadow: 0 8rpx 24rpx rgba(238, 90, 111, 0.4);
+	letter-spacing: 2rpx;
+	
+	&.disabled {
+		background: #cccccc;
+		box-shadow: none;
+		opacity: 0.6;
+	}
+	
+	&::after {
+		border: none;
+	}
+	
+	&:active {
+		opacity: 0.9;
+		transform: scale(0.98);
+	}
+}
+
+// ==================== 确认支付界面 ====================
+.confirm-popup {
+	width: 600rpx;
+	background: #fff;
+	border-radius: 32rpx;
+	overflow: hidden;
+	box-shadow: 0 8rpx 32rpx rgba(0, 0, 0, 0.15);
+}
+
+.confirm-title {
+	padding: 40rpx 0;
 	text-align: center;
+	border-bottom: 1rpx solid #f0f0f0;
 	
 	text {
-		font-size: 24rpx;
-		color: #999;
-		line-height: 1.6;
+		font-size: 36rpx;
+		font-weight: bold;
+		color: #333;
 	}
 }
 
-.amount-section {
-	padding: 24rpx;
+.confirm-gift-icon {
+	padding: 60rpx 0 30rpx;
+	text-align: center;
 	
-	.section-title {
-		display: block;
+	.gift-emoji {
+		font-size: 140rpx;
+		line-height: 1;
+	}
+}
+
+.confirm-activity {
+	text-align: center;
+	margin-bottom: 16rpx;
+	
+	text {
+		font-size: 36rpx;
+		font-weight: bold;
+		color: #333;
+	}
+}
+
+.confirm-number {
+	text-align: center;
+	margin-bottom: 20rpx;
+	
+	text {
 		font-size: 28rpx;
-		color: #333;
-		font-weight: 500;
-		margin-bottom: 20rpx;
-	}
-	
-	.amount-options {
-		display: flex;
-		flex-wrap: wrap;
-		gap: 16rpx;
-	}
-	
-	.amount-item {
-		flex: 0 0 calc(33.333% - 11rpx);
-		height: 80rpx;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		background: #f5f5f5;
-		border-radius: 12rpx;
-		border: 2rpx solid transparent;
-		transition: all 0.3s;
-		
-		&.active {
-			background: #fff5f0;
-			border-color: #ff6b35;
-			
-			.amount-text {
-				color: #ff6b35;
-				font-weight: 600;
-			}
-		}
-		
-		.amount-text {
-			font-size: 28rpx;
-			color: #333;
-		}
+		color: #ff6b6b;
+		font-weight: 600;
+		background: linear-gradient(135deg, #ffe8f0 0%, #ffd4e5 100%);
+		padding: 12rpx 32rpx;
+		border-radius: 20rpx;
+		display: inline-block;
 	}
 }
 
-.custom-amount {
-	padding: 0 24rpx 24rpx;
+.confirm-amount {
+	text-align: center;
+	margin-bottom: 60rpx;
 	
-	.section-title {
-		display: block;
-		font-size: 28rpx;
-		color: #333;
-		font-weight: 500;
-		margin-bottom: 20rpx;
-	}
-	
-	.custom-input-wrapper {
-		display: flex;
-		align-items: center;
-		background: #f5f5f5;
-		border-radius: 12rpx;
-		padding: 0 24rpx;
-		height: 80rpx;
-		
-		.currency-symbol {
-			font-size: 32rpx;
-			color: #333;
-			margin-right: 8rpx;
-			font-weight: 600;
-		}
-		
-		.custom-input {
-			flex: 1;
-			font-size: 32rpx;
-			color: #333;
-			height: 100%;
-		}
-		
-		.unit-text {
-			font-size: 24rpx;
-			color: #999;
-			margin-left: 8rpx;
-		}
+	text {
+		font-size: 72rpx;
+		font-weight: bold;
+		color: #ff4757;
 	}
 }
 
-.message-section {
-	padding: 0 24rpx 24rpx;
-	position: relative;
-	
-	.section-title {
-		display: block;
-		font-size: 28rpx;
-		color: #333;
-		font-weight: 500;
-		margin-bottom: 20rpx;
-	}
-	
-	.message-input {
-		width: 100%;
-		min-height: 120rpx;
-		background: #f5f5f5;
-		border-radius: 12rpx;
-		padding: 16rpx 20rpx;
-		font-size: 26rpx;
-		color: #333;
-		line-height: 1.6;
-		box-sizing: border-box;
-	}
-	
-	.message-count {
-		position: absolute;
-		right: 36rpx;
-		bottom: 36rpx;
-		font-size: 22rpx;
-		color: #999;
-	}
-}
-
-.reward-stats {
-	padding: 16rpx 24rpx;
-	background: #f9f9f9;
-	margin: 0 24rpx 24rpx;
-	border-radius: 12rpx;
-	
-	.stats-text {
-		font-size: 24rpx;
-		color: #666;
-		line-height: 1.6;
-	}
-}
-
-.button-group {
+.confirm-buttons {
+	padding: 0 40rpx 50rpx;
 	display: flex;
-	gap: 16rpx;
-	padding: 0 24rpx 32rpx;
+	flex-direction: column;
+	gap: 20rpx;
 	
 	button {
-		flex: 1;
-		height: 88rpx;
-		border-radius: 44rpx;
-		font-size: 30rpx;
+		width: 100%;
+		height: 90rpx;
+		border-radius: 45rpx;
+		font-size: 32rpx;
 		border: none;
+		font-weight: 600;
 		
 		&::after {
 			border: none;
 		}
 	}
+}
+
+.confirm-pay-btn {
+	background: linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%);
+	color: #fff;
+	box-shadow: 0 6rpx 20rpx rgba(238, 90, 111, 0.3);
 	
-	.cancel-btn {
-		background: #f5f5f5;
-		color: #666;
+	&:active {
+		opacity: 0.9;
+	}
+}
+
+.confirm-cancel-btn {
+	background: #f5f5f5;
+	color: #666;
+	
+	&:active {
+		background: #e8e8e8;
+	}
+}
+
+// ==================== 编号选择器弹窗 ====================
+.number-picker-mask {
+	position: fixed;
+	top: 0;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	background: rgba(0, 0, 0, 0.6);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	z-index: 10000;
+}
+
+.number-picker-popup {
+	width: 660rpx;
+	max-height: 80vh;
+	background: #fff;
+	border-radius: 24rpx;
+	overflow: hidden;
+	display: flex;
+	flex-direction: column;
+	box-shadow: 0 12rpx 48rpx rgba(0, 0, 0, 0.2);
+}
+
+.picker-header {
+	padding: 32rpx 40rpx;
+	border-bottom: 1rpx solid #f0f0f0;
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	background: linear-gradient(135deg, #ffe8f0 0%, #ffd4e5 100%);
+	
+	.picker-title {
+		font-size: 32rpx;
+		font-weight: bold;
+		color: #333;
 	}
 	
-	.confirm-btn {
-		background: linear-gradient(135deg, #ff6b35 0%, #ff8c42 100%);
-		color: #fff;
-		font-weight: 600;
+	.picker-close {
+		padding: 8rpx;
 		
-		&[disabled] {
-			opacity: 0.5;
+		text {
+			font-size: 48rpx;
+			color: #666;
+			line-height: 1;
 		}
+	}
+}
+
+.number-grid-scroll {
+	flex: 1;
+	padding: 30rpx 20rpx;
+	max-height: 500rpx;
+}
+
+.number-grid {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 16rpx;
+	justify-content: space-between;
+}
+
+.number-item {
+	width: calc((100% - 80rpx) / 5);
+	height: 80rpx;
+	background: #f5f5f5;
+	border-radius: 12rpx;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	border: 2rpx solid transparent;
+	transition: all 0.3s;
+	
+	text {
+		font-size: 28rpx;
+		color: #333;
+		font-weight: 500;
+	}
+	
+	&.selected {
+		background: linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%);
+		border-color: #ff6b6b;
+		box-shadow: 0 4rpx 12rpx rgba(238, 90, 111, 0.3);
+		
+		text {
+			color: #fff;
+			font-weight: bold;
+		}
+	}
+	
+	&:active {
+		transform: scale(0.95);
+	}
+}
+
+.picker-footer {
+	padding: 20rpx 40rpx 40rpx;
+	border-top: 1rpx solid #f0f0f0;
+}
+
+.picker-confirm-btn {
+	width: 100%;
+	height: 88rpx;
+	background: linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%);
+	border-radius: 44rpx;
+	font-size: 32rpx;
+	color: #fff;
+	font-weight: bold;
+	border: none;
+	box-shadow: 0 6rpx 20rpx rgba(238, 90, 111, 0.3);
+	
+	&::after {
+		border: none;
+	}
+	
+	&:active {
+		opacity: 0.9;
 	}
 }
 </style>
