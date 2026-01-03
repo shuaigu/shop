@@ -11,6 +11,9 @@ export default {
 	},
 	data() {
 		return {
+			// 用户ID
+			userId: '', // 🔥 添加userId字段
+			
 			// 分享相关数据
 			shareTitle: '',
 			shareImageUrl: '',
@@ -75,10 +78,6 @@ export default {
 		}
 	},
 	
-	props: {
-		userId: String
-	},
-
 	computed: {
 		// 计算文章总数，便于在模板和分享中使用
 		articleTotal() {
@@ -93,6 +92,7 @@ export default {
 		
 		// 保存userId - 处理从不同来源进入的情况
 		if (options.userId) {
+			this.userId = options.userId; // 🔥 关键修复：赋值给 this.userId
 			this.shareUserId = options.userId;
 		} else if (options.query) {
 			// 处理从朋友圈分享进入的情况
@@ -107,11 +107,13 @@ export default {
 			
 			// 从query参数中获取userId
 			if (queryParams.userId) {
+				this.userId = queryParams.userId; // 🔥 关键修复：赋值给 this.userId
 				this.shareUserId = queryParams.userId;
 			}
 		}
 		
-		console.log('解析后的shareUserId:', this.shareUserId);
+		console.log('👤 [用户文章列表] 解析后的userId:', this.userId);
+		console.log('👤 [用户文章列表] 解析后的shareUserId:', this.shareUserId);
 		
 		// 初始化store
 		this.userStore = useUserInfoStore();

@@ -1731,19 +1731,56 @@ export default {
 
 		// 验证并处理用户头像URL
 		let userAvatarUrl = userStore.userInfo.avatarUrl || '/static/images/touxiang.png'
-		// 更严格的临时文件检测
-		if (!userAvatarUrl || 
-			 userAvatarUrl.startsWith('http://tmp/') || 
-			 userAvatarUrl.startsWith('wxfile://') ||
-			 userAvatarUrl.includes('tmp_') ||
-			 userAvatarUrl.includes('tmp/')) {
-			console.warn('📷 检测到临时或无效头像文件，使用默认头像:', userAvatarUrl)
+		
+		// 检测临时文件、cloud://旧格式
+		const isInvalidAvatar = !userAvatarUrl || 
+			userAvatarUrl.startsWith('http://tmp/') || 
+			userAvatarUrl.startsWith('wxfile://') ||
+			userAvatarUrl.includes('tmp_') ||
+			userAvatarUrl.includes('tmp/') ||
+			userAvatarUrl.startsWith('cloud://'); // 只过滤cloud://，不过滤CDN域名
+		
+		if (isInvalidAvatar) {
+			console.warn('🚨 检测到无效或旧格式头像文件，使用默认头像:', userAvatarUrl)
 			userAvatarUrl = '/static/images/touxiang.png'
 		}
+		
+		// 🔥 关键：如果是 uniCloud CDN 域名，转换为自定义域名
+		if (userAvatarUrl.includes('.cdn.bspapp.com/cloudstorage/')) {
+			console.log('🔄 检测到 uniCloud CDN 格式头像，开始转换...');
+			
+			try {
+				// 提取文件路径部分
+				// 示例: https://mp-xxx.cdn.bspapp.com/cloudstorage/xxx.jpg?imageMogr2/...
+				// 提取: xxx.jpg
+				const match = userAvatarUrl.match(/\.cdn\.bspapp\.com\/cloudstorage\/(.+)/);
+				
+				if (match && match[1]) {
+					const filePath = match[1];
+					// 移除URL中的图片处理参数
+					const cleanPath = filePath.split('?')[0];
+					// 构建新的URL: https://aly2.jingle0350.cn/xxx.jpg
+					userAvatarUrl = `https://aly2.jingle0350.cn/${cleanPath}`;
+					
+					console.log('✅ CDN域名转换成功！');
+					console.log('  - 原始URL:', userStore.userInfo.avatarUrl);
+					console.log('  - 转换后:', userAvatarUrl);
+				} else {
+					console.warn('⚠️ CDN域名格式无法识别，使用默认头像');
+					userAvatarUrl = '/static/images/touxiang.png';
+				}
+			} catch (error) {
+				console.error('❌ CDN域名转换失败:', error);
+				userAvatarUrl = '/static/images/touxiang.png';
+			}
+		}
+		
 		// 打印调试信息
-		console.log('📷 发布文章使用的头像URL:', userAvatarUrl)
-		console.log('📷 原始头像URL:', userStore.userInfo.avatarUrl)
-		console.log('📷 用户昵称:', userStore.userInfo.nickName)
+		console.log('📷 发布文章使用的头像信息:');
+		console.log('  - 头像URL:', userAvatarUrl);
+		console.log('  - 原始头像URL:', userStore.userInfo.avatarUrl);
+		console.log('  - 用户昵称:', userStore.userInfo.nickName);
+		console.log('  - 用户ID:', userStore.userInfo.uid);
 
 		// 构建基础参数
 		const params = {
@@ -1923,10 +1960,13 @@ export default {
 				)
 			])
 
-			if (res.id || res.code === 0) {
+				if (res.id || res.code === 0) {
 				// ===== 优化：先关闭loading，再显示成功提示，最后跳转 =====
 				// 1. 先关闭loading
 				uni.hideLoading()
+				
+				console.log('✅ 文章发布成功，文章ID:', res.id);
+				console.log('👤 发布的文章包含头像:', userStore.userInfo.avatarUrl);
 				
 				// 2. 显示成功提示（保持在屏幕上1.5秒）
 				uni.showToast({
@@ -1938,11 +1978,11 @@ export default {
 				
 				// 3. 等待成功提示显示完整后再跳转
 				setTimeout(() => {
-					// 发布成功后跳转到首页并刷新
+					// 发布成功后跳转到首页并刷新，添加时间戳避免缓存
 					uni.reLaunch({
-						url: `/pages/index/index?refresh=true&timestamp=${Date.now()}`,
+						url: `/pages/index/index?refresh=true&timestamp=${Date.now()}&articleId=${res.id}`,
 						success: () => {
-							console.log('跳转到首页并刷新')
+							console.log('跳转到首页并刷新，头像应该同步显示')
 							// 重置提交状态
 							isSubmitting.value = false
 						}

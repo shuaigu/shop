@@ -658,17 +658,20 @@
 		
 		// 检查是否需要刷新（从发布页跳转过来）
 		if (shouldRefreshAfterLoad.value) {
-			console.log('检测到刷新标记，延迟1秒后刷新数据');
+			console.log('检测到刷新标记，清除缓存并刷新数据');
+			// 清除文章缓存，确保加载最新数据
+			cacheManager.clearByType('articles');
+			
 			setTimeout(() => {
 				pageNo.value = 1;
 				status.value = 'more';
 				getArticleList(tempCateId).then(() => {
-					console.log('页面数据刷新完成');
+					console.log('✅ 页面数据刷新完成，新文章头像已加载');
 					shouldRefreshAfterLoad.value = false; // 重置标记
 				}).catch(err => {
-					console.error('刷新数据失败:', err);
+					console.error('❌ 刷新数据失败:', err);
 				});
-			}, 1000); // 延迟1秒
+			}, 800); // 延迟800毫秒，确保页面渲染完成
 		}
 	});
 

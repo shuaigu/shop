@@ -84,11 +84,42 @@ export function fixImageUrl(url, type = 'image', addParams = true) {
 	// 🔥 uniCloud CDN域名转换为配置的域名
 	// 识别uniCloud CDN域名：mp-xxx.cdn.bspapp.com
 	if (url.includes('.cdn.bspapp.com/cloudstorage/')) {
-		// 检测uniCloud旧数据，降级为默认图
-		console.warn('⚠️ [域名转换] 检测uniCloud CDN旧数据，降级为默认图:', url);
-		return type === 'avatar' ? domainConfig.defaultImages.avatar : domainConfig.defaultImages.default;
+		console.log('🔄 [fixImageUrl] 检测uniCloud CDN域名，转换为自定义域名:', url);
 		
-		/* 旧数据已废弃，统一降级为默认图 */
+		try {
+			// 提取文件路径部分
+			// 示例: https://mp-xxx.cdn.bspapp.com/cloudstorage/xxx.jpg
+			const match = url.match(/\.cdn\.bspapp\.com(\/cloudstorage\/.+)/);
+			
+			if (match && match[1]) {
+				const filePath = match[1];
+				// 移除 /cloudstorage/ 前缀
+				const cleanPath = filePath.replace('/cloudstorage/', '');
+				// 构建新的URL
+				const convertedUrl = `https://${domainConfig.correctDomain}/${cleanPath}`;
+				// 移除URL中的图片处理参数
+				const finalUrl = convertedUrl.split('?')[0];
+				
+				console.log('✅ [fixImageUrl] CDN域名转换成功:', finalUrl);
+				
+				// 如果需要添加参数，根据类型添加
+				if (addParams) {
+					if (type === 'avatar') {
+						return addImageParams(finalUrl, { preset: 'thumbnail' });
+					} else {
+						return addImageParams(finalUrl, { preset: 'listWidth' });
+					}
+				}
+				
+				return finalUrl;
+			}
+			
+			console.warn('⚠️ [fixImageUrl] CDN域名格式无法识别，使用默认图');
+			return type === 'avatar' ? domainConfig.defaultImages.avatar : domainConfig.defaultImages.default;
+		} catch (error) {
+			console.error('❌ [fixImageUrl] CDN域名转换失败:', error);
+			return type === 'avatar' ? domainConfig.defaultImages.avatar : domainConfig.defaultImages.default;
+		}
 	}
 	
 	// 🔥 自动添加图片处理参数
@@ -208,10 +239,39 @@ export async function processAvatarUrl(avatarUrl) {
 		}
 	}
 	
-	// 5. uniCloud CDN域名（旧头像数据，降级为空）
+	// 5. uniCloud CDN域名（旧头像数据，转换为自定义域名）
 	if (avatarUrl.includes('.cdn.bspapp.com/cloudstorage/')) {
-		console.log('👤 processAvatarUrl: 检测uniCloud CDN域名（旧数据），返回空字符串');
-		return ''; // 旧数据统一返回空，使用默认头像
+		console.log('👤 processAvatarUrl: 检测uniCloud CDN域名（旧数据），尝试转换为自定义域名');
+		
+		try {
+			// 提取文件路径部分
+			// 示例: https://mp-xxx.cdn.bspapp.com/cloudstorage/xxx.jpg
+			// 提取: /cloudstorage/xxx.jpg
+			const match = avatarUrl.match(/\.cdn\.bspapp\.com(\/cloudstorage\/.+)/);
+			
+			if (match && match[1]) {
+				const filePath = match[1];
+				// 移除 /cloudstorage/ 前缀
+				const cleanPath = filePath.replace('/cloudstorage/', '');
+				// 构建新的URL: https://aly2.jingle0350.cn/ + 文件路径
+				const convertedUrl = `https://${domainConfig.correctDomain}/${cleanPath}`;
+				
+				// 移除URL中的图片处理参数
+				const finalUrl = convertedUrl.split('?')[0];
+				
+				console.log('✅ processAvatarUrl: CDN域名转换成功');
+				console.log('  - 原始URL:', avatarUrl);
+				console.log('  - 转换后:', finalUrl);
+				
+				return finalUrl;
+			}
+			
+			console.warn('⚠️ processAvatarUrl: CDN域名格式无法识别，返回空字符串');
+			return '';
+		} catch (error) {
+			console.error('❌ processAvatarUrl: CDN域名转换失败:', error);
+			return '';
+		}
 	}
 	
 	// 6. HTTP 协议，转换为 HTTPS

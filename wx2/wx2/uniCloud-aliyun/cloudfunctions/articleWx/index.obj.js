@@ -91,9 +91,15 @@ module.exports = {
 		// 验证并处理用户头像URL - 防止临时文件写入数据库
 		let validAvatarUrl = user_avatarUrl || '/static/images/touxiang.png'
 		if (validAvatarUrl.startsWith('http://tmp/') || validAvatarUrl.startsWith('wxfile://')) {
-			console.warn('云函数检测到临时头像文件，使用默认头像:', validAvatarUrl)
+			console.warn('🚨 [云函数] 检测到临时头像文件，使用默认头像:', validAvatarUrl)
 			validAvatarUrl = '/static/images/touxiang.png'
 		}
+		
+		console.log('👤 [云函数-addArticle] 用户头像信息:');
+		console.log('  - 用户ID:', user_id);
+		console.log('  - 用户昵称:', user_nickName);
+		console.log('  - 接收到的头像URL:', user_avatarUrl);
+		console.log('  - 最终存入数据库的头像URL:', validAvatarUrl);
 		// 新增文章 - 将 state 默认设置为 1 (已通过)
 		return await this.articleCollection.add( {
 			user_id,
@@ -334,36 +340,31 @@ module.exports = {
 			.where( { user_id: user_id } )
 			.count()
 
-		// 优化：当文章为空时，直接从用户表查询用户信息
+		// 🔥 优化：始终从用户表查询最新的用户信息，确保头像和昵称是最新的
 		let userInfo = null;
 		
-		if (res.data && res.data.length > 0) {
-			// 从文章数据中获取用户信息
-			userInfo = {
-				avatarUrl: res.data[0].user_avatarUrl,
-				nickName: res.data[0].user_nickName,
-				mobile: res.data[0].user_mobile
-			};
-			console.log('👤 [云函数] 从文章数据获取用户信息:', userInfo);
-		} else {
-			// 文章为空，从用户表查询
-			console.log('👤 [云函数] 文章为空，从用户表查询用户信息, user_id:', user_id);
-			try {
-				const userResult = await this.db.collection('user').doc(user_id).get();
-				
-				if (userResult.data && userResult.data.length > 0) {
-					userInfo = {
-						avatarUrl: userResult.data[0].avatarUrl || '',
-						nickName: userResult.data[0].nickName || '未设置昵称',
-						mobile: userResult.data[0].mobile || ''
-					};
-					console.log('👤 [云函数] 从用户表获取用户信息成功:', userInfo);
-				} else {
-					console.log('👤 [云函数] 用户不存在');
-				}
-			} catch (err) {
-				console.error('👤 [云函数] 查询用户表失败:', err);
+		console.log('👤 [云函数-getArticleList] 开始查询用户信息, user_id:', user_id);
+		
+		try {
+			// 始终从user表查询用户信息，确保数据准确性
+			const userResult = await this.db.collection('user').doc(user_id).get();
+			
+			if (userResult.data && userResult.data.length > 0) {
+				const userData = userResult.data[0];
+				userInfo = {
+					avatarUrl: userData.avatarUrl || '',
+					nickName: userData.nickName || '未设置昵称',
+					mobile: userData.mobile || ''
+				};
+				console.log('👤 [云函数-getArticleList] 从user表获取用户信息成功');
+				console.log('👤 [云函数-getArticleList] avatarUrl:', userInfo.avatarUrl);
+				console.log('👤 [云函数-getArticleList] nickName:', userInfo.nickName);
+				console.log('👤 [云函数-getArticleList] mobile:', userInfo.mobile);
+			} else {
+				console.log('⚠️ [云函数-getArticleList] user表中未找到该用户, user_id:', user_id);
 			}
+		} catch (err) {
+			console.error('❌ [云函数-getArticleList] 查询user表失败:', err);
 		}
 
 		return {

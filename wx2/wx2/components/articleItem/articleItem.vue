@@ -243,40 +243,53 @@
 		const userInfo = props.item || {};
 		let avatarUrl = userInfo.user_avatarUrl || userInfo.avatarUrl || (userInfo.author && userInfo.author.avatar_file && userInfo.author.avatar_file.url);
 		
+		console.log('👤 [articleItem] 开始处理头像, 原始URL:', avatarUrl);
+		
 		// 如果没有头像URL，返回默认头像
 		if (!avatarUrl) {
+			console.log('👤 [articleItem] 头像URL为空，使用默认头像');
 			return '/static/images/touxiang.png';
 		}
 		
 		// 如果是默认头像，直接返回
 		if (avatarUrl === getDefaultImage('avatar') || avatarUrl === '/static/images/touxiang.png') {
+			console.log('👤 [articleItem] 已是默认头像，直接返回');
 			return '/static/images/touxiang.png';
 		}
 		
 		// 检测并过滤临时文件路径
 		if (avatarUrl.includes('tmp_') || avatarUrl.includes('tmp/') || avatarUrl.startsWith('http://tmp/') || avatarUrl.startsWith('wxfile://')) {
-			console.warn('检测到临时文件路径，使用默认头像:', avatarUrl);
+			console.warn('👤 [articleItem] 检测到临时文件路径，使用默认头像:', avatarUrl);
 			return '/static/images/touxiang.png';
 		}
 		
 		// 检查缓存
 		const cacheKey = `avatar_${avatarUrl}`;
 		if (imageUrlCache.has(cacheKey)) {
-			return imageUrlCache.get(cacheKey);
+			const cachedUrl = imageUrlCache.get(cacheKey);
+			console.log('👤 [articleItem] 使用缓存头像:', cachedUrl);
+			return cachedUrl;
 		}
 		
 		// 使用新的processAvatarUrl处理，自动转换cloud://格式
 		let processedUrl;
 		try {
 			processedUrl = await processAvatarUrl(avatarUrl);
+			console.log('👤 [articleItem] processAvatarUrl处理结果:', processedUrl);
 			
 			// 二次校验：确保处理后的URL不是临时文件
 			if (processedUrl && (processedUrl.includes('tmp_') || processedUrl.includes('tmp/') || processedUrl.startsWith('http://tmp/') || processedUrl.startsWith('wxfile://'))) {
-				console.warn('处理后仍为临时文件，使用默认头像:', processedUrl);
+				console.warn('👤 [articleItem] 处理后仍为临时文件，使用默认头像:', processedUrl);
+				processedUrl = '/static/images/touxiang.png';
+			}
+			
+			// 如果processedUrl为空字符串，使用默认头像
+			if (!processedUrl || processedUrl === '') {
+				console.warn('👤 [articleItem] processAvatarUrl返回空，使用默认头像');
 				processedUrl = '/static/images/touxiang.png';
 			}
 		} catch (error) {
-			console.error('处理头像URL失败:', error);
+			console.error('👤 [articleItem] 处理头像URL失败:', error);
 			processedUrl = '/static/images/touxiang.png';
 		}
 		
@@ -289,13 +302,16 @@
 			imageUrlCache.delete(firstKey);
 		}
 		
+		console.log('👤 [articleItem] 最终头像URL:', processedUrl);
 		return processedUrl;
 	};
 	
-	// 初始化头像（异步）
-	processAvatarUrlLocal().then(url => {
+	// 初始化头像（异步）- 立即执行
+	(async () => {
+		const url = await processAvatarUrlLocal();
 		userAvatarUrl.value = url;
-	});
+		console.log('👤 [articleItem] 头像初始化完成:', url);
+	})();
 	
 	// 处理头像加载成功
 	const handleAvatarLoad = () => {

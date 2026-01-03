@@ -1253,11 +1253,46 @@
 
 	// 帮砍一刀按钮处理 - 与砍价卡片按钮功能完全一致
 	const handleBargainHelp = async () => {
+		// 检查砍价是否已启用
+		if (!articleDetail.value.enable_bargain) {
+			uni.showToast({
+				title: '该文章未开启砍价',
+				icon: 'none',
+				duration: 2000
+			})
+			return
+		}
+		
+		// 检查砍价是否已过期
+		if (isBargainExpired.value) {
+			uni.showToast({
+				title: '砍价活动已结束',
+				icon: 'none',
+				duration: 2000
+			})
+			return
+		}
+		
+		// 检查砍价是否已完成
+		if (isBargainComplete.value) {
+			uni.showToast({
+				title: '您已完成砍价',
+				icon: 'none',
+				duration: 2000
+			})
+			return
+		}
+		
 		// 直接触发砍价组件的砍价操作，所有检查逻辑由组件内部统一处理
 		if (dianzanBargainRef.value && dianzanBargainRef.value.handleBargain) {
 			await dianzanBargainRef.value.handleBargain()
 		} else {
 			console.error('砍价组件未找到或未挂载')
+			uni.showToast({
+				title: '砍价功能暂不可用',
+				icon: 'none',
+				duration: 2000
+			})
 		}
 	}
 	
@@ -3713,7 +3748,7 @@
 					</view>
 					
 					<!-- 打赏模块 -->
-					<view class="reward-section" v-if="articleDetail.user_id">
+					<view class="reward-section" v-if="false">
 						<view class="reward-container">
 							<view class="reward-header">
 								<view class="reward-title-box">
@@ -3823,7 +3858,7 @@
 				<!-- 打赏按钮 -->
 				<view 
 					class="action-item" 
-					v-if="articleDetail.user_id"
+					v-if="false"
 					@click="openRewardPopup"
 				>
 					<uni-icons type="gift" size="24" color="#ff6b35"></uni-icons>
@@ -3842,11 +3877,14 @@
 				
 				<view 
 					class="call-btn" 
-					:class="{ 'complete': isBargainComplete }"
+					:class="{ 
+						'complete': isBargainComplete,
+						'disabled': !articleDetail.enable_bargain || isBargainExpired || !dianzanBargainRef
+					}"
 					@click="handleBargainHelp"
 				>
 					<image src="/static/images/砍价.png" class="bargain-icon"></image>
-					<view class="call-text">{{ isBargainComplete ? '已完成' : '帮砍一刀' }}</view>
+					<view class="call-text">{{ isBargainComplete ? '已完成' : (!articleDetail.enable_bargain ? '未开启' : isBargainExpired ? '已结束' : '帮砍一刀') }}</view>
 				</view>
 			</view>
 		</view>
@@ -3972,6 +4010,7 @@
 		
 		<!-- 打赏弹窗 -->
 		<reward-popup
+			v-if="false"
 			ref="rewardPopupRef"
 			:articleId="currentArticleId"
 			:authorId="articleDetail.user_id"
@@ -4819,6 +4858,28 @@
 			&:active {
 				transform: none; // 移除按下效果
 				box-shadow: 0 4rpx 12rpx rgba(153, 153, 153, 0.3);
+			}
+		}
+		
+		// 禁用状态：灰色背景 + 禁止点击
+		&.disabled {
+			background: linear-gradient(135deg, #ccc, #ddd); // 浅灰色渐变
+			box-shadow: 0 4rpx 12rpx rgba(204, 204, 204, 0.3);
+			pointer-events: none; // 禁止点击
+			opacity: 0.5; // 降低不透明度
+			cursor: not-allowed; // 显示禁止光标
+			
+			&:active {
+				transform: none; // 移除按下效果
+				box-shadow: 0 4rpx 12rpx rgba(204, 204, 204, 0.3);
+			}
+			
+			.bargain-icon {
+				opacity: 0.5; // 图标也变淡
+			}
+			
+			.call-text {
+				opacity: 0.7; // 文字也变淡
 			}
 		}
 		
