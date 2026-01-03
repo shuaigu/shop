@@ -354,14 +354,17 @@ const formatTime = (timestamp) => {
 	display: flex;
 	flex-direction: column;
 	align-items: center;
-	padding: 40rpx 30rpx;
-	background-color: #FF5500; // 更强烈的橙红色背景
+	padding: 30rpx 24rpx;
+	background-color: #FF5500;
 	position: relative;
 	border-radius: 20rpx;
-	min-height: auto; // 改为auto使其自适应内容高度
-	height: auto; // 确保高度能够自适应
-	overflow: hidden; // 防止内容溢出
-	transition: height 0.3s ease; // 添加高度变化的过渡效果
+	min-height: auto;
+	height: auto;
+	overflow: hidden; // 恢复hidden防止内容超出
+	transition: height 0.3s ease;
+	box-sizing: border-box;
+	max-width: 100%; // 限制最大宽度
+	width: 100%; // 占满父容器
 }
 
 .lottery-header {
@@ -412,16 +415,19 @@ const formatTime = (timestamp) => {
 
 .lottery-grid {
 	width: 100%;
+	max-width: 100%;
 	background-color: #FFFFFF;
-	border-radius: 20rpx;
+	border-radius: 16rpx;
 	display: grid;
-	grid-template-columns: repeat(5, 1fr); // 每行5个头像，最多支持5*5=25个用户
-	gap: 15rpx;
-	padding: 20rpx;
+	grid-template-columns: repeat(5, minmax(0, 1fr));
+	gap: 6rpx;
+	padding: 0; // 去掉padding
 	position: relative;
 	box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.1);
-	max-height: 700rpx; // 设置最大高度
-	overflow-y: auto; // 超出部分可滚动
+	max-height: 700rpx;
+	overflow-y: auto;
+	overflow-x: hidden;
+	box-sizing: border-box;
 }
 
 .prize-cell {
@@ -433,8 +439,10 @@ const formatTime = (timestamp) => {
 	position: relative;
 	overflow: hidden;
 	transition: all 0.15s ease;
-	padding: 5rpx;
+	padding: 2rpx;
 	border-radius: 8rpx;
+	min-width: 0; // 防止flex子项溢出
+	max-width: 100%; // 限制最大宽度
 	
 	&.active {
 		transform: scale(1.1);
@@ -463,22 +471,27 @@ const formatTime = (timestamp) => {
 }
 
 .prize-avatar {
-	width: 80rpx;
-	height: 80rpx;
+	width: 60rpx; // 进一步减小头像
+	height: 60rpx;
 	border-radius: 50%;
-	margin-bottom: 8rpx;
+	margin-bottom: 4rpx;
 	background-color: #f5f5f5;
+	flex-shrink: 0; // 防止压缩
 }
 
 .prize-name {
 	font-size: 20rpx;
 	color: #333333;
 	text-align: center;
-	width: 90rpx;
+	width: 100%;
+	max-width: 90rpx;
 	line-height: 1.2;
-	transform: scale(0.9);
+	transform: scale(0.85);
 	transform-origin: center top;
 	margin: 0 auto;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
 	
 	&.active {
 		transform: scale(0.9);
@@ -488,10 +501,10 @@ const formatTime = (timestamp) => {
 }
 
 .lottery-btn {
-	margin-top: 60rpx;
-	background-color: #FFD700; // 更亮的按钮
+	margin-top: 40rpx;
+	background-color: #FFD700;
 	color: #FF3300;
-	padding: 20rpx 60rpx;
+	padding: 18rpx 50rpx;
 	border-radius: 40rpx;
 	font-size: 32rpx;
 	font-weight: bold;

@@ -42,6 +42,46 @@
 			<text class="btn-text">{{getBtnText()}}</text>
 		</view>
 		
+		<!-- 幸运号码选择弹窗 -->
+		<view v-if="showNumberPicker" class="number-picker-popup" @click="closeNumberPicker">
+			<view class="number-picker-content" @click.stop>
+				<!-- 弹窗头部 -->
+				<view class="picker-header">
+					<text class="picker-title">选择幸运编号</text>
+					<view class="picker-close" @click="closeNumberPicker">
+						<text>✕</text>
+					</view>
+				</view>
+				
+				<!-- 号码网格 -->
+				<view class="number-grid-wrapper">
+					<scroll-view scroll-y class="number-grid-scroll">
+						<view class="number-grid">
+							<view 
+								v-for="num in 100" 
+								:key="num"
+								:class="['number-item', {'selected': selectedNumber === num}]"
+								@click="selectNumber(num)"
+							>
+								<text class="number-text">{{num}}</text>
+							</view>
+						</view>
+					</scroll-view>
+				</view>
+				
+				<!-- 确认按钮 -->
+				<view class="picker-footer">
+					<button 
+						class="picker-confirm-btn" 
+						:disabled="!selectedNumber"
+						@click="confirmNumber"
+					>
+						确认选择
+					</button>
+				</view>
+			</view>
+		</view>
+		
 		<!-- 中奖弹窗 - 修改为默认显示 -->
 		<view v-if="showResult && winner" class="result-popup">
 			<view class="result-content">
@@ -92,6 +132,10 @@ const props = defineProps({
 
 // 是否显示概率
 const showProbability = ref(true);
+
+// 号码选择器相关
+const showNumberPicker = ref(false); // 是否显示号码选择弹窗
+const selectedNumber = ref(null); // 用户选中的幸运号码
 
 // 定义事件
 const emit = defineEmits(['lottery-result', 'show-comment', 'position-updated']);
@@ -657,16 +701,67 @@ const stopLottery = () => {
 
 // 获取按钮文本
 const getBtnText = () => {
-	if (!isRotating.value) {
-		return '开始抽奖';
-	} else {
+	if (isRotating.value) {
 		return '停止抽奖';
+	} else if (!selectedNumber.value) {
+		return '参与抽奖';
+	} else {
+		return `开始抽奖（号码：${selectedNumber.value}）`;
 	}
 };
 
 // 处理抽奖按钮点击
 const handleLotteryBtn = () => {
+	// 如果正在抽奖，直接停止
+	if (isRotating.value) {
+		startLottery();
+		return;
+	}
+	
+	// 如果还没有选择号码，显示号码选择器
+	if (!selectedNumber.value) {
+		showNumberPicker.value = true;
+		return;
+	}
+	
+	// 如果已经选择号码，直接开始抽奖
 	startLottery();
+};
+
+// 选择号码
+const selectNumber = (num) => {
+	selectedNumber.value = num;
+};
+
+// 确认选择号码
+const confirmNumber = () => {
+	if (!selectedNumber.value) {
+		uni.showToast({
+			title: '请先选择幸运号码',
+			icon: 'none'
+		});
+		return;
+	}
+	
+	// 关闭弹窗
+	showNumberPicker.value = false;
+	
+	// 提示用户选择成功
+	uni.showToast({
+		title: `已选择幸运号码：${selectedNumber.value}`,
+		icon: 'success',
+		duration: 1500
+	});
+	
+	// 延迟开始抽奖，让用户看到提示
+	setTimeout(() => {
+		startLottery();
+	}, 1500);
+};
+
+// 关闭号码选择器
+const closeNumberPicker = () => {
+	showNumberPicker.value = false;
 };
 
 // 开始旋转动画
@@ -717,6 +812,8 @@ const closeResult = () => {
 	// 重置抽奖状态，准备重新抽奖
 	isRotating.value = false;
 	currentIndex.value = -1;
+	// 重置选中的号码，允许用户重新选择
+	selectedNumber.value = null;
 };
 
 // 格式化时间
@@ -1640,5 +1737,206 @@ onMounted(async () => {
 .history-footer {
 	margin-top: 20rpx;
 	text-align: center;
+}
+
+// 号码选择弹窗样式
+.number-picker-popup {
+	position: fixed;
+	top: 0;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	background-color: rgba(0, 0, 0, 0.6);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	z-index: 200;
+	animation: fadeIn 0.3s ease;
+}
+
+.number-picker-content {
+	width: 90%;
+	max-width: 600rpx;
+	max-height: 80vh;
+	background: linear-gradient(to bottom, #fff5f8, #ffffff);
+	border-radius: 24rpx;
+	overflow: hidden;
+	box-shadow: 0 12rpx 40rpx rgba(255, 107, 107, 0.3);
+	animation: slideUp 0.3s ease;
+	display: flex;
+	flex-direction: column;
+}
+
+@keyframes slideUp {
+	from {
+		transform: translateY(100rpx);
+		opacity: 0;
+	}
+	to {
+		transform: translateY(0);
+		opacity: 1;
+	}
+}
+
+.picker-header {
+	padding: 30rpx 30rpx 20rpx;
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	background: linear-gradient(135deg, #ff8fa3 0%, #ffb3c1 100%);
+	border-radius: 24rpx 24rpx 0 0;
+}
+
+.picker-title {
+	font-size: 36rpx;
+	font-weight: bold;
+	color: #FFFFFF;
+	text-shadow: 0 2rpx 4rpx rgba(0, 0, 0, 0.2);
+}
+
+.picker-close {
+	width: 50rpx;
+	height: 50rpx;
+	border-radius: 50%;
+	background-color: rgba(255, 255, 255, 0.3);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	transition: all 0.3s;
+	
+	text {
+		font-size: 40rpx;
+		color: #FFFFFF;
+		line-height: 1;
+	}
+	
+	&:active {
+		background-color: rgba(255, 255, 255, 0.5);
+		transform: scale(0.95);
+	}
+}
+
+.number-grid-wrapper {
+	flex: 1;
+	overflow: hidden;
+	padding: 0 30rpx; // 增加左右内边距到30rpx
+}
+
+.number-grid-scroll {
+	height: 100%;
+	max-height: 500rpx;
+}
+
+.number-grid {
+	display: grid;
+	grid-template-columns: repeat(5, 1fr);
+	gap: 12rpx;
+	padding: 20rpx 0;
+}
+
+.number-item {
+	aspect-ratio: 1 / 1;
+	background-color: #f5f5f5;
+	border-radius: 12rpx;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	transition: all 0.3s;
+	border: 2rpx solid transparent;
+	cursor: pointer;
+	position: relative;
+	overflow: hidden;
+	
+	&::before {
+		content: '';
+		position: absolute;
+		top: 0;
+		left: 0;
+		right: 0;
+		bottom: 0;
+		background: linear-gradient(135deg, transparent 0%, rgba(255, 143, 163, 0.1) 100%);
+		opacity: 0;
+		transition: opacity 0.3s;
+	}
+	
+	&:active {
+		transform: scale(0.95);
+	}
+	
+	&.selected {
+		background: linear-gradient(135deg, #ff8fa3 0%, #ffb3c1 100%);
+		border-color: #ff6b85;
+		box-shadow: 0 4rpx 12rpx rgba(255, 107, 133, 0.4);
+		transform: scale(1.05);
+		
+		&::before {
+			opacity: 1;
+		}
+		
+		.number-text {
+			color: #FFFFFF;
+			font-weight: bold;
+			text-shadow: 0 1rpx 2rpx rgba(0, 0, 0, 0.2);
+		}
+	}
+}
+
+.number-text {
+	font-size: 32rpx;
+	color: #666666;
+	font-weight: 500;
+	transition: all 0.3s;
+	z-index: 1;
+	position: relative;
+}
+
+.picker-footer {
+	padding: 20rpx 30rpx 30rpx;
+	background-color: #FFFFFF;
+}
+
+.picker-confirm-btn {
+	width: 100%;
+	height: 80rpx;
+	background: linear-gradient(135deg, #ff8fa3 0%, #ffb3c1 100%);
+	color: #FFFFFF;
+	border: none;
+	border-radius: 40rpx;
+	font-size: 32rpx;
+	font-weight: bold;
+	box-shadow: 0 8rpx 20rpx rgba(255, 107, 133, 0.3);
+	transition: all 0.3s;
+	position: relative;
+	overflow: hidden;
+	
+	&::before {
+		content: '';
+		position: absolute;
+		top: 50%;
+		left: 50%;
+		width: 0;
+		height: 0;
+		border-radius: 50%;
+		background-color: rgba(255, 255, 255, 0.3);
+		transform: translate(-50%, -50%);
+		transition: width 0.6s, height 0.6s;
+	}
+	
+	&:active {
+		transform: scale(0.98);
+		box-shadow: 0 4rpx 12rpx rgba(255, 107, 133, 0.3);
+		
+		&::before {
+			width: 600rpx;
+			height: 600rpx;
+		}
+	}
+	
+	&[disabled] {
+		background: linear-gradient(135deg, #cccccc 0%, #dddddd 100%);
+		color: #999999;
+		box-shadow: none;
+		opacity: 0.6;
+	}
 }
 </style>

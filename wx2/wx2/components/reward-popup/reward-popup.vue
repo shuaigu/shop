@@ -861,7 +861,6 @@ defineExpose({
 
 .number-grid-scroll {
 	flex: 1;
-	padding: 30rpx 20rpx;
 	max-height: 500rpx;
 }
 
