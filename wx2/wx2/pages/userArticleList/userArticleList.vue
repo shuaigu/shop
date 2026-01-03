@@ -393,7 +393,9 @@ export default {
 					
 					// 添加空值检查
 					if (res && res.userInfo) {
+						console.log('👤 [用户文章列表] 从 API 获取到用户信息:', res.userInfo);
 						this.userArticleInfo = res.userInfo;
+						
 						// 如果当前用户是登录用户，可以更新全局用户信息
 						if (this.userId === this.userStore.userInfo.uid) {
 							this.userStore.setUserInfo({

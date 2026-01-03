@@ -1,5 +1,5 @@
 <script setup>
-	import { ref, computed, onMounted } from 'vue'
+	import { ref, computed, onMounted, watch } from 'vue'
 	import { useUserInfoStore } from '@/store/user'
 	import { processAvatarUrl, getDefaultImage } from '@/utils/domainConfig.js'
 
@@ -53,16 +53,43 @@
 	// 处理后的头像URL
 	const displayAvatarUrl = ref('/static/images/touxiang.png')
 	
+	// 更新头像显示
+	const updateAvatarDisplay = async () => {
+		const avatarUrl = props.userInfo?.avatarUrl
+		console.log('👤 [user-header] 更新头像显示, avatarUrl:', avatarUrl)
+		
+		if (!avatarUrl) {
+			console.log('👤 [user-header] 头像URL为空,使用默认头像')
+			displayAvatarUrl.value = '/static/images/touxiang.png'
+			return
+		}
+		
+		try {
+			const processedUrl = await processAvatarUrl(avatarUrl)
+			console.log('👤 [user-header] 头像处理结果:', processedUrl)
+			
+			// 如果处理后返回空字符串,使用默认头像
+			if (!processedUrl || processedUrl === '') {
+				console.log('👤 [user-header] 处理结果为空,使用默认头像')
+				displayAvatarUrl.value = '/static/images/touxiang.png'
+			} else {
+				displayAvatarUrl.value = processedUrl
+			}
+		} catch (error) {
+			console.error('👤 [user-header] 处理头像失败:', error)
+			displayAvatarUrl.value = '/static/images/touxiang.png'
+		}
+	}
+	
 	// 初始化头像
 	onMounted(async () => {
-		if (props.userInfo && props.userInfo.avatarUrl) {
-			try {
-				displayAvatarUrl.value = await processAvatarUrl(props.userInfo.avatarUrl)
-			} catch (error) {
-				console.error('处理头像失败:', error)
-				displayAvatarUrl.value = '/static/images/touxiang.png'
-			}
-		}
+		await updateAvatarDisplay()
+	})
+	
+	// 监听userInfo变化
+	watch(() => props.userInfo?.avatarUrl, async (newVal) => {
+		console.log('👤 [user-header] userInfo.avatarUrl变化:', newVal)
+		await updateAvatarDisplay()
 	})
 </script>
 

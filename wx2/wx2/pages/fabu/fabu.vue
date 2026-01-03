@@ -1731,10 +1731,19 @@ export default {
 
 		// 验证并处理用户头像URL
 		let userAvatarUrl = userStore.userInfo.avatarUrl || '/static/images/touxiang.png'
-		if (userAvatarUrl.startsWith('http://tmp/') || userAvatarUrl.startsWith('wxfile://')) {
-			console.warn('检测到临时头像文件，使用默认头像')
+		// 更严格的临时文件检测
+		if (!userAvatarUrl || 
+			 userAvatarUrl.startsWith('http://tmp/') || 
+			 userAvatarUrl.startsWith('wxfile://') ||
+			 userAvatarUrl.includes('tmp_') ||
+			 userAvatarUrl.includes('tmp/')) {
+			console.warn('📷 检测到临时或无效头像文件，使用默认头像:', userAvatarUrl)
 			userAvatarUrl = '/static/images/touxiang.png'
 		}
+		// 打印调试信息
+		console.log('📷 发布文章使用的头像URL:', userAvatarUrl)
+		console.log('📷 原始头像URL:', userStore.userInfo.avatarUrl)
+		console.log('📷 用户昵称:', userStore.userInfo.nickName)
 
 		// 构建基础参数
 		const params = {

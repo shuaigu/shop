@@ -96,7 +96,7 @@
 			<view class="bargain-stats" v-if="bargainStats && bargainStats.total_participants > 0">
 				<!-- 统计文字 -->
 				<view class="stats-text">
-					已有 <text class="stats-number">{{ bargainStats.total_participants }}</text> 人参与：
+					我发起的砍价：已有 <text class="stats-number">{{ bargainStats.total_participants }}</text> 人参与：
 				</view>
 				
 				<!-- 参与用户头像列表 -->
@@ -757,6 +757,18 @@ const handleBargain = async () => {
 			
 					// 设置最后一次砍价金额
 					lastBargainAmount.value = result.bargain_amount
+					
+					// 检查文章是否已经有人完成砍价
+					if (result.article_completed && result.winner_nickname) {
+						// 如果活动已经有人完成，提示用户
+						if (result.is_complete) {
+							// 当前用户是获胜者
+							console.log('恭喜！您是第一个完成砍价的用户！')
+						} else {
+							// 当前用户不是获胜者，但活动已经结束
+							console.log(`活动已结束，获胜者是：${result.winner_nickname}`)
+						}
+					}
 		
 					// 立即更新本地统计数据（提供即时反馈）
 					if (!bargainStats.value) {
@@ -1242,6 +1254,22 @@ onBeforeUnmount(() => {
 	uni.$off('updateBargainStatus', handleGlobalBargainUpdate)
 })
 
+// 暴露给父组件的方法和状态
+defineExpose({
+	// 砍价相关
+	handleBargain, // 砍价方法
+	isBargainComplete, // 砍价完成状态
+	currentPrice, // 当前价格
+	getBargainStatus, // 获取砍价状态方法
+	bargainProgress, // 砍价进度
+	// 点赞相关
+	getLikeStatus, // 获取点赞状态方法
+	handleClick, // 点赞方法
+	handleLike, // 点赞方法（别名）
+	isLiked, // 点赞状态
+	likeCount // 点赞数
+})
+
 // 弹窗相关处理方法
 // 处理继续邀请（分享给好友）
 const handleShareInvite = () => {
@@ -1264,20 +1292,6 @@ const handlePopupClose = () => {
 	isShowingMessageOnly.value = false
 	dynamicMessage.value = ''
 }
-
-// 暴露方法供外部调用
-defineExpose({
-	getLikeStatus,
-	handleLike,
-	isLiked,
-	likeCount,
-	// 砍价相关
-	getBargainStatus,
-	handleBargain,
-	currentPrice,
-	isBargainComplete,
-	bargainProgress
-})
 </script>
 
 <style lang="scss" scoped>

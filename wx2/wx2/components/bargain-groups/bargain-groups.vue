@@ -5,9 +5,15 @@
 			<view class="header-title">
 				<image class="title-icon" src="/static/images/砍价2.png" mode="aspectFit"></image>
 				<text class="title-text">砍价小组</text>
-				<text class="winner-hint">最先砍价完的小组得</text>
+				<text class="winner-hint">最先砍价完者得</text>
 			</view>
 			<text class="groups-count">共{{ totalGroups }}个小组</text>
+		</view>
+		
+		<!-- 获胜者提示 -->
+		<view class="winner-banner" v-if="articleCompleted && winnerNickname">
+			<uni-icons type="checkmarkempty" size="20" color="#52c41a"></uni-icons>
+			<text class="winner-text">活动已结束！获胜者：{{ winnerNickname }}</text>
 		</view>
 		
 		<!-- 小组列表 -->
@@ -25,8 +31,8 @@
 						<text class="initiator-name">{{ group.initiator_nickname }}</text>
 						<text class="create-time">{{ formatTime(group.create_time) }}</text>
 					</view>
-					<view class="group-badge" :class="{ 'complete': group.is_complete }">
-						<text>{{ group.is_complete ? '已完成' : '进行中' }}</text>
+					<view class="group-badge" :class="{ 'complete': group.is_complete, 'rank-1': !group.is_complete && index === 0, 'rank-2': !group.is_complete && index === 1, 'rank-3': !group.is_complete && index === 2 }">
+						<text>{{ group.is_complete ? '已完成' : index + 1 }}</text>
 					</view>
 				</view>
 				
@@ -55,7 +61,7 @@
 				<!-- 参与人数和头像 -->
 				<view class="group-participants">
 					<view class="participants-count">
-						<uni-icons type="person-filled" size="16" color="#1890ff"></uni-icons>
+						<uni-icons type="person-filled" size="16" color="#ff6b6b"></uni-icons>
 						<text>{{ group.total_participants }}人参与</text>
 					</view>
 					
@@ -108,6 +114,8 @@ const groupsList = ref([])
 const totalGroups = ref(0)
 const initialPrice = ref(0)
 const isLoading = ref(false)
+const articleCompleted = ref(false) // 文章是否已经有人完成砍价
+const winnerNickname = ref('') // 获胜者昵称
 
 // 格式化时间
 const formatTime = (timestamp) => {
@@ -149,13 +157,39 @@ const loadGroups = async () => {
 		console.log('砍价小组列表结果:', result)
 		
 		if (result.errCode === 0) {
-			groupsList.value = result.data.groups || []
+			let groups = result.data.groups || []
+			
+			// 按已砍金额排序，金额最多的排在前面
+			groups.sort((a, b) => {
+				// 首先按已砍金额降序排序
+				const amountDiff = b.total_bargained_amount - a.total_bargained_amount
+				if (amountDiff !== 0) {
+					return amountDiff
+				}
+				// 如果已砍金额相同，按进度降序排序
+				const progressDiff = b.progress - a.progress
+				if (progressDiff !== 0) {
+					return progressDiff
+				}
+				// 如果进度也相同，按创建时间降序排序（最新的在前）
+				return b.create_time - a.create_time
+			})
+			
+			groupsList.value = groups
 			totalGroups.value = result.data.total_groups || 0
 			initialPrice.value = result.data.initial_price || 0
 			
-			console.log('加载成功:', {
+			// 设置文章完成状态和获胜者信息
+			articleCompleted.value = result.data.article_completed || false
+			winnerNickname.value = result.data.winner_nickname || ''
+			
+			console.log('加载成功，已按砍价金额排序:', {
 				groups: groupsList.value.length,
-				total: totalGroups.value
+				total: totalGroups.value,
+				topGroup: groupsList.value[0] ? {
+					name: groupsList.value[0].initiator_nickname,
+					amount: groupsList.value[0].total_bargained_amount
+				} : null
 			})
 		} else {
 			console.error('获取小组列表失败:', result.errMsg)
@@ -205,34 +239,8 @@ onMounted(() => {
 	width: 100%;
 	margin-top: 32rpx;
 	padding: 40rpx 0 32rpx;
-	background: linear-gradient(180deg, #f0f8ff 0%, #fafcff 50%, #ffffff 100%);
+	background: #ffffff;
 	position: relative;
-	
-	// 顶部分隔线
-	&::before {
-		content: '';
-		position: absolute;
-		top: 0;
-		left: 0;
-		right: 0;
-		height: 20rpx;
-		background: linear-gradient(180deg, rgba(24, 144, 255, 0.12) 0%, rgba(24, 144, 255, 0.06) 50%, transparent 100%);
-		border-bottom: 1rpx solid rgba(24, 144, 255, 0.08);
-	}
-	
-	// 顶部装饰线
-	&::after {
-		content: '';
-		position: absolute;
-		top: 20rpx;
-		left: 50%;
-		transform: translateX(-50%);
-		width: 160rpx;
-		height: 8rpx;
-		background: linear-gradient(90deg, transparent 0%, rgba(24, 144, 255, 0.3) 30%, #1890ff 50%, rgba(24, 144, 255, 0.3) 70%, transparent 100%);
-		border-radius: 4rpx;
-		box-shadow: 0 2rpx 8rpx rgba(24, 144, 255, 0.2);
-	}
 }
 
 .groups-header {
@@ -248,30 +256,26 @@ onMounted(() => {
 		display: flex;
 		align-items: center;
 		gap: 14rpx;
-		padding: 14rpx 24rpx;
-		background: linear-gradient(135deg, rgba(24, 144, 255, 0.12) 0%, rgba(24, 144, 255, 0.06) 100%);
+		padding: 10rpx 20rpx;
+		background: #fff5f5;
 		border-radius: 28rpx;
-		border: 2rpx solid rgba(24, 144, 255, 0.25);
-		box-shadow: 0 4rpx 12rpx rgba(24, 144, 255, 0.08);
+		border: 2rpx solid #ffe0e0;
 		transition: all 0.3s ease;
 		
 		&:active {
 			transform: scale(0.98);
-			box-shadow: 0 2rpx 8rpx rgba(24, 144, 255, 0.12);
 		}
 		
 		.title-icon {
 			width: 36rpx;
 			height: 36rpx;
-			filter: drop-shadow(0 2rpx 4rpx rgba(24, 144, 255, 0.3));
 		}
 		
 		.title-text {
 			font-size: 34rpx;
 			font-weight: 700;
-			color: #0066cc;
+			color: #d94545;
 			letter-spacing: 1rpx;
-			text-shadow: 0 1rpx 2rpx rgba(24, 144, 255, 0.1);
 		}
 		
 		.winner-hint {
@@ -291,12 +295,44 @@ onMounted(() => {
 	.groups-count {
 		font-size: 24rpx;
 		font-weight: 600;
-		color: #1890ff;
-		background: linear-gradient(135deg, rgba(24, 144, 255, 0.1), rgba(24, 144, 255, 0.15));
+		color: #ff6b6b;
+		background: #fff5f5;
 		padding: 6rpx 16rpx;
 		border-radius: 20rpx;
-		border: 1rpx solid rgba(24, 144, 255, 0.2);
-		box-shadow: 0 2rpx 6rpx rgba(24, 144, 255, 0.08);
+		border: 1rpx solid #ffe0e0;
+	}
+}
+
+// 获胜者横幅样式
+.winner-banner {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 12rpx;
+	margin: 0 24rpx 24rpx;
+	padding: 20rpx 24rpx;
+	background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+	border-radius: 16rpx;
+	border: 2rpx solid #86efac;
+	box-shadow: 0 4rpx 12rpx rgba(34, 197, 94, 0.1);
+	animation: slideDown 0.5s ease-out;
+	
+	.winner-text {
+		font-size: 28rpx;
+		font-weight: 600;
+		color: #16a34a;
+		letter-spacing: 0.5rpx;
+	}
+}
+
+@keyframes slideDown {
+	from {
+		opacity: 0;
+		transform: translateY(-20rpx);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0);
 	}
 }
 
@@ -308,44 +344,19 @@ onMounted(() => {
 }
 
 .group-card {
-	background: linear-gradient(135deg, #e8f4ff 0%, #f5faff 50%, #ffffff 100%);
+	background: #ffffff;
 	border-radius: 20rpx;
 	padding: 20rpx;
-	box-shadow: 0 6rpx 20rpx rgba(24, 144, 255, 0.1), 0 2rpx 8rpx rgba(24, 144, 255, 0.06);
-	border: 2rpx solid rgba(186, 231, 255, 0.8);
-	transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+	box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.06);
+	border: 2rpx solid #f0f0f0;
+	transition: all 0.3s ease;
 	position: relative;
 	overflow: hidden;
 	
-	// 渐变光晕背景
-	&::before {
-		content: '';
-		position: absolute;
-		top: -60%;
-		right: -60%;
-		width: 120%;
-		height: 120%;
-		background: radial-gradient(circle at center, rgba(24, 144, 255, 0.06) 0%, rgba(24, 144, 255, 0.02) 40%, transparent 70%);
-		pointer-events: none;
-		opacity: 0.8;
-	}
-	
-	// 顶部装饰条
-	&::after {
-		content: '';
-		position: absolute;
-		top: 0;
-		left: 0;
-		right: 0;
-		height: 4rpx;
-		background: linear-gradient(90deg, transparent 0%, #1890ff 50%, transparent 100%);
-		opacity: 0.6;
-	}
-	
 	&:active {
-		transform: translateY(2rpx) scale(0.98);
-		box-shadow: 0 3rpx 12rpx rgba(24, 144, 255, 0.15), 0 1rpx 4rpx rgba(24, 144, 255, 0.1);
-		border-color: #1890ff;
+		transform: scale(0.98);
+		box-shadow: 0 2rpx 4rpx rgba(0, 0, 0, 0.08);
+		border-color: #ff6b6b;
 	}
 }
 
@@ -356,28 +367,14 @@ onMounted(() => {
 	position: relative;
 	z-index: 1;
 	padding-bottom: 12rpx;
-	border-bottom: 1rpx solid rgba(24, 144, 255, 0.08);
+	border-bottom: 1rpx solid #f0f0f0;
 	
 	.initiator-avatar {
 		width: 52rpx;
 		height: 52rpx;
 		border-radius: 50%;
-		border: 3rpx solid #1890ff;
-		box-shadow: 0 3rpx 10rpx rgba(24, 144, 255, 0.25), inset 0 1rpx 3rpx rgba(255, 255, 255, 0.5);
-		position: relative;
-		
-		&::after {
-			content: '';
-			position: absolute;
-			top: -3rpx;
-			left: -3rpx;
-			right: -3rpx;
-			bottom: -3rpx;
-			border-radius: 50%;
-			background: linear-gradient(135deg, rgba(24, 144, 255, 0.3), transparent);
-			z-index: -1;
-			filter: blur(2rpx);
-		}
+		border: 2rpx solid #ff6b6b;
+		box-shadow: 0 2rpx 6rpx rgba(0, 0, 0, 0.1);
 	}
 	
 	.initiator-info {
@@ -391,7 +388,7 @@ onMounted(() => {
 		.initiator-name {
 			font-size: 26rpx;
 			font-weight: 700;
-			color: #0050b3;
+			color: #d94545;
 			overflow: hidden;
 			text-overflow: ellipsis;
 			white-space: nowrap;
@@ -400,26 +397,54 @@ onMounted(() => {
 		
 		.create-time {
 			font-size: 22rpx;
-			color: #69b1ff;
+			color: #ff9999;
 			font-weight: 500;
 		}
 	}
 	
 	.group-badge {
-		padding: 6rpx 14rpx;
-		border-radius: 24rpx;
-		background: linear-gradient(135deg, #40a9ff 0%, #1890ff 50%, #096dd9 100%);
-		font-size: 22rpx;
+		padding: 4rpx 12rpx;
+		border-radius: 50%;
+		background: #ff6b6b;
+		font-size: 24rpx;
 		color: #fff;
-		font-weight: 700;
+		font-weight: 800;
 		flex-shrink: 0;
-		box-shadow: 0 3rpx 8rpx rgba(24, 144, 255, 0.35), inset 0 1rpx 2rpx rgba(255, 255, 255, 0.3);
-		text-shadow: 0 1rpx 2rpx rgba(0, 0, 0, 0.2);
 		transition: all 0.3s ease;
+		min-width: 48rpx;
+		height: 48rpx;
+		display: flex;
+		align-items: center;
+		justify-content: center;
 		
 		&.complete {
-			background: linear-gradient(135deg, #73d13d 0%, #52c41a 50%, #389e0d 100%);
-			box-shadow: 0 3rpx 8rpx rgba(82, 196, 26, 0.35), inset 0 1rpx 2rpx rgba(255, 255, 255, 0.3);
+			background: #52c41a;
+			border-radius: 24rpx;
+			padding: 6rpx 14rpx;
+			font-size: 22rpx;
+			min-width: auto;
+			height: auto;
+		}
+		
+		// 第1名 - 金色
+		&.rank-1 {
+			background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%);
+			color: #d97706;
+			box-shadow: 0 2rpx 8rpx rgba(255, 215, 0, 0.4);
+		}
+		
+		// 第2名 - 银色
+		&.rank-2 {
+			background: linear-gradient(135deg, #c0c0c0 0%, #e8e8e8 100%);
+			color: #666;
+			box-shadow: 0 2rpx 8rpx rgba(192, 192, 192, 0.4);
+		}
+		
+		// 第3名 - 铜色
+		&.rank-3 {
+			background: linear-gradient(135deg, #cd7f32 0%, #e9a66c 100%);
+			color: #fff;
+			box-shadow: 0 2rpx 8rpx rgba(205, 127, 50, 0.4);
 		}
 	}
 }
@@ -429,9 +454,9 @@ onMounted(() => {
 	position: relative;
 	z-index: 1;
 	padding: 12rpx;
-	background: rgba(24, 144, 255, 0.03);
+	background: #fafafa;
 	border-radius: 12rpx;
-	border: 1rpx solid rgba(24, 144, 255, 0.08);
+	border: 1rpx solid #f0f0f0;
 	
 	.progress-info {
 		display: flex;
@@ -448,15 +473,14 @@ onMounted(() => {
 			
 			.label {
 				font-size: 20rpx;
-				color: #69b1ff;
+				color: #ff9999;
 				font-weight: 500;
 			}
 			
 			.current-price {
 				font-size: 28rpx;
 				font-weight: 800;
-				color: #0050b3;
-				text-shadow: 0 1rpx 2rpx rgba(24, 144, 255, 0.1);
+				color: #d94545;
 				letter-spacing: 0.5rpx;
 			}
 			
@@ -464,7 +488,6 @@ onMounted(() => {
 				font-size: 26rpx;
 				font-weight: 700;
 				color: #52c41a;
-				text-shadow: 0 1rpx 2rpx rgba(82, 196, 26, 0.1);
 			}
 		}
 	}
@@ -477,31 +500,16 @@ onMounted(() => {
 		.progress-bar {
 			flex: 1;
 			height: 14rpx;
-			background: linear-gradient(180deg, #e6f4ff 0%, #d6ebff 100%);
+			background: #f0f0f0;
 			border-radius: 7rpx;
 			overflow: hidden;
-			box-shadow: inset 0 2rpx 4rpx rgba(24, 144, 255, 0.1), 0 1rpx 2rpx rgba(0, 0, 0, 0.05);
-			border: 1rpx solid rgba(24, 144, 255, 0.2);
 			position: relative;
-			
-			// 进度条光泽效果
-			&::after {
-				content: '';
-				position: absolute;
-				top: 0;
-				left: 0;
-				right: 0;
-				height: 50%;
-				background: linear-gradient(180deg, rgba(255, 255, 255, 0.4) 0%, transparent 100%);
-				pointer-events: none;
-			}
 			
 			.progress-fill {
 				height: 100%;
-				background: linear-gradient(90deg, #40a9ff 0%, #1890ff 50%, #096dd9 100%);
+				background: #ff6b6b;
 				border-radius: 7rpx;
 				transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
-				box-shadow: 0 0 12rpx rgba(24, 144, 255, 0.5), inset 0 1rpx 2rpx rgba(255, 255, 255, 0.3);
 				position: relative;
 				overflow: hidden;
 				
@@ -522,10 +530,9 @@ onMounted(() => {
 		.progress-text {
 			font-size: 22rpx;
 			font-weight: 700;
-			color: #0050b3;
+			color: #d94545;
 			min-width: 60rpx;
 			text-align: right;
-			text-shadow: 0 1rpx 2rpx rgba(24, 144, 255, 0.1);
 		}
 	}
 }
@@ -546,7 +553,7 @@ onMounted(() => {
 	margin-bottom: 0;
 	margin-top: 8rpx;
 	padding-top: 12rpx;
-	border-top: 1rpx solid rgba(24, 144, 255, 0.08);
+	border-top: 1rpx solid #f0f0f0;
 	position: relative;
 	z-index: 1;
 	
@@ -556,12 +563,11 @@ onMounted(() => {
 		gap: 8rpx;
 		font-size: 22rpx;
 		font-weight: 600;
-		color: #1890ff;
-		background: linear-gradient(135deg, rgba(24, 144, 255, 0.1), rgba(24, 144, 255, 0.06));
+		color: #ff6b6b;
+		background: #fff5f5;
 		padding: 6rpx 12rpx;
 		border-radius: 16rpx;
-		border: 1rpx solid rgba(24, 144, 255, 0.15);
-		box-shadow: 0 2rpx 6rpx rgba(24, 144, 255, 0.08);
+		border: 1rpx solid #ffe0e0;
 	}
 	
 	.participants-avatars {
@@ -577,12 +583,12 @@ onMounted(() => {
 			width: 40rpx;
 			height: 40rpx;
 			border-radius: 50%;
-			background: linear-gradient(135deg, #40a9ff 0%, #1890ff 50%, #096dd9 100%);
+			background: #ff6b6b;
 			color: #fff;
 			font-size: 20rpx;
 			font-weight: 800;
 			border: 3rpx solid #fff;
-			box-shadow: 0 3rpx 10rpx rgba(24, 144, 255, 0.3), inset 0 1rpx 2rpx rgba(255, 255, 255, 0.3);
+			box-shadow: 0 2rpx 6rpx rgba(0, 0, 0, 0.1);
 			margin-right: -14rpx;
 			position: relative;
 			z-index: 1;
@@ -593,7 +599,7 @@ onMounted(() => {
 			height: 40rpx;
 			border-radius: 50%;
 			border: 3rpx solid #fff;
-			box-shadow: 0 3rpx 10rpx rgba(24, 144, 255, 0.2), inset 0 1rpx 3rpx rgba(0, 0, 0, 0.1);
+			box-shadow: 0 2rpx 6rpx rgba(0, 0, 0, 0.1);
 			margin-right: -14rpx;
 			position: relative;
 			transition: transform 0.3s ease;
@@ -620,13 +626,13 @@ onMounted(() => {
 	.empty-text {
 		margin-top: 24rpx;
 		font-size: 28rpx;
-		color: #69b1ff;
+		color: #ff9999;
 	}
 	
 	.empty-hint {
 		margin-top: 12rpx;
 		font-size: 24rpx;
-		color: #91d5ff;
+		color: #ffbbbb;
 	}
 }
 

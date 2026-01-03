@@ -1104,6 +1104,11 @@
 			// 获取当前用户的点赞状态
 			await getLikeStatus();
 			
+			// 同步砍价完成状态（延迟执行，确保组件已挂载）
+			setTimeout(() => {
+				syncBargainCompleteStatus()
+			}, 500)
+			
 			// 🎨 直接使用数据库的头像URL，不做复杂处理
 			if (userStore.userInfo && userStore.userInfo.avatarUrl) {
 				processedPosterAvatarUrl.value = userStore.userInfo.avatarUrl;
@@ -1246,28 +1251,21 @@
 		} )
 	}
 
-	// 修改处理打电话的方法
-	const handlePublish = async () => {
-		try {
-			// 检查登录状态
-			const isLoggedIn = await customTestLogin()
-			if (!isLoggedIn) {
-				// customTestLogin 已经处理了登录跳转
-				return
-			}
-
-			// 跳转到发布页面
-			uni.navigateTo({
-				url: '/pages/fabu/fabu',
-				animationType: 'slide-in-bottom',
-				animationDuration: 300
-			})
-		} catch (err) {
-			console.error('跳转发布页面失败:', err)
-			uni.showToast({
-				title: '操作失败，请重试',
-				icon: 'none'
-			})
+	// 帮砍一刀按钮处理 - 与砍价卡片按钮功能完全一致
+	const handleBargainHelp = async () => {
+		// 直接触发砍价组件的砍价操作，所有检查逻辑由组件内部统一处理
+		if (dianzanBargainRef.value && dianzanBargainRef.value.handleBargain) {
+			await dianzanBargainRef.value.handleBargain()
+		} else {
+			console.error('砍价组件未找到或未挂载')
+		}
+	}
+	
+	// 同步砍价组件的完成状态到页面
+	const syncBargainCompleteStatus = () => {
+		if (dianzanBargainRef.value && dianzanBargainRef.value.isBargainComplete) {
+			isBargainComplete.value = dianzanBargainRef.value.isBargainComplete.value
+			console.log('已同步砍价完成状态:', isBargainComplete.value)
 		}
 	}
 
@@ -3193,8 +3191,8 @@
 	// 砖价成功事件处理
 	const handleBargainSuccess = (data) => {
 		console.log('砍价成功:', data)
-		// 可以在这里添加额外的逻辑，比如显示动画等
-		
+		// 同步状态
+		syncBargainCompleteStatus()
 		// 刷新砍价小组列表
 		if (bargainGroupsRef.value && typeof bargainGroupsRef.value.loadGroups === 'function') {
 			setTimeout(() => {
@@ -3204,22 +3202,65 @@
 		}
 	}
 	
-	// 砖价完成事件处理
+	// 砍价完成事件处理
 	const handleBargainComplete = (data) => {
 		console.log('砍价完成:', data)
-		uni.showModal({
-			title: '恭喜！',
-			content: '砍价已完成，请联系作者领取奖励！',
-			confirmText: '联系作者',
-			success: (res) => {
-				if (res.confirm && articleDetail.value.user_mobile) {
-					// 调用拨号功能
-					uni.makePhoneCall({
-						phoneNumber: articleDetail.value.user_mobile
-					})
-				}
+		// 更新完成状态
+		isBargainComplete.value = true
+		// 刷新砍价小组列表
+		if (bargainGroupsRef.value && typeof bargainGroupsRef.value.loadGroups === 'function') {
+			setTimeout(() => {
+				bargainGroupsRef.value.loadGroups()
+			}, 1000)
+		}
+			
+		// 检查是否是第一个完成的用户
+		if (data.article_completed && data.winner_nickname) {
+			const isWinner = data.winner_nickname === (userStore.userInfo?.nickName || '')
+				
+			if (isWinner) {
+				// 当前用户是获胜者
+				uni.showModal({
+					title: '恭喜！',
+					content: '您是第一个完成砍价的用户，请联系作者领取奖励！',
+					confirmText: '联系作者',
+					showCancel: true,
+					cancelText: '稍后',
+					success: (res) => {
+						if (res.confirm && articleDetail.value.user_mobile) {
+							// 调用拨号功能
+							uni.makePhoneCall({
+								phoneNumber: articleDetail.value.user_mobile
+							})
+						}
+					}
+				})
+			} else {
+				// 当前用户不是获胜者，但活动已经结束
+				uni.showToast({
+					title: `活动已结束，获胜者是：${data.winner_nickname}`,
+					icon: 'none',
+					duration: 3000
+				})
 			}
-		})
+		} else {
+			// 显示完成提示
+			uni.showModal({
+				title: '恭喜！',
+				content: '砍价已完成，请联系作者领取奖励！',
+				confirmText: '联系作者',
+				showCancel: true,
+				cancelText: '稍后',
+				success: (res) => {
+					if (res.confirm && articleDetail.value.user_mobile) {
+						// 调用拨号功能
+						uni.makePhoneCall({
+							phoneNumber: articleDetail.value.user_mobile
+						})
+					}
+				}
+			})
+		}
 	}
 	
 	// 处理邀请好友砍价（分享）
@@ -3318,6 +3359,11 @@
 	
 	// 砍价小组列表组件引用
 	const bargainGroupsRef = ref(null)
+	
+	// 砍价组件引用
+	const dianzanBargainRef = ref(null)
+	// 砍价完成状态
+	const isBargainComplete = ref(false)
 	
 	// 获取砍价成功话术
 	const getBargainSuccessMessage = () => {
@@ -3493,6 +3539,7 @@
 									</view>
 									
 									<dianzan 
+										ref="dianzanBargainRef"
 										mode="bargain"
 										:articleId="articleDetail._id || props.article_id"
 										:initialLiked="isArticleLiked"
@@ -3793,9 +3840,13 @@
 					</view>
 				</button>
 				
-				<view class="call-btn" @click="handlePublish">
-					<image src="/static/images/发布.png" class="publish-icon"></image>
-					<view class="call-text">发布</view>
+				<view 
+					class="call-btn" 
+					:class="{ 'complete': isBargainComplete }"
+					@click="handleBargainHelp"
+				>
+					<image src="/static/images/砍价.png" class="bargain-icon"></image>
+					<view class="call-text">{{ isBargainComplete ? '已完成' : '帮砍一刀' }}</view>
 				</view>
 			</view>
 		</view>
@@ -4373,7 +4424,7 @@
 				gap: 12rpx;
 				margin: auto 0; /* 添加上下外边距为auto，实现垂直居中 */
 
-				.publish-icon {
+				.bargain-icon {
 					width: 34rpx;
 					height: 34rpx;
 					vertical-align: middle;
@@ -4739,7 +4790,7 @@
 	}
 
 	.call-btn {
-		background-color: #399bfe;
+		background: linear-gradient(135deg, #ff6b6b, #ff8787); // 与砍价卡片按钮颜色一致
 		color: #fff;
 		padding: 10rpx 30rpx;
 		border-radius: 30rpx;
@@ -4748,10 +4799,41 @@
 		align-items: center;
 		justify-content: center;
 		gap: 8rpx;
+		box-shadow: 0 4rpx 12rpx rgba(255, 107, 107, 0.3); // 添加与砍价按钮一致的阴影
+		transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); // 添加过渡动画
+		
+		// 添加按下效果，与砍价按钮一致
+		&:active {
+			transform: scale(0.95);
+			box-shadow: 0 2rpx 8rpx rgba(255, 107, 107, 0.2);
+		}
+		
+		// 砍价完成状态：灰色背景 + 禁止点击
+		&.complete {
+			background: linear-gradient(135deg, #999, #bbb); // 灰色渐变
+			box-shadow: 0 4rpx 12rpx rgba(153, 153, 153, 0.3);
+			pointer-events: none; // 禁止点击
+			opacity: 0.6; // 降低不透明度
+			cursor: not-allowed; // 显示禁止光标
+			
+			&:active {
+				transform: none; // 移除按下效果
+				box-shadow: 0 4rpx 12rpx rgba(153, 153, 153, 0.3);
+			}
+		}
+		
+		.bargain-icon {
+			width: 32rpx;
+			height: 32rpx;
+			flex-shrink: 0;
+			// 将斧子图标变成白色
+			filter: brightness(0) invert(1);
+		}
 		
 		.call-text {
 			color: #ffffff;
 			font-size: 28rpx;
+			font-weight: 600; // 添加字体加粗，与砍价按钮一致
 		}
 	}
 

@@ -334,12 +334,37 @@ module.exports = {
 			.where( { user_id: user_id } )
 			.count()
 
-		// 添加对空数据的检查
-		const userInfo = res.data && res.data.length > 0 ? {
-			avatarUrl: res.data[0].user_avatarUrl,
-			nickName: res.data[0].user_nickName,
-			mobile: res.data[0].user_mobile
-		} : null;
+		// 优化：当文章为空时，直接从用户表查询用户信息
+		let userInfo = null;
+		
+		if (res.data && res.data.length > 0) {
+			// 从文章数据中获取用户信息
+			userInfo = {
+				avatarUrl: res.data[0].user_avatarUrl,
+				nickName: res.data[0].user_nickName,
+				mobile: res.data[0].user_mobile
+			};
+			console.log('👤 [云函数] 从文章数据获取用户信息:', userInfo);
+		} else {
+			// 文章为空，从用户表查询
+			console.log('👤 [云函数] 文章为空，从用户表查询用户信息, user_id:', user_id);
+			try {
+				const userResult = await this.db.collection('user').doc(user_id).get();
+				
+				if (userResult.data && userResult.data.length > 0) {
+					userInfo = {
+						avatarUrl: userResult.data[0].avatarUrl || '',
+						nickName: userResult.data[0].nickName || '未设置昵称',
+						mobile: userResult.data[0].mobile || ''
+					};
+					console.log('👤 [云函数] 从用户表获取用户信息成功:', userInfo);
+				} else {
+					console.log('👤 [云函数] 用户不存在');
+				}
+			} catch (err) {
+				console.error('👤 [云函数] 查询用户表失败:', err);
+			}
+		}
 
 		return {
 			data: res.data || [],
@@ -1516,6 +1541,31 @@ module.exports = {
 				} catch (err) {
 					console.error('更新发起人积分失败:', err);
 				}
+				
+				// 检查文章是否已经有人完成砍价，如果没有，则更新文章状态为已完成
+				try {
+					// 先检查文章当前状态
+					const articleCheck = await this.articleCollection.doc(article_id).get();
+					if (articleCheck.data && articleCheck.data.length > 0) {
+						const currentArticle = articleCheck.data[0];
+						// 如果文章还未标记为完成，则标记为完成（第一个完成的人是获胜者）
+						if (!currentArticle.bargain_completed) {
+							await this.articleCollection.doc(article_id).update({
+								bargain_completed: true,
+								bargain_completed_time: Date.now(),
+								bargain_winner_id: actualInitiatorId,
+								bargain_winner_nickname: actualInitiatorInfo.nickName || '匿名发起人'
+							});
+							console.log('文章砍价活动已标记为完成:', { 
+								article_id, 
+								winner_id: actualInitiatorId,
+								winner_nickname: actualInitiatorInfo.nickName 
+							});
+						}
+					}
+				} catch (err) {
+					console.error('更新文章砍价完成状态失败:', err);
+				}
 			}
 			
 			console.log('砍价成功:', {
@@ -1525,6 +1575,20 @@ module.exports = {
 				reward_points: rewardPoints
 			});
 			
+			// 检查文章是否已经有人完成砍价（用于提示用户）
+			let articleCompleted = false;
+			let winnerNickname = '';
+			try {
+				const articleCheck = await this.articleCollection.doc(article_id).get();
+				if (articleCheck.data && articleCheck.data.length > 0) {
+					const currentArticle = articleCheck.data[0];
+					articleCompleted = currentArticle.bargain_completed || false;
+					winnerNickname = currentArticle.bargain_winner_nickname || '';
+				}
+			} catch (err) {
+				console.error('检查文章砍价状态失败:', err);
+			}
+			
 			return {
 				errCode: 0,
 				errMsg: isComplete ? '砍价完成！发起人已获得奖励！' : '砍价成功',
@@ -1532,7 +1596,9 @@ module.exports = {
 				is_complete: isComplete,
 				bargain_amount: actualBargainAmount,
 				progress: ((initialPrice - newPrice) / initialPrice * 100).toFixed(2),
-				reward_points: rewardPoints
+				reward_points: rewardPoints,
+				article_completed: articleCompleted, // 文章是否已经有人完成砍价
+				winner_nickname: winnerNickname // 获胜者昵称
 			};
 			
 		} catch (err) {
@@ -1821,13 +1887,20 @@ module.exports = {
 				}
 			});
 			
-			// 获取文章的起始价格（用于计算进度）
+			// 获取文章的起始价格和获胜者信息（用于计算进度）
 			const article = await this.articleCollection
 				.doc(article_id)
-				.field({ bargain_initial_price: true })
+				.field({ 
+					bargain_initial_price: true,
+					bargain_completed: true,
+					bargain_winner_id: true,
+					bargain_winner_nickname: true
+				})
 				.get();
 			
 			const initialPrice = article.data && article.data.length > 0 ? article.data[0].bargain_initial_price : 0;
+			const articleCompleted = article.data && article.data.length > 0 ? article.data[0].bargain_completed : false;
+			const winnerNickname = article.data && article.data.length > 0 ? article.data[0].bargain_winner_nickname : '';
 			
 			// 转换为数组并添加统计信息
 			const groups = Array.from(groupsMap.values()).map(group => {
@@ -1856,7 +1929,9 @@ module.exports = {
 				data: {
 					groups: groups,
 					total_groups: groups.length,
-					initial_price: initialPrice
+					initial_price: initialPrice,
+					article_completed: articleCompleted, // 文章是否已经有人完成砍价
+					winner_nickname: winnerNickname // 获胜者昵称
 				}
 			};
 			

@@ -253,6 +253,26 @@
             "description": "自定义分享封面图片URL",
             "defaultValue": "",
             "trim": "both"
+        },
+        "bargain_completed": {
+            "bsonType": "bool",
+            "description": "砍价活动是否已有人完成（有人砍到0元）",
+            "defaultValue": false
+        },
+        "bargain_completed_time": {
+            "bsonType": "timestamp",
+            "description": "砍价活动完成时间",
+            "defaultValue": null
+        },
+        "bargain_winner_id": {
+            "bsonType": "string",
+            "description": "砍价活动获胜者ID（第一个完成砍价的发起人）",
+            "defaultValue": ""
+        },
+        "bargain_winner_nickname": {
+            "bsonType": "string",
+            "description": "砍价活动获胜者昵称",
+            "defaultValue": ""
         }
     }
 }
