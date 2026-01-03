@@ -129,12 +129,12 @@ const selectedPrizeIndex = ref(0);
 const customPrize = ref('');
 const manualTargetIndex = ref(-1);
 
-// 奖品类型设置
+// 奖品类型设置 - 已移除奖励功能，仅作展示用途
 const prizeTypes = [
 	{ id: 'empty', name: '谢谢参与' },
-	{ id: 'small', name: '小额奖品' },
-	{ id: 'medium', name: '中额奖品' },
-	{ id: 'large', name: '大额奖品' }
+	{ id: 'small', name: '展示奖品' },
+	{ id: 'medium', name: '展示奖品' },
+	{ id: 'large', name: '展示奖品' }
 ];
 
 // 对应prizes的类型索引
@@ -450,17 +450,18 @@ const runLottery = () => {
 	}, speed.value);
 };
 
-// 显示抽奖结果
+// 显示抽奖结果 - 已移除奖励发放功能
 const showResult = () => {
 	// 如果有抽奖结果，使用它
 	if (prizeResult.value && prizeResult.value.prize) {
 		const prize = prizeResult.value.prize;
 		let message = '';
 		
+		// 不再发放任何奖励，仅显示抽奖结果
 		if (prize.type === 'empty') {
 			message = '很遗憾，谢谢参与！';
 		} else {
-			message = `恭喜您获得${prize.name}！`;
+			message = `抽中：${prize.name}（仅作展示，不发放奖励）`;
 		}
 		
 		lotteryResult.value = {
@@ -474,10 +475,11 @@ const showResult = () => {
 		
 		let message = '';
 		
+		// 不再发放任何奖励，仅显示抽奖结果
 		if (prize.type === 'empty') {
 			message = '很遗憾，谢谢参与！';
 		} else {
-			message = `恭喜您获得${prize.name}！`;
+			message = `抽中：${prize.name}（仅作展示，不发放奖励）`;
 		}
 		
 		lotteryResult.value = {

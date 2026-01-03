@@ -846,7 +846,7 @@ const formatTime = (timestamp) => {
 	return `${month}月${day}日`;
 };
 
-// 对于父组件中的事件处理函数
+// 对于父组件中的事件处理函数 - 已移除奖励发放功能
 const handleLotteryResult = async (result) => {
 	// 修复 result.includes is not a function 错误
 	// 不再使用 result.includes 进行判断
@@ -860,7 +860,7 @@ const handleLotteryResult = async (result) => {
 					isLotteryResult: true
 				};
 				
-				// 将中奖用户信息保存到数据库
+				// 将中奖用户信息保存到数据库（仅记录，不发放奖励）
 				// 准备保存的数据
 				const lotteryData = {
 					article_id: props.articleId,
@@ -871,15 +871,16 @@ const handleLotteryResult = async (result) => {
 					winner_content: result.content || '',
 					winner_index: winnerIndex.value,
 					draw_time: Date.now(),
-					participant_count: participantsList.length || 0
+					participant_count: participantsList.length || 0,
+					reward_status: 'none' // 标记为不发放奖励
 				};
 				
-				// 调用云函数保存抽奖结果
+				// 调用云函数保存抽奖结果（仅记录）
 				const choujiangWx = uniCloud.importObject('choujiangWx');
 				const saveResult = await choujiangWx.saveLotteryResult(lotteryData);
 				
 				if (saveResult && saveResult.success) {
-					console.log('抽奖结果保存成功:', saveResult);
+					console.log('抽奖结果保存成功（不发放奖励）:', saveResult);
 					
 					// 确保结果显示正常
 					showResult.value = true;

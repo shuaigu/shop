@@ -284,6 +284,7 @@ module.exports = {
 	
 	/**
 	 * 保存抽奖结果到数据库
+	 * 注意：此功能仅记录抽奖结果，不发放任何奖励
 	 * @param {object} resultData 抽奖结果数据
 	 * @returns {object} 保存结果
 	 */
@@ -293,11 +294,14 @@ module.exports = {
 				throw new Error('结果数据不能为空');
 			}
 			
-			// 添加到抽奖结果集合
+			// 添加到抽奖结果集合（仅记录，不发放奖励）
 			const result = await this.lotteryResultCollection.add({
 				...resultData,
-				create_time: Date.now()
+				create_time: Date.now(),
+				reward_status: resultData.reward_status || 'none' // 默认不发放奖励
 			});
+			
+			console.log('抽奖结果已保存（不发放奖励）');
 			
 			return {
 				success: true,
