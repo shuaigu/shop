@@ -1745,6 +1745,130 @@ module.exports = {
 		}
 	},
 	
+	/**
+	 * getBargainGroupsList 获取文章的所有砍价小组列表
+	 * @param {string} article_id 文章ID
+	 * @returns {object} 小组列表数据
+	 */
+	async getBargainGroupsList(article_id) {
+		try {
+			if (!article_id) {
+				return {
+					errCode: -1,
+					errMsg: '文章ID不能为空'
+				};
+			}
+			
+			// 获取该文章所有砍价记录
+			const records = await this.bargainRecordCollection
+				.where({ article_id: article_id })
+				.orderBy('create_time', 'desc')
+				.field({
+					user_id: true,
+					bargain_amount: true,
+					nickname: true,
+					avatar: true,
+					create_time: true,
+					initiator_id: true,
+					initiator_nickname: true,
+					initiator_avatar: true
+				})
+				.get();
+			
+			console.log('=== 查询所有砍价记录 ===', records.data.length);
+			
+			if (!records.data || records.data.length === 0) {
+				return {
+					errCode: 0,
+					data: {
+						groups: [],
+						total_groups: 0
+					}
+				};
+			}
+			
+			// 按发起人ID分组
+			const groupsMap = new Map();
+			
+			records.data.forEach(record => {
+				const initiatorId = record.initiator_id;
+				
+				if (!groupsMap.has(initiatorId)) {
+					// 创建新小组
+					groupsMap.set(initiatorId, {
+						initiator_id: initiatorId,
+						initiator_nickname: record.initiator_nickname || '匿名用户',
+						initiator_avatar: record.initiator_avatar || '/static/images/touxiang.png',
+						create_time: record.create_time,
+						total_bargained_amount: 0,
+						participants_map: new Map(),
+						records: []
+					});
+				}
+				
+				const group = groupsMap.get(initiatorId);
+				group.total_bargained_amount += record.bargain_amount || 0;
+				group.records.push(record);
+				
+				// 统计参与人数（去重）
+				if (!group.participants_map.has(record.user_id)) {
+					group.participants_map.set(record.user_id, {
+						user_id: record.user_id,
+						nickname: record.nickname || '匿名用户',
+						avatar: record.avatar || '/static/images/touxiang.png',
+						create_time: record.create_time
+					});
+				}
+			});
+			
+			// 获取文章的起始价格（用于计算进度）
+			const article = await this.articleCollection
+				.doc(article_id)
+				.field({ bargain_initial_price: true })
+				.get();
+			
+			const initialPrice = article.data && article.data.length > 0 ? article.data[0].bargain_initial_price : 0;
+			
+			// 转换为数组并添加统计信息
+			const groups = Array.from(groupsMap.values()).map(group => {
+				const participants = Array.from(group.participants_map.values());
+				const progress = initialPrice > 0 ? (group.total_bargained_amount / initialPrice * 100).toFixed(2) : 0;
+				
+				return {
+					initiator_id: group.initiator_id,
+					initiator_nickname: group.initiator_nickname,
+					initiator_avatar: group.initiator_avatar,
+					create_time: group.create_time,
+					total_participants: participants.length,
+					total_bargained_amount: group.total_bargained_amount,
+					current_price: Math.max(0, initialPrice - group.total_bargained_amount),
+					progress: parseFloat(progress),
+					is_complete: group.total_bargained_amount >= initialPrice,
+					participants: participants.slice(0, 5) // 只返回前5个参与者头像
+				};
+			});
+			
+			// 按创建时间降序排序（最新的在前）
+			groups.sort((a, b) => b.create_time - a.create_time);
+			
+			return {
+				errCode: 0,
+				data: {
+					groups: groups,
+					total_groups: groups.length,
+					initial_price: initialPrice
+				}
+			};
+			
+		} catch (err) {
+			console.error('获取砍价小组列表失败:', err);
+			return {
+				errCode: -1,
+				errMsg: '获取失败: ' + err.message
+			};
+		}
+	},
+	
 	main: async function(event) {
 		console.log('云函数入口函数接收到的参数', event)
 		

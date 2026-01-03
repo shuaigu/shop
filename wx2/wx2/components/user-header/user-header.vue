@@ -1,5 +1,5 @@
 <script setup>
-	import { ref, onMounted } from 'vue'
+	import { ref, computed, onMounted } from 'vue'
 	import { useUserInfoStore } from '@/store/user'
 	import { processAvatarUrl, getDefaultImage } from '@/utils/domainConfig.js'
 
@@ -32,8 +32,21 @@
 		emit( 'contact' )
 	}
 	
+	// 检查是否为管理员
+	const isAdmin = computed(() => {
+		return userStore.userInfo?.role?.[0] === 'admin'
+	})
+	
 	// 处理发布按钮点击
 	const handlePublish = () => {
+		if (!isAdmin.value) {
+			uni.showToast({
+				title: '仅管理员可以发布',
+				icon: 'none',
+				duration: 2000
+			})
+			return
+		}
 		emit('publish')
 	}
 	
@@ -57,7 +70,7 @@
 	<view class="headInfo">
 		<view class="background-gradient"></view>
 		<!-- 添加发布按钮 -->
-		<view class="publish-btn" @click="handlePublish">
+		<view class="publish-btn" :class="{ 'disabled': !isAdmin }" @click="handlePublish">
 			<text class="icon lishuai-qianshuxieyi"></text>
 			<text class="publish-text">发布</text>
 		</view>
@@ -135,9 +148,22 @@
 				font-weight: 500;
 			}
 			
-			&:active {
+			&:active:not(.disabled) {
 				transform: scale(0.95);
 				background: rgba(255, 255, 255, 0.35);
+			}
+			
+			// 禁用状态样式
+			&.disabled {
+				background: rgba(150, 150, 150, 0.3);
+				border: 1px solid rgba(150, 150, 150, 0.4);
+				cursor: not-allowed;
+				opacity: 0.6;
+				
+				.icon,
+				.publish-text {
+					color: #cccccc;
+				}
 			}
 		}
 

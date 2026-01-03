@@ -1,8 +1,9 @@
 const fs = require( 'fs' );
 const path = require( 'path' )
 module.exports = {
+	// 异步回调地址，微信支付后会调用这个地址
 	"notifyUrl": {
-		"mp-323df75e-12a9-41d8-b2c1-e6fbfee24b0d": "https://fc-mp-323df75e-12a9-41d8-b2c1-e6fbfee24b0d.next.bspapp.com/uni-pay-co",
+		"default": "https://fc-mp-4f80f767-c485-40d3-b143-9134b266a903.next.bspapp.com/uni-pay-co"
 	},
 	"notifyKey": "6FB2bD73b7B53918728417C50762E6D45FB2CD73C7B53918728417C50762E6D4",
 	"wxpay": {

@@ -1,4 +1,4 @@
-<script setup>
+﻿<script setup>
 	import { computed, onMounted, ref, watch, onUnmounted, onBeforeUnmount, onActivated, nextTick } from 'vue'
 	import { useUserInfoStore } from '@/store/user.js'
 	import formatTime from '@/utils/formatTime.js'
@@ -13,9 +13,14 @@
 	import dianzan from '@/components/dianzan/dianzan.vue'
 	// 导入海报生成组件
 	import articlePoster from '@/components/article-poster/article-poster.vue'
+	// 导入砍价小组列表组件
+	import bargainGroups from '@/components/bargain-groups/bargain-groups.vue'
 
 	// 导入uni-load-more组件
 	import uniLoadMore from '@/uni_modules/uni-load-more/components/uni-load-more/uni-load-more.vue'
+	
+	// 导入打赏弹窗组件
+	import rewardPopup from '@/components/reward-popup/reward-popup.vue'
 	
 
 	// 接受传递过来的数据 - 不需要导入 defineProps
@@ -335,6 +340,15 @@
 	const likeButtonBottom = ref(null)
 	const isLikeAnimating = ref(false)
 	const tuijianRef = ref(null)
+	
+	// 打赏相关状态
+	const rewardPopupRef = ref(null) // 打赏弹窗引用
+	const rewardList = ref([]) // 打赏列表
+	const rewardStatistics = ref({ // 打赏统计
+		totalAmount: 0,
+		totalCount: 0,
+		userCount: 0
+	})
 
 	// 添加一个统一的媒体处理函数
 	const processMediaURL = (url, type = 'image') => {
@@ -2496,6 +2510,13 @@
 				}, 500); // 延迟500ms，确保页面渲染完成
 				
 				console.log('✅ 页面加载成功');
+								
+				// 加载打赏数据
+				if (currentArticleId.value) {
+					loadRewardData().catch(err => {
+						console.error('加载打赏数据失败:', err)
+					})
+				}
 			} catch (error) {
 			console.error('❌ 页面加载失败:', error);
 			
@@ -2933,6 +2954,79 @@
 		}
 	};
 	
+	// ========== 打赏相关方法 ==========
+	
+	// 打开打赏弹窗
+	const openRewardPopup = async () => {
+		try {
+			// 检查登录状态
+			const isLoggedIn = await customTestLogin()
+			if (!isLoggedIn) {
+				return
+			}
+			
+			// 移除作者身份检查，允许管理员和作者打赏
+			
+			// 加载打赏统计和列表
+			await loadRewardData()
+			
+			// 打开弹窗
+			if (rewardPopupRef.value) {
+				rewardPopupRef.value.open()
+			}
+		} catch (err) {
+			console.error('打开打赏弹窗失败:', err)
+			uni.showToast({
+				title: '操作失败',
+				icon: 'none'
+			})
+		}
+	}
+	
+	// 加载打赏数据
+	const loadRewardData = async () => {
+		try {
+			if (!currentArticleId.value) {
+				return
+			}
+			
+			const rewardApi = uniCloud.importObject('rewardWx', { customUI: true })
+			
+			// 加载统计
+			const statsRes = await rewardApi.getRewardStatistics({
+				article_id: currentArticleId.value
+			})
+			
+			if (statsRes.code === 0) {
+				rewardStatistics.value = statsRes.data
+			}
+			
+			// 加载打赏列表（最近10条）
+			const listRes = await rewardApi.getRewardList({
+				article_id: currentArticleId.value,
+				page: 1,
+				pageSize: 10
+			})
+			
+			if (listRes.code === 0) {
+				rewardList.value = listRes.data.list || []
+			}
+		} catch (err) {
+			console.error('加载打赏数据失败:', err)
+		}
+	}
+	
+	// 打赏成功回调
+	const handleRewardSuccess = async (data) => {
+		uni.showToast({
+			title: '打赏成功',
+			icon: 'success'
+		})
+		
+		// 重新加载打赏数据
+		await loadRewardData()
+	}
+	
 	// 格式化浏览时长
 	const formatDuration = (seconds) => {
 		if (!seconds || seconds <= 0) return '刚刚';
@@ -3100,6 +3194,14 @@
 	const handleBargainSuccess = (data) => {
 		console.log('砍价成功:', data)
 		// 可以在这里添加额外的逻辑，比如显示动画等
+		
+		// 刷新砍价小组列表
+		if (bargainGroupsRef.value && typeof bargainGroupsRef.value.loadGroups === 'function') {
+			setTimeout(() => {
+				bargainGroupsRef.value.loadGroups()
+				console.log('已刷新砍价小组列表')
+			}, 1000) // 延迟1秒刷新，确保数据已更新
+		}
 	}
 	
 	// 砖价完成事件处理
@@ -3149,6 +3251,73 @@
 			icon: 'none'
 		})
 	}
+	
+	// 处理砍价小组卡片点击
+	const handleGroupClick = (group) => {
+		console.log('点击砍价小组:', group)
+		// 可以跳转到小组详情页或展开详细信息
+		// 这里简单显示小组信息
+		uni.showModal({
+			title: '砍价小组详情',
+			content: `发起人：${group.initiator_nickname}\n已砍金额：¥${group.total_bargained_amount.toFixed(2)}\n参与人数：${group.total_participants}人\n进度：${group.progress}%`,
+			showCancel: false
+		})
+	}
+	
+	// 处理加入砍价小组
+	const handleJoinGroup = (group) => {
+		console.log('==== 父组件接收到 join-group 事件 ====', group)
+		
+		if (!group) {
+			console.error('小组数据为空')
+			return
+		}
+		
+		console.log('小组信息:', {
+			initiator_id: group.initiator_id,
+			initiator_nickname: group.initiator_nickname,
+			is_complete: group.is_complete,
+			total_participants: group.total_participants
+		})
+		
+		// 检查活动是否已过期
+		if (isBargainExpired.value) {
+			console.log('砍价活动已过期')
+			uni.showToast({
+				title: '砍价活动已结束',
+				icon: 'none',
+				duration: 2000
+			})
+			return
+		}
+		
+		// 存储当前选择的小组发起人ID，用于砍价时关联到该小组
+		try {
+			uni.setStorageSync('current_sharer_id', group.initiator_id)
+			console.log('已存储砍价小组发起人ID:', group.initiator_id)
+		} catch (e) {
+			console.error('存储发起人ID失败:', e)
+		}
+		
+		// 提示用户即将参与砍价
+		const message = group.is_complete ? '该小组已完成砍价' : '已选择小组，请点击“帮砍一刀”按钮'
+		console.log('显示提示:', message)
+		
+		uni.showToast({
+			title: message,
+			icon: 'success',
+			duration: 2000
+		})
+		
+		// 如果小组未完成，引导用户进行砍价
+		if (!group.is_complete) {
+			console.log('小组未完成，引导用户砍价')
+			// 这里可以添加滚动到砍价操作按钮的逻辑
+		}
+	}
+	
+	// 砍价小组列表组件引用
+	const bargainGroupsRef = ref(null)
 	
 	// 获取砍价成功话术
 	const getBargainSuccessMessage = () => {
@@ -3274,7 +3443,89 @@
 								</view>
 							</view>
 							
-							<!-- 图片显示区域 - 单独显示 -->
+							<!-- 砍价信息卡片 - 在视频播放器下方显示 -->
+							<view class="bargain-info-card" v-if="articleDetail.enable_bargain">
+								<view class="bargain-card-header">
+									<!-- 优先显示本地图片，加载失败后显示备用图标 -->
+									<image 
+										v-if="!bargainIconError"
+										class="bargain-header-icon" 
+										src="/static/images/砍价2.png" 
+										mode="aspectFit"
+										@error="handleBargainIconError"
+										@load="handleBargainIconLoad"
+									></image>
+									<!-- 备用方案：uni-icons 图标 -->
+									<uni-icons 
+										v-else
+										type="compose" 
+										size="28" 
+										color="#ff6b6b"
+									></uni-icons>
+									<text class="bargain-title">砍价活动</text>
+								</view>
+								<view class="bargain-card-content">
+									<!-- 倒计时显示 - 简洁样式 -->
+									<view class="bargain-countdown-top" v-if="articleDetail.bargain_end_time && articleDetail.bargain_end_time > 0 && !isBargainExpired">
+										<!-- 天数格子 -->
+										<view class="countdown-box">
+											<text class="countdown-number">{{ countdownDays }}</text>
+										</view>
+										<text class="countdown-label">天</text>
+																
+										<!-- 小时格子 -->
+										<view class="countdown-box">
+											<text class="countdown-number">{{ countdownHours }}</text>
+										</view>
+										<text class="countdown-label">小时</text>
+																
+										<!-- 分钟格子 -->
+										<view class="countdown-box">
+											<text class="countdown-number">{{ countdownMinutes }}</text>
+										</view>
+										<text class="countdown-label">分钟</text>
+																
+										<!-- 秒数格子 -->
+										<view class="countdown-box">
+											<text class="countdown-number">{{ countdownSeconds }}</text>
+										</view>
+										<text class="countdown-label">秒</text>
+									</view>
+									
+									<dianzan 
+										mode="bargain"
+										:articleId="articleDetail._id || props.article_id"
+										:initialLiked="isArticleLiked"
+										:initialCount="likeCount"
+										:initialPrice="articleDetail.bargain_initial_price || 0"
+										:bargainStep="articleDetail.bargain_step || 10"
+										:bargainEndTime="articleDetail.bargain_end_time || 0"
+										:bargainSuccessMessage="getBargainSuccessMessage()"
+										:bargainPopupImage="articleDetail.bargain_popup_image"
+										:bargainAmountText="articleDetail.bargain_amount_text || ''"
+										:showBargainPopup="true"
+										:showText="true"
+										:showCount="false"
+										@update:liked="(val) => isArticleLiked = val"
+										@update:count="(val) => likeCount = val"
+										@bargain-success="handleBargainSuccess"
+										@bargain-complete="handleBargainComplete"
+										@share-invite="handleShareInvite"
+										@view-detail="handleViewDetail"
+									/>
+
+								</view>
+							</view>
+						
+						<!-- 砍价小组列表 - 独立显示在砍价卡片外部 -->
+						<bargain-groups 
+							v-if="articleDetail.enable_bargain"
+							ref="bargainGroupsRef"
+							:articleId="articleDetail._id || props.article_id"
+							@group-click="handleGroupClick"
+						/>
+							
+							<!-- 图片显示区域 - 在砍价模块后面 -->
 							<view class="articleImages" v-if="articleDetail.images && articleDetail.images.length">
 								<!-- 图片网格 -->
 								<view class="image-grid">
@@ -3367,82 +3618,9 @@
 						</view>
 					</view>
 
-					<!-- 砍价信息卡片 - 在文章内容下方独立展示 -->
-					<view class="bargain-info-card" v-if="articleDetail.enable_bargain">
-						<view class="bargain-card-header">
-							<!-- 优先显示本地图片，加载失败后显示备用图标 -->
-							<image 
-								v-if="!bargainIconError"
-								class="bargain-header-icon" 
-								src="/static/images/砍价2.png" 
-								mode="aspectFit"
-								@error="handleBargainIconError"
-								@load="handleBargainIconLoad"
-							></image>
-							<!-- 备用方案：uni-icons 图标 -->
-							<uni-icons 
-								v-else
-								type="compose" 
-								size="28" 
-								color="#ff6b6b"
-							></uni-icons>
-							<text class="bargain-title">砍价活动</text>
-						</view>
-						<view class="bargain-card-content">
-							<!-- 倒计时显示 - 简洁样式 -->
-							<view class="bargain-countdown-top" v-if="articleDetail.bargain_end_time && articleDetail.bargain_end_time > 0 && !isBargainExpired">
-								<!-- 天数格子 -->
-								<view class="countdown-box">
-									<text class="countdown-number">{{ countdownDays }}</text>
-								</view>
-								<text class="countdown-label">天</text>
-													
-								<!-- 小时格子 -->
-								<view class="countdown-box">
-									<text class="countdown-number">{{ countdownHours }}</text>
-								</view>
-								<text class="countdown-label">小时</text>
-													
-								<!-- 分钟格子 -->
-								<view class="countdown-box">
-									<text class="countdown-number">{{ countdownMinutes }}</text>
-								</view>
-								<text class="countdown-label">分钟</text>
-													
-								<!-- 秒数格子 -->
-								<view class="countdown-box">
-									<text class="countdown-number">{{ countdownSeconds }}</text>
-								</view>
-								<text class="countdown-label">秒</text>
-							</view>
-							
-							<dianzan 
-								mode="bargain"
-								:articleId="articleDetail._id || props.article_id"
-								:initialLiked="isArticleLiked"
-								:initialCount="likeCount"
-								:initialPrice="articleDetail.bargain_initial_price || 0"
-								:bargainStep="articleDetail.bargain_step || 10"
-								:bargainEndTime="articleDetail.bargain_end_time || 0"
-								:bargainSuccessMessage="getBargainSuccessMessage()"
-								:bargainPopupImage="articleDetail.bargain_popup_image"
-								:bargainAmountText="articleDetail.bargain_amount_text || ''"
-								:showBargainPopup="true"
-								:showText="true"
-								:showCount="false"
-								@update:liked="(val) => isArticleLiked = val"
-								@update:count="(val) => likeCount = val"
-								@bargain-success="handleBargainSuccess"
-								@bargain-complete="handleBargainComplete"
-								@share-invite="handleShareInvite"
-								@view-detail="handleViewDetail"
-							/>
-						</view>
-					</view>
-
 					
-					
-					<!-- 详情图展示 - 在文章内容下方重复展示图片 -->
+				
+				<!-- 详情图展示 - 在文章内容下方重复展示图片 -->
 					<view class="article-detail-images" v-if="articleDetail.images && articleDetail.images.length" style="border-top: 0px solid #f5f5f5;">
 						<view class="detail-images-title">
 							<view class="line"></view>
@@ -3484,6 +3662,52 @@
 						</view>
 						<view class="location-content">
 							<text class="location-address">地址：{{ getSimplifiedLocation() }}</text>
+						</view>
+					</view>
+					
+					<!-- 打赏模块 -->
+					<view class="reward-section" v-if="articleDetail.user_id">
+						<view class="reward-container">
+							<view class="reward-header">
+								<view class="reward-title-box">
+									<uni-icons type="gift" size="20" color="#ff6b35"></uni-icons>
+									<text class="reward-title">打赏支持</text>
+								</view>
+								<view class="reward-stats" v-if="rewardStatistics.totalCount > 0">
+									<text class="stats-text">{{ rewardStatistics.userCount }}人已打赏</text>
+								</view>
+							</view>
+							
+							<view class="reward-content">
+								<view class="reward-desc">
+									<text>如果觉得内容对您有帮助，欢迎打赏支持作者</text>
+								</view>
+								
+								<button class="reward-btn" @click="openRewardPopup">
+									<uni-icons type="wallet" size="18" color="#fff"></uni-icons>
+									<text>打赏作者</text>
+								</button>
+							</view>
+							
+							<!-- 打赏列表 -->
+							<view class="reward-list" v-if="rewardList.length > 0">
+								<view class="reward-list-title">
+									<text>最近打赏</text>
+								</view>
+								<scroll-view class="reward-scroll" scroll-x>
+									<view class="reward-item" v-for="(item, index) in rewardList" :key="index">
+										<image 
+											class="reward-avatar" 
+											:src="item.from_user_avatar || getDefaultImage('avatar')" 
+											mode="aspectFill"
+										></image>
+										<view class="reward-info">
+											<text class="reward-name">{{ item.from_user_name }}</text>
+											<text class="reward-amount">¥{{ (item.amount / 100).toFixed(2) }}</text>
+										</view>
+									</view>
+								</scroll-view>
+							</view>
 						</view>
 					</view>
 					
@@ -3547,6 +3771,18 @@
 						:disabled="!isPosterReady"
 						@posterGenerated="handlePosterGenerated"
 					/>
+				</view>
+				
+				<!-- 打赏按钮 -->
+				<view 
+					class="action-item" 
+					v-if="articleDetail.user_id"
+					@click="openRewardPopup"
+				>
+					<uni-icons type="gift" size="24" color="#ff6b35"></uni-icons>
+					<view class="text" style="color: #ff6b35;">
+						打赏
+					</view>
 				</view>
 				
 				<!-- 转发按钮 -->
@@ -3683,6 +3919,15 @@
 			</view>
 		</view>
 		
+		<!-- 打赏弹窗 -->
+		<reward-popup
+			ref="rewardPopupRef"
+			:articleId="currentArticleId"
+			:authorId="articleDetail.user_id"
+			:authorName="articleDetail.user_nickName"
+			:authorAvatar="articleDetail.user_avatarUrl"
+			@success="handleRewardSuccess"
+		/>
 
 	</view>
 </template>
@@ -5699,6 +5944,145 @@
 			:deep(.dianzan-component) {
 				width: 100%;
 				min-height: 200rpx;
+			}
+		}
+	}
+	
+	/* 打赏模块样式 */
+	.reward-section {
+		margin: 20rpx 0;
+		padding: 0;
+		
+		.reward-container {
+			background: #fff;
+			margin: 0 24rpx;
+			border-radius: 16rpx;
+			padding: 32rpx 24rpx;
+			box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.06);
+		}
+		
+		.reward-header {
+			display: flex;
+			justify-content: space-between;
+			align-items: center;
+			margin-bottom: 24rpx;
+			
+			.reward-title-box {
+				display: flex;
+				align-items: center;
+				gap: 8rpx;
+			}
+			
+			.reward-title {
+				font-size: 32rpx;
+				font-weight: 600;
+				color: #333;
+			}
+			
+			.reward-stats {
+				.stats-text {
+					font-size: 24rpx;
+					color: #999;
+				}
+			}
+		}
+		
+		.reward-content {
+			display: flex;
+			flex-direction: column;
+			gap: 20rpx;
+			
+			.reward-desc {
+				text {
+					font-size: 26rpx;
+					color: #666;
+					line-height: 1.6;
+				}
+			}
+			
+			.reward-btn {
+				display: flex;
+				align-items: center;
+				justify-content: center;
+				gap: 8rpx;
+				background: linear-gradient(135deg, #ff6b35 0%, #ff8c42 100%);
+				color: #fff;
+				border-radius: 44rpx;
+				height: 88rpx;
+				font-size: 30rpx;
+				font-weight: 600;
+				border: none;
+				box-shadow: 0 8rpx 16rpx rgba(255, 107, 53, 0.3);
+				transition: all 0.3s;
+				
+				&::after {
+					border: none;
+				}
+				
+				&:active {
+					transform: scale(0.98);
+					box-shadow: 0 4rpx 12rpx rgba(255, 107, 53, 0.4);
+				}
+			}
+		}
+		
+		.reward-list {
+			margin-top: 24rpx;
+			
+			.reward-list-title {
+				margin-bottom: 16rpx;
+				
+				text {
+					font-size: 26rpx;
+					color: #666;
+					font-weight: 500;
+				}
+			}
+			
+			.reward-scroll {
+				white-space: nowrap;
+				display: flex;
+				gap: 16rpx;
+				padding: 8rpx 0;
+			}
+			
+			.reward-item {
+				display: inline-flex;
+				flex-direction: column;
+				align-items: center;
+				gap: 8rpx;
+				min-width: 120rpx;
+				padding: 12rpx;
+				background: #f9f9f9;
+				border-radius: 12rpx;
+				
+				.reward-avatar {
+					width: 60rpx;
+					height: 60rpx;
+					border-radius: 30rpx;
+				}
+				
+				.reward-info {
+					display: flex;
+					flex-direction: column;
+					align-items: center;
+					gap: 4rpx;
+					
+					.reward-name {
+						font-size: 24rpx;
+						color: #333;
+						max-width: 100rpx;
+						overflow: hidden;
+						text-overflow: ellipsis;
+						white-space: nowrap;
+					}
+					
+					.reward-amount {
+						font-size: 22rpx;
+						color: #ff6b35;
+						font-weight: 600;
+					}
+				}
 			}
 		}
 	}
