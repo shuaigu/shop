@@ -136,7 +136,10 @@
 				throw new Error('文章ID不能为空')
 			}
 
-			const res = await articleApi.getArticleDetal(props.article_id)
+			const res = await articleApi.getArticleDetal(
+				props.article_id, 
+				userStore.userInfo?.uid || null
+			)
 			
 			// 检查返回的数据结构
 			if (!res || !res.articleRes || !res.articleRes.data || !Array.isArray(res.articleRes.data)) {
@@ -167,6 +170,12 @@
 			// 初始化点赞状态
 			isLiked.value = articleData.is_liked || false
 			likeCount.value = articleData.like_count || 0
+			console.log('初始化点赞状态:', {
+				isLiked: isLiked.value,
+				likeCount: likeCount.value,
+				articleData_is_liked: articleData.is_liked,
+				userId: userStore.userInfo?.uid
+			})
 
 			// 获取分类名称
 			if (articleData.cate_id) {
@@ -560,10 +569,22 @@
 		try {
 			if (!articleDetail.value._id) return
 			
-			const result = await articleApi.updateLookCount(articleDetail.value._id)
+			// 记录浏览开始时间
+			viewStartTime.value = Date.now()
+			
+			// 准备浏览者信息
+			const viewerInfo = {
+				user_id: userStore.userInfo.uid || `guest_${Date.now()}`,
+				user_nickName: userStore.userInfo.nickName || '访客',
+				user_avatarUrl: userStore.userInfo.avatarUrl || '/static/images/touxiang.png',
+				view_source: 'direct',
+				actual_view_duration: 0
+			}
+			
+			const result = await articleApi.updateLookCount(articleDetail.value._id, viewerInfo)
 			if (result.code === 0) {
 				// 更新本地浏览量显示
-				articleDetail.value.look_count = (articleDetail.value.look_count || 0) + 1
+				articleDetail.value.look_count = result.data.look_count
 				console.log('浏览量更新成功')
 				
 				// 立即发送事件通知其他页面更新浏览量
@@ -675,8 +696,21 @@
 			clearInterval(commentRefreshTimer)
 		}
 		
+		// 离开页面时更新浏览时长
+		if (viewStartTime.value > 0 && userStore.userInfo.uid) {
+			const duration = Math.floor((Date.now() - viewStartTime.value) / 1000)
+			if (duration > 0 && articleDetail.value._id) {
+				articleApi.updateViewDuration(
+					articleDetail.value._id,
+					userStore.userInfo.uid || `guest_${Date.now()}`,
+					duration
+				).catch(err => {
+					console.error('更新浏览时长失败:', err)
+				})
+			}
+		}
+		
 		// 在离开详情页时，再次发送事件通知其他页面更新浏览量
-		// 这确保了即使用户没有等待API请求完成就离开页面，其他页面也能获取到最新的浏览量
 		if (articleDetail.value && articleDetail.value._id) {
 			uni.$emit('updateArticleLookCount', {
 				articleId: articleDetail.value._id,
@@ -866,6 +900,17 @@
 	const isLiked = ref(false)
 	const likeCount = ref(0)
 
+	// 浏览者列表相关状态
+	const viewersListVisible = ref(false)
+	const viewersList = ref([])
+	const viewersPageNo = ref(1)
+	const viewersPageSize = ref(20)
+	const viewersTotal = ref(0)
+	const hasMoreViewers = ref(true)
+	const viewersLoading = ref(false)
+	const viewersRefreshing = ref(false)
+	const viewStartTime = ref(0) // 浏览开始时间
+
 	// 处理点赞状态变化
 	const handleLikeChange = (data) => {
 		console.log('点赞状态变化:', data)
@@ -879,7 +924,7 @@
 		}
 	}
 
-	// 添加处理幸运用户横幅的方法
+	// 处理幸运用户横幅的方法
 	const handleLuckyUser = (data) => {
 		console.log('收到幸运用户事件:', data);
 		
@@ -910,6 +955,93 @@
 				console.log('更新幸运用户信息:', tempUserInfo);
 			}
 		}
+	}
+
+	// 显示浏览者列表
+	const showViewersList = async () => {
+		try {
+			const isLoggedIn = await customTestLogin()
+			if (!isLoggedIn) return
+			
+			if (!userStore.userInfo || userStore.userInfo.uid !== articleDetail.value.user_id) {
+				uni.showToast({ title: '只有作者才能查看浏览者', icon: 'none' })
+				return
+			}
+			
+			// 显示加载提示
+			uni.showLoading({ title: '加载中...', mask: true })
+			
+			viewersList.value = []
+			viewersPageNo.value = 1
+			hasMoreViewers.value = true
+			viewersTotal.value = 0
+			viewersListVisible.value = true
+			
+			await loadViewers(true)
+			uni.hideLoading()
+		} catch (err) {
+			console.error('显示浏览者列表失败:', err)
+			uni.hideLoading()
+			uni.showToast({ title: '操作失败', icon: 'none' })
+		}
+	}
+	
+	const loadViewers = async (refresh = false) => {
+		try {
+			if (viewersLoading.value) return
+			if (refresh) {
+				viewersPageNo.value = 1
+				viewersList.value = []
+				hasMoreViewers.value = true
+			} else if (!hasMoreViewers.value) return
+			
+			viewersLoading.value = true
+			const result = await articleApi.getViewers(props.article_id, {
+				pageNo: viewersPageNo.value,
+				pageSize: viewersPageSize.value
+			})
+			
+			if (result.code === 0) {
+				const { viewers, total, totalPages } = result.data
+				if (refresh) {
+					viewersList.value = viewers
+				} else {
+					viewersList.value.push(...viewers)
+				}
+				viewersTotal.value = total
+				hasMoreViewers.value = viewersPageNo.value < totalPages
+				if (hasMoreViewers.value) viewersPageNo.value++
+			} else {
+				uni.showToast({ title: result.message || '获取失败', icon: 'none' })
+			}
+		} catch (err) {
+			console.error('加载失败:', err)
+			uni.showToast({ title: '加载失败', icon: 'none' })
+		} finally {
+			viewersLoading.value = false
+			viewersRefreshing.value = false
+		}
+	}
+	
+	const closeViewersList = () => {
+		viewersListVisible.value = false
+		viewersList.value = []
+		viewersPageNo.value = 1
+		hasMoreViewers.value = true
+	}
+	
+	const handleViewersRefresh = async () => {
+		viewersRefreshing.value = true
+		await loadViewers(true)
+	}
+	
+	const formatDuration = (seconds) => {
+		if (!seconds || seconds <= 0) return '0秒'
+		const totalSeconds = Math.floor(seconds)
+		if (totalSeconds < 60) return `${totalSeconds}秒`
+		const minutes = Math.floor(totalSeconds / 60)
+		const secs = totalSeconds % 60
+		return `${minutes}分${secs}秒`
 	}
 
 	// 添加分享文章方法
@@ -1021,7 +1153,12 @@
 				</view>
 				<view class="author-details">
 					<view class="author-name">{{ articleDetail.user && articleDetail.user.nickName || articleDetail.user_nickName || articleDetail.nickName || articleDetail.user_name || '匿名用户' }}</view>
-					<view class="post-time">{{ formatTime(articleDetail.create_time) }} | {{ articleDetail.look_count || 0 }}浏览</view>
+					<view 
+						class="post-time"
+						@click="userStore.userInfo && userStore.userInfo.uid === articleDetail.user_id ? showViewersList() : null"
+					>
+						{{ formatTime(articleDetail.create_time) }} | {{ articleDetail.look_count || 0 }}浏览
+					</view>
 				</view>
 				<view class="contact-btn" @click="handleCall">
 					<uni-icons type="phone-filled" size="24" color="#07C160"></uni-icons>
@@ -1189,7 +1326,6 @@
 			</scroll-view>
 
 			<!-- 底部栏 -->
-			<!-- 底部栏 -->
 			<view class="footer">
 				<view class="footer-content">
 					<view class="action-item" @click="goToHome">
@@ -1240,6 +1376,65 @@
 			@close="closePreview"
 			@change="handlePreviewChange"
 		/>
+		
+		<!-- 浏览者列表弹窗 -->
+		<view v-if="viewersListVisible" class="viewers-modal" @click="closeViewersList">
+			<view class="viewers-container" @click.stop>
+				<view class="viewers-header">
+					<text class="viewers-title">浏览者列表 ({{ viewersTotal }})</text>
+					<view class="close-btn" @click="closeViewersList">
+						<uni-icons type="closeempty" size="24" color="#666"></uni-icons>
+					</view>
+				</view>
+				<scroll-view 
+					class="viewers-list" 
+					scroll-y 
+					@scrolltolower="() => loadViewers(false)"
+					:refresher-enabled="true"
+					:refresher-triggered="viewersRefreshing"
+					@refresherrefresh="handleViewersRefresh"
+					:lower-threshold="100"
+				>
+					<view class="viewer-item" v-for="(viewer, index) in viewersList" :key="index">
+						<view class="viewer-avatar">
+							<image 
+								:src="viewer.user_avatarUrl || '/static/images/touxiang.png'" 
+								mode="aspectFill"
+							></image>
+						</view>
+						<view class="viewer-info">
+							<view class="viewer-name">
+								<text>{{ viewer.user_nickName || '匿名用户' }}</text>
+								<text class="guest-badge" v-if="viewer.user_id && viewer.user_id.startsWith('guest_')">访客</text>
+							</view>
+							<view class="viewer-detail">
+								<text class="viewer-time">{{ formatTime(viewer.view_time) }}</text>
+								<text class="viewer-duration" v-if="viewer.view_duration > 0">浏览 {{ formatDuration(viewer.view_duration) }}</text>
+							</view>
+						</view>
+						<view class="viewer-contact" v-if="viewer.user_mobile">
+							<uni-icons type="phone" size="20" color="#07C160"></uni-icons>
+						</view>
+					</view>
+					
+					<!-- 加载中提示 -->
+					<view v-if="viewersLoading" class="loading-more">
+						<text>加载中...</text>
+					</view>
+					
+					<!-- 没有更多数据 -->
+					<view v-if="!hasMoreViewers && viewersList.length > 0" class="no-more">
+						<text>没有更多了</text>
+					</view>
+					
+					<!-- 空状态 -->
+					<view v-if="viewersList.length === 0 && !viewersLoading" class="empty-viewers">
+						<uni-icons type="eye-slash" size="50" color="#CCCCCC"></uni-icons>
+						<text>暂无浏览记录</text>
+					</view>
+				</scroll-view>
+			</view>
+		</view>
 	</view>
 </template>
 
@@ -1791,5 +1986,202 @@
 	.video-loading :deep(.uni-load-more__text) {
 		color: #fff;
 		text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+	}
+	
+	/* 浏览者列表样式 */
+	.viewers-modal {
+		position: fixed;
+		top: 0;
+		left: 0;
+		right: 0;
+		bottom: 0;
+		background-color: rgba(0, 0, 0, 0.6);
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		z-index: 9999;
+		animation: fadeIn 0.3s ease;
+	}
+	
+	@keyframes fadeIn {
+		from { opacity: 0; }
+		to { opacity: 1; }
+	}
+	
+	.viewers-container {
+		width: 90%;
+		max-width: 650rpx;
+		height: 75vh;
+		max-height: 1200rpx;
+		background-color: #fff;
+		border-radius: 24rpx;
+		display: flex;
+		flex-direction: column;
+		overflow: hidden;
+		box-shadow: 0 8rpx 32rpx rgba(0, 0, 0, 0.2);
+		animation: slideUp 0.3s ease;
+	}
+	
+	@keyframes slideUp {
+		from { 
+			transform: translateY(100rpx);
+			opacity: 0;
+		}
+		to { 
+			transform: translateY(0);
+			opacity: 1;
+		}
+	}
+	
+	.viewers-header {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		padding: 32rpx 30rpx;
+		border-bottom: 2rpx solid #F0F0F0;
+		background: linear-gradient(to bottom, #ffffff, #fafafa);
+		
+		.viewers-title {
+			font-size: 34rpx;
+			font-weight: 600;
+			color: #333;
+			display: flex;
+			align-items: center;
+			gap: 8rpx;
+			
+			&::before {
+				content: '👁️';
+				font-size: 32rpx;
+			}
+		}
+		
+		.close-btn {
+			padding: 8rpx;
+			cursor: pointer;
+			transition: transform 0.2s ease;
+			
+			&:active {
+				transform: scale(0.9);
+			}
+		}
+	}
+	
+	.viewers-list {
+		flex: 1;
+		padding: 8rpx 0;
+		background-color: #fafafa;
+	}
+	
+	.viewer-item {
+		display: flex;
+		align-items: center;
+		padding: 24rpx 30rpx;
+		background-color: #fff;
+		margin: 0 16rpx 8rpx;
+		border-radius: 12rpx;
+		box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.04);
+		transition: all 0.3s ease;
+		
+		&:active {
+			transform: scale(0.98);
+			box-shadow: 0 1rpx 4rpx rgba(0, 0, 0, 0.06);
+		}
+		
+		.viewer-avatar {
+			width: 88rpx;
+			height: 88rpx;
+			border-radius: 50%;
+			overflow: hidden;
+			margin-right: 24rpx;
+			border: 3rpx solid #F0F0F0;
+			
+			image {
+				width: 100%;
+				height: 100%;
+			}
+		}
+		
+		.viewer-info {
+			flex: 1;
+			min-width: 0;
+			
+			.viewer-name {
+				display: flex;
+				align-items: center;
+				margin-bottom: 8rpx;
+				
+				text {
+					font-size: 30rpx;
+					color: #333;
+					font-weight: 500;
+					overflow: hidden;
+					text-overflow: ellipsis;
+					white-space: nowrap;
+				}
+				
+				.guest-badge {
+					margin-left: 12rpx;
+					font-size: 20rpx;
+					color: #FF9800;
+					background-color: #FFF3E0;
+					padding: 4rpx 12rpx;
+					border-radius: 6rpx;
+					flex-shrink: 0;
+				}
+			}
+			
+			.viewer-detail {
+				display: flex;
+				align-items: center;
+				gap: 16rpx;
+				flex-wrap: wrap;
+				
+				.viewer-time {
+					font-size: 24rpx;
+					color: #999;
+				}
+				
+				.viewer-duration {
+					font-size: 24rpx;
+					color: #666;
+					background-color: #F0F8FF;
+					padding: 2rpx 10rpx;
+					border-radius: 4rpx;
+				}
+			}
+		}
+		
+		.viewer-contact {
+			margin-left: 16rpx;
+			flex-shrink: 0;
+		}
+	}
+	
+	.loading-more {
+		text-align: center;
+		padding: 30rpx;
+		color: #999;
+		font-size: 26rpx;
+	}
+	
+	.no-more {
+		text-align: center;
+		padding: 30rpx;
+		color: #CCCCCC;
+		font-size: 24rpx;
+	}
+	
+	.empty-viewers {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
+		padding: 120rpx 0;
+		
+		text {
+			margin-top: 24rpx;
+			color: #999;
+			font-size: 28rpx;
+		}
 	}
 </style>

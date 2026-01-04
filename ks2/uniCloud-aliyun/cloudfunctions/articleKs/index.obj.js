@@ -10,6 +10,7 @@ module.exports = {
 		this.userCollection = this.db.collection('uni-id-users')
 		this.articleCollection = this.db.collection('articleList')
 		this.commentCollection = this.db.collection('commentList')
+		this.viewRecordCollection = this.db.collection('viewRecord') // 浏览记录表
 	},
 	/**
 	 * addReady 获取分类和定位
@@ -144,9 +145,10 @@ module.exports = {
 	/**
 	 * getArticleDetal 根据文章id获取文章列表
 	 * @param {string}  article_id 文章id
+	 * @param {string}  user_id 用户id（可选，用于查询点赞状态）
 	 * @returns {object} 返回值 -- 文章对象
 	 */
-	async getArticleDetal(articleId) {
+	async getArticleDetal(articleId, userId = null) {
 		try {
 			// 检查文章ID是否存在
 			if (!articleId) {
@@ -161,6 +163,34 @@ module.exports = {
 			// 检查文章是否存在
 			if (!articleRes.data || articleRes.data.length === 0) {
 				throw new Error('文章不存在')
+			}
+
+			// 如果提供了用户ID，查询用户是否已点赞
+			if (userId) {
+				try {
+					console.log('查询点赞状态:', { articleId, userId })
+					const likeRecordCollection = this.db.collection('likeRecord')
+					const likeRes = await likeRecordCollection
+						.where({
+							article_id: articleId,
+							user_id: userId
+						})
+						.limit(1)
+						.get()
+					
+					console.log('点赞记录查询结果:', likeRes)
+					// 将点赞状态添加到文章数据中
+					articleRes.data[0].is_liked = likeRes.data && likeRes.data.length > 0
+					console.log('设置 is_liked:', articleRes.data[0].is_liked)
+				} catch (err) {
+					console.error('查询点赞状态失败:', err)
+					// 如果查询失败，默认为未点赞
+					articleRes.data[0].is_liked = false
+				}
+			} else {
+				console.log('未提供用户ID，设置 is_liked 为 false')
+				// 如果没有提供用户ID，默认为未点赞
+				articleRes.data[0].is_liked = false
 			}
 
 			// 获取评论列表
@@ -483,31 +513,130 @@ module.exports = {
 		}
 	},
 	/**
-	 * updateLookCount 更新文章浏览量
+	 * updateLookCount 更新文章浏览量并记录浏览者
 	 * @param {string} id 文章id
+	 * @param {object} viewerInfo 浏览者信息
 	 * @returns {object} 返回更新结果
 	 */
-	async updateLookCount(id) {
+	async updateLookCount(id, viewerInfo = null) {
 		if (!id) return {
 			code: -1,
 			message: '文章ID不能为空'
 		}
 		
 		try {
+			// 获取文章当前浏览量
+			const article = await this.articleCollection.doc(id).get();
+			
+			// 检查文章是否存在
+			if (!article.data || article.data.length === 0) {
+				return {
+					code: -1,
+					message: '文章不存在'
+				}
+			}
+			
+			// 当前浏览量
+			const currentCount = article.data[0].look_count || 0;
+			
+			// 更新浏览量
 			await this.articleCollection
 				.doc(id)
 				.update({
 					look_count: this.dbCmd.inc(1)
 				})
+				
+			// 如果有浏览者信息，记录浏览记录（包括访客用户）
+			if (viewerInfo && viewerInfo.user_id) {
+				try {
+					// 检查是否在3秒内有重复访问，避免频繁刷新
+					const recentTime = Date.now() - 3 * 1000; // 3秒前
+					const recentRecord = await this.viewRecordCollection
+						.where({
+							article_id: id,
+							user_id: viewerInfo.user_id,
+							view_time: this.dbCmd.gte(recentTime)
+						})
+						.limit(1)
+						.get();
+					
+					if (!recentRecord.data || recentRecord.data.length === 0) {
+						// 3秒内没有访问记录，创建新的浏览记录
+						const currentTime = Date.now();
+						
+						// 获取用户完整信息（包括电话和地区）
+						let userMobile = '';
+						let userDistrict = '';
+						
+						// 如果不是访客，从 user 表中查询用户信息
+						if (viewerInfo.user_id && !viewerInfo.user_id.startsWith('guest_')) {
+							try {
+								const userRes = await this.db.collection('user').doc(viewerInfo.user_id)
+									.field({
+										mobile: true,
+										district: true
+									})
+									.get();
+								
+								if (userRes.data && userRes.data.length > 0) {
+									userMobile = userRes.data[0].mobile || '';
+									userDistrict = userRes.data[0].district || '';
+								}
+							} catch (userErr) {
+								console.warn('获取用户信息失败:', userErr);
+							}
+						}
+						
+						await this.viewRecordCollection.add({
+							article_id: id,
+							user_id: viewerInfo.user_id,
+							user_nickName: viewerInfo.user_nickName || '匿名用户',
+							user_avatarUrl: viewerInfo.user_avatarUrl || '/static/images/touxiang.png',
+							user_mobile: userMobile,
+							user_district: userDistrict,
+							view_time: currentTime,
+							view_duration: viewerInfo.actual_view_duration || 0,
+							view_source: viewerInfo.view_source || 'direct',
+							sharer_id: viewerInfo.sharer_id || null,
+							sharer_name: viewerInfo.sharer_name || null,
+							sharer_avatar: viewerInfo.sharer_avatar || null,
+							ip_address: viewerInfo.ip_address || '',
+							device_info: viewerInfo.device_info || {}
+						});
+						
+						console.log('新浏览记录已创建:', {
+							article_id: id,
+							user_id: viewerInfo.user_id,
+							user_type: viewerInfo.user_id.startsWith('guest_') ? '访客' : '注册用户',
+							user_mobile: userMobile,
+							user_district: userDistrict,
+							view_time: new Date(currentTime).toLocaleString()
+						});
+					} else {
+						console.log('3秒内重复访问，跳过记录创建:', {
+							user_id: viewerInfo.user_id,
+							last_visit: new Date(recentRecord.data[0].view_time).toLocaleString()
+						});
+					}
+				} catch (recordErr) {
+					// 记录浏览者信息失败不影响浏览量更新
+					console.error('记录浏览者信息失败:', recordErr);
+				}
+			}
+				
 			return {
 				code: 0,
-				message: '更新成功'
+				message: '更新成功',
+				data: {
+					look_count: currentCount + 1
+				}
 			}
 		} catch (err) {
 			console.error('更新浏览量失败:', err)
 			return {
 				code: -1,
-				message: '更新失败'
+				message: '更新失败',
+				error: err.message
 			}
 		}
 	},
@@ -644,6 +773,145 @@ module.exports = {
 
 		// 其他逻辑
 	},
+	/**
+	 * getViewers 获取文章浏览者列表
+	 * @param {string} articleId 文章ID
+	 * @param {object} params 查询参数
+	 * @returns {object} 浏览者列表
+	 */
+	async getViewers(articleId, params = {}) {
+		try {
+			if (!articleId) {
+				return {
+					code: -1,
+					message: '文章ID不能为空'
+				}
+			}
+			
+			// 检查文章是否存在
+			const article = await this.articleCollection.doc(articleId).get()
+			if (!article.data || article.data.length === 0) {
+				return {
+					code: -1,
+					message: '文章不存在'
+				}
+			}
+			
+			// 分页参数
+			const pageNo = params.pageNo || 1
+			const pageSize = Math.min(params.pageSize || 20, 50) // 限制最大每页数量
+			
+			// 获取浏览者列表
+			const viewersRes = await this.viewRecordCollection
+				.where({
+					article_id: articleId
+				})
+				.orderBy('view_time', 'desc')
+				.skip((pageNo - 1) * pageSize)
+				.limit(pageSize)
+				.field({
+					user_id: true,
+					user_nickName: true,
+					user_avatarUrl: true,
+					user_mobile: true,
+					user_district: true,
+					view_time: true,
+					view_source: true,
+					view_duration: true,
+					sharer_id: true,
+					sharer_name: true,
+					sharer_avatar: true
+				})
+				.get()
+			
+			// 获取总数
+			const totalRes = await this.viewRecordCollection
+				.where({
+					article_id: articleId
+				})
+				.count()
+			
+			return {
+				code: 0,
+				message: '获取成功',
+				data: {
+					viewers: viewersRes.data || [],
+					total: totalRes.total || 0,
+					pageNo: pageNo,
+					pageSize: pageSize,
+					totalPages: Math.ceil((totalRes.total || 0) / pageSize)
+				}
+			}
+			
+		} catch (err) {
+			console.error('获取浏览者列表失败:', err)
+			return {
+				code: -1,
+				message: '获取失败',
+				error: err.message
+			}
+		}
+	},
+	
+	/**
+	 * updateViewDuration 更新浏览时长
+	 * @param {string} articleId 文章ID
+	 * @param {string} userId 用户ID
+	 * @param {number} duration 实际浏览时长（秒）
+	 * @returns {object} 更新结果
+	 */
+	async updateViewDuration(articleId, userId, duration) {
+		try {
+			if (!articleId || !userId || !duration || duration <= 0) {
+				return {
+					code: -1,
+					message: '参数不合法'
+				}
+			}
+			
+			// 查找该用户对该文章的最近一条浏览记录
+			const recentRecord = await this.viewRecordCollection
+				.where({
+					article_id: articleId,
+					user_id: userId
+				})
+				.orderBy('view_time', 'desc')
+				.limit(1)
+				.get()
+			
+			if (!recentRecord.data || recentRecord.data.length === 0) {
+				return {
+					code: -1,
+					message: '未找到浏览记录'
+				}
+			}
+			
+			// 更新浏览时长
+			const recordId = recentRecord.data[0]._id
+			await this.viewRecordCollection.doc(recordId).update({
+				view_duration: Math.floor(duration) // 确保是整数
+			})
+			
+			console.log('浏览时长已更新:', {
+				article_id: articleId,
+				user_id: userId,
+				duration: Math.floor(duration)
+			});
+			
+			return {
+				code: 0,
+				message: '更新成功'
+			}
+		} catch (err) {
+			console.error('更新浏览时长失败:', err)
+			return {
+				code: -1,
+				message: '更新失败',
+				error: err.message
+			}
+		}
+	},
+	
 	// 添加一个测试方法来检查数据库连接
 	async testConnection() {
 		try {

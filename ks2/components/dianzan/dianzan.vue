@@ -30,7 +30,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onBeforeUnmount, computed } from 'vue';
+import { ref, onMounted, onBeforeUnmount, computed, watch } from 'vue';
 
 // 定义props
 const props = defineProps({
@@ -509,13 +509,36 @@ onMounted(() => {
 		articleId: props.articleId,
 		userId: props.userId,
 		initialIsLiked: props.initialIsLiked,
-		initialLikeCount: props.initialLikeCount
+		initialLikeCount: props.initialLikeCount,
+		isLiked: isLiked.value,
+		likeCount: likeCount.value
 	});
 	
 	// 如果已经点赞，检查是否为幸运用户
 	if (isLiked.value) {
 		checkIfLuckyUser();
 	}
+});
+
+// 监听prop变化，确保状态同步
+watch(() => props.initialIsLiked, (newValue, oldValue) => {
+	console.log('initialIsLiked 变化:', { 
+		old: oldValue, 
+		new: newValue,
+		currentIsLiked: isLiked.value,
+		articleId: props.articleId
+	});
+	isLiked.value = newValue;
+});
+
+watch(() => props.initialLikeCount, (newValue, oldValue) => {
+	console.log('initialLikeCount 变化:', { 
+		old: oldValue, 
+		new: newValue,
+		currentLikeCount: likeCount.value,
+		articleId: props.articleId
+	});
+	likeCount.value = newValue;
 });
 
 onBeforeUnmount(() => {

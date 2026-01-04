@@ -357,11 +357,31 @@ const _sfc_main = {
         articleId: props.articleId,
         userId: props.userId,
         initialIsLiked: props.initialIsLiked,
-        initialLikeCount: props.initialLikeCount
+        initialLikeCount: props.initialLikeCount,
+        isLiked: isLiked.value,
+        likeCount: likeCount.value
       });
       if (isLiked.value) {
         checkIfLuckyUser();
       }
+    });
+    common_vendor.watch(() => props.initialIsLiked, (newValue, oldValue) => {
+      console.log("initialIsLiked 变化:", {
+        old: oldValue,
+        new: newValue,
+        currentIsLiked: isLiked.value,
+        articleId: props.articleId
+      });
+      isLiked.value = newValue;
+    });
+    common_vendor.watch(() => props.initialLikeCount, (newValue, oldValue) => {
+      console.log("initialLikeCount 变化:", {
+        old: oldValue,
+        new: newValue,
+        currentLikeCount: likeCount.value,
+        articleId: props.articleId
+      });
+      likeCount.value = newValue;
     });
     common_vendor.onBeforeUnmount(() => {
       common_vendor.index.$off("updateArticleLikeStatus", updateLikeStatus);

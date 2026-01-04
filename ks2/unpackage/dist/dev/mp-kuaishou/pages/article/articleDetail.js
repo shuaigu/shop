@@ -98,7 +98,7 @@ const _sfc_main = {
     const videoLoadStatus = common_vendor.ref("loading");
     const isPlaying = common_vendor.ref(true);
     const getArticleDetail = async () => {
-      var _a;
+      var _a, _b, _c;
       try {
         const needRedirect = await handlePageNavigation();
         if (needRedirect) {
@@ -107,7 +107,10 @@ const _sfc_main = {
         if (!props.article_id) {
           throw new Error("文章ID不能为空");
         }
-        const res = await articleApi.getArticleDetal(props.article_id);
+        const res = await articleApi.getArticleDetal(
+          props.article_id,
+          ((_a = userStore.userInfo) == null ? void 0 : _a.uid) || null
+        );
         if (!res || !res.articleRes || !res.articleRes.data || !Array.isArray(res.articleRes.data)) {
           throw new Error("获取文章详情失败：返回数据格式错误");
         }
@@ -124,6 +127,12 @@ const _sfc_main = {
         }
         isLiked.value = articleData.is_liked || false;
         likeCount.value = articleData.like_count || 0;
+        console.log("初始化点赞状态:", {
+          isLiked: isLiked.value,
+          likeCount: likeCount.value,
+          articleData_is_liked: articleData.is_liked,
+          userId: (_b = userStore.userInfo) == null ? void 0 : _b.uid
+        });
         if (articleData.cate_id) {
           try {
             const cateApi = common_vendor.tr.importObject("cateKs", { customUI: true });
@@ -166,7 +175,7 @@ const _sfc_main = {
           const configApi = common_vendor.tr.importObject("config", { customUI: true });
           const configRes = await configApi.getConfig("commentDisplay");
           navInfo.value = {
-            isVisible: ((_a = configRes == null ? void 0 : configRes.data) == null ? void 0 : _a.isVisible) ?? true,
+            isVisible: ((_c = configRes == null ? void 0 : configRes.data) == null ? void 0 : _c.isVisible) ?? true,
             // 默认显示
             title: "评论区"
           };
@@ -435,9 +444,17 @@ const _sfc_main = {
       try {
         if (!articleDetail.value._id)
           return;
-        const result = await articleApi.updateLookCount(articleDetail.value._id);
+        viewStartTime.value = Date.now();
+        const viewerInfo = {
+          user_id: userStore.userInfo.uid || `guest_${Date.now()}`,
+          user_nickName: userStore.userInfo.nickName || "访客",
+          user_avatarUrl: userStore.userInfo.avatarUrl || "/static/images/touxiang.png",
+          view_source: "direct",
+          actual_view_duration: 0
+        };
+        const result = await articleApi.updateLookCount(articleDetail.value._id, viewerInfo);
         if (result.code === 0) {
-          articleDetail.value.look_count = (articleDetail.value.look_count || 0) + 1;
+          articleDetail.value.look_count = result.data.look_count;
           console.log("浏览量更新成功");
           common_vendor.index.$emit("updateArticleLookCount", {
             articleId: articleDetail.value._id,
@@ -515,6 +532,18 @@ const _sfc_main = {
     common_vendor.onUnmounted(() => {
       if (commentRefreshTimer) {
         clearInterval(commentRefreshTimer);
+      }
+      if (viewStartTime.value > 0 && userStore.userInfo.uid) {
+        const duration = Math.floor((Date.now() - viewStartTime.value) / 1e3);
+        if (duration > 0 && articleDetail.value._id) {
+          articleApi.updateViewDuration(
+            articleDetail.value._id,
+            userStore.userInfo.uid || `guest_${Date.now()}`,
+            duration
+          ).catch((err) => {
+            console.error("更新浏览时长失败:", err);
+          });
+        }
       }
       if (articleDetail.value && articleDetail.value._id) {
         common_vendor.index.$emit("updateArticleLookCount", {
@@ -632,6 +661,15 @@ const _sfc_main = {
     });
     const isLiked = common_vendor.ref(false);
     const likeCount = common_vendor.ref(0);
+    const viewersListVisible = common_vendor.ref(false);
+    const viewersList = common_vendor.ref([]);
+    const viewersPageNo = common_vendor.ref(1);
+    const viewersPageSize = common_vendor.ref(20);
+    const viewersTotal = common_vendor.ref(0);
+    const hasMoreViewers = common_vendor.ref(true);
+    const viewersLoading = common_vendor.ref(false);
+    const viewersRefreshing = common_vendor.ref(false);
+    const viewStartTime = common_vendor.ref(0);
     const handleLikeChange = (data) => {
       console.log("点赞状态变化:", data);
       isLiked.value = data.isLiked;
@@ -659,6 +697,86 @@ const _sfc_main = {
           console.log("更新幸运用户信息:", tempUserInfo);
         }
       }
+    };
+    const showViewersList = async () => {
+      try {
+        const isLoggedIn = await customTestLogin();
+        if (!isLoggedIn)
+          return;
+        if (!userStore.userInfo || userStore.userInfo.uid !== articleDetail.value.user_id) {
+          common_vendor.index.showToast({ title: "只有作者才能查看浏览者", icon: "none" });
+          return;
+        }
+        common_vendor.index.showLoading({ title: "加载中...", mask: true });
+        viewersList.value = [];
+        viewersPageNo.value = 1;
+        hasMoreViewers.value = true;
+        viewersTotal.value = 0;
+        viewersListVisible.value = true;
+        await loadViewers(true);
+        common_vendor.index.hideLoading();
+      } catch (err) {
+        console.error("显示浏览者列表失败:", err);
+        common_vendor.index.hideLoading();
+        common_vendor.index.showToast({ title: "操作失败", icon: "none" });
+      }
+    };
+    const loadViewers = async (refresh = false) => {
+      try {
+        if (viewersLoading.value)
+          return;
+        if (refresh) {
+          viewersPageNo.value = 1;
+          viewersList.value = [];
+          hasMoreViewers.value = true;
+        } else if (!hasMoreViewers.value)
+          return;
+        viewersLoading.value = true;
+        const result = await articleApi.getViewers(props.article_id, {
+          pageNo: viewersPageNo.value,
+          pageSize: viewersPageSize.value
+        });
+        if (result.code === 0) {
+          const { viewers, total, totalPages } = result.data;
+          if (refresh) {
+            viewersList.value = viewers;
+          } else {
+            viewersList.value.push(...viewers);
+          }
+          viewersTotal.value = total;
+          hasMoreViewers.value = viewersPageNo.value < totalPages;
+          if (hasMoreViewers.value)
+            viewersPageNo.value++;
+        } else {
+          common_vendor.index.showToast({ title: result.message || "获取失败", icon: "none" });
+        }
+      } catch (err) {
+        console.error("加载失败:", err);
+        common_vendor.index.showToast({ title: "加载失败", icon: "none" });
+      } finally {
+        viewersLoading.value = false;
+        viewersRefreshing.value = false;
+      }
+    };
+    const closeViewersList = () => {
+      viewersListVisible.value = false;
+      viewersList.value = [];
+      viewersPageNo.value = 1;
+      hasMoreViewers.value = true;
+    };
+    const handleViewersRefresh = async () => {
+      viewersRefreshing.value = true;
+      await loadViewers(true);
+    };
+    const formatDuration = (seconds) => {
+      if (!seconds || seconds <= 0)
+        return "0秒";
+      const totalSeconds = Math.floor(seconds);
+      if (totalSeconds < 60)
+        return `${totalSeconds}秒`;
+      const minutes = Math.floor(totalSeconds / 60);
+      const secs = totalSeconds % 60;
+      return `${minutes}分${secs}秒`;
     };
     const processMediaURL = (url, type = "image") => {
       if (!url)
@@ -713,60 +831,61 @@ const _sfc_main = {
         c: common_vendor.t(articleDetail.value.user && articleDetail.value.user.nickName || articleDetail.value.user_nickName || articleDetail.value.nickName || articleDetail.value.user_name || "匿名用户"),
         d: common_vendor.t(common_vendor.unref(utils_formatTime.formatTime)(articleDetail.value.create_time)),
         e: common_vendor.t(articleDetail.value.look_count || 0),
-        f: common_vendor.p({
+        f: common_vendor.o(($event) => common_vendor.unref(userStore).userInfo && common_vendor.unref(userStore).userInfo.uid === articleDetail.value.user_id ? showViewersList() : null),
+        g: common_vendor.p({
           type: "phone-filled",
           size: "24",
           color: "#07C160"
         }),
-        g: common_vendor.o(handleCall),
-        h: articleDetail.value.videoURL
+        h: common_vendor.o(handleCall),
+        i: articleDetail.value.videoURL
       }, articleDetail.value.videoURL ? common_vendor.e({
-        i: videoLoadStatus.value === "loading"
+        j: videoLoadStatus.value === "loading"
       }, videoLoadStatus.value === "loading" ? {
-        j: common_vendor.p({
+        k: common_vendor.p({
           status: "loading",
           contentText: {
             contentrefresh: "视频加载中..."
           }
         })
       } : {}, {
-        k: videoLoadStatus.value === "error"
+        l: videoLoadStatus.value === "error"
       }, videoLoadStatus.value === "error" ? {
-        l: common_vendor.p({
+        m: common_vendor.p({
           type: "videocam-slash",
           size: "50",
           color: "#CCCCCC"
         })
       } : {}, {
-        m: articleDetail.value.videoURL,
-        n: articleDetail.value.images && articleDetail.value.images[0] ? articleDetail.value.images[0].compressedURL : "",
-        o: common_vendor.o(handleVideoError),
-        p: common_vendor.o(handleVideoLoaded),
-        q: common_vendor.o(handleVideoWaiting),
-        r: common_vendor.o(handleVideoCanPlay),
-        s: common_vendor.o(handleVideoPlay),
-        t: common_vendor.o(handleVideoPause),
-        v: !isPlaying.value && videoLoadStatus.value === "loaded"
+        n: articleDetail.value.videoURL,
+        o: articleDetail.value.images && articleDetail.value.images[0] ? articleDetail.value.images[0].compressedURL : "",
+        p: common_vendor.o(handleVideoError),
+        q: common_vendor.o(handleVideoLoaded),
+        r: common_vendor.o(handleVideoWaiting),
+        s: common_vendor.o(handleVideoCanPlay),
+        t: common_vendor.o(handleVideoPlay),
+        v: common_vendor.o(handleVideoPause),
+        w: !isPlaying.value && videoLoadStatus.value === "loaded"
       }, !isPlaying.value && videoLoadStatus.value === "loaded" ? {
-        w: common_vendor.p({
+        x: common_vendor.p({
           type: "videocam-filled",
           size: "36",
           color: "#FFFFFF"
         }),
-        x: common_vendor.o(toggleVideoPlay)
+        y: common_vendor.o(toggleVideoPlay)
       } : {}) : {}, {
-        y: articleDetail.value.images && articleDetail.value.images.length
+        z: articleDetail.value.images && articleDetail.value.images.length
       }, articleDetail.value.images && articleDetail.value.images.length ? common_vendor.e({
-        z: articleDetail.value.images.length > 1
+        A: articleDetail.value.images.length > 1
       }, articleDetail.value.images.length > 1 ? {
-        A: common_vendor.p({
+        B: common_vendor.p({
           type: "image",
           size: "16",
           color: "#FFFFFF"
         }),
-        B: common_vendor.t(articleDetail.value.images.length)
+        C: common_vendor.t(articleDetail.value.images.length)
       } : {}, {
-        C: common_vendor.f(articleDetail.value.images.length > 9 ? articleDetail.value.images.slice(0, 9) : articleDetail.value.images, (item, index, i0) => {
+        D: common_vendor.f(articleDetail.value.images.length > 9 ? articleDetail.value.images.slice(0, 9) : articleDetail.value.images, (item, index, i0) => {
           return common_vendor.e({
             a: item.compressedURL,
             b: common_vendor.o(($event) => handleImageLoad(index)),
@@ -779,19 +898,19 @@ const _sfc_main = {
             g: common_vendor.o(($event) => previewImage(index))
           });
         }),
-        D: common_vendor.n(`grid-${articleDetail.value.images.length > 9 ? 9 : articleDetail.value.images.length}`)
+        E: common_vendor.n(`grid-${articleDetail.value.images.length > 9 ? 9 : articleDetail.value.images.length}`)
       }) : {}, {
-        E: articleDetail.value.content
+        F: articleDetail.value.content
       }, articleDetail.value.content ? {
-        F: common_vendor.t(articleDetail.value.content)
+        G: common_vendor.t(articleDetail.value.content)
       } : {}, {
-        G: articleDetail.value.images && articleDetail.value.images.length
+        H: articleDetail.value.images && articleDetail.value.images.length
       }, articleDetail.value.images && articleDetail.value.images.length ? {
-        H: common_vendor.t(articleDetail.value.images.length)
+        I: common_vendor.t(articleDetail.value.images.length)
       } : {}, {
-        I: articleDetail.value.images && articleDetail.value.images.length
+        J: articleDetail.value.images && articleDetail.value.images.length
       }, articleDetail.value.images && articleDetail.value.images.length ? {
-        J: common_vendor.f(articleDetail.value.images, (item, index, i0) => {
+        K: common_vendor.f(articleDetail.value.images, (item, index, i0) => {
           return {
             a: index,
             b: item.compressedURL,
@@ -799,56 +918,56 @@ const _sfc_main = {
           };
         })
       } : {}, {
-        K: navInfo.value && navInfo.value.isVisible
+        L: navInfo.value && navInfo.value.isVisible
       }, navInfo.value && navInfo.value.isVisible ? common_vendor.e({
-        L: isCommentsLoading.value && !articleComment.value.length
+        M: isCommentsLoading.value && !articleComment.value.length
       }, isCommentsLoading.value && !articleComment.value.length ? {} : commentCount.value === 0 ? {
-        N: common_vendor.p({
+        O: common_vendor.p({
           type: "chat",
           size: "50",
           color: "#CCCCCC"
         })
       } : {}, {
-        M: commentCount.value === 0,
-        O: common_vendor.t(commentCount.value),
-        P: common_vendor.p({
+        N: commentCount.value === 0,
+        P: common_vendor.t(commentCount.value),
+        Q: common_vendor.p({
           type: "chat",
           size: "20",
           color: "#999"
         }),
-        Q: common_vendor.o(handleCommentClick)
+        R: common_vendor.o(handleCommentClick)
       }) : {}, {
-        R: navInfo.value && navInfo.value.isVisible
+        S: navInfo.value && navInfo.value.isVisible
       }, navInfo.value && navInfo.value.isVisible ? {
-        S: common_vendor.o(handelDelComment),
-        T: common_vendor.p({
+        T: common_vendor.o(handelDelComment),
+        U: common_vendor.p({
           comments: articleComment.value
         })
       } : {}, {
-        U: common_vendor.sr(tuijianRef, "786907d5-9", {
+        V: common_vendor.sr(tuijianRef, "786907d5-9", {
           "k": "tuijianRef"
         }),
-        V: common_vendor.o(handleArticleClick),
-        W: common_vendor.p({
+        W: common_vendor.o(handleArticleClick),
+        X: common_vendor.p({
           ["current-article-id"]: __props.article_id,
           cate_id: articleDetail.value.cate_id
         }),
-        X: !hasVideo.value ? 1 : "",
-        Y: common_vendor.o(($event) => {
+        Y: !hasVideo.value ? 1 : "",
+        Z: common_vendor.o(($event) => {
           var _a;
           return (_a = tuijianRef.value) == null ? void 0 : _a.loadMore();
         }),
-        Z: isLoading.value,
-        aa: common_vendor.o(getArticleDetail),
-        ab: common_vendor.p({
+        aa: isLoading.value,
+        ab: common_vendor.o(getArticleDetail),
+        ac: common_vendor.p({
           type: "home",
           size: "24",
           color: "#444444"
         }),
-        ac: common_vendor.o(goToHome),
-        ad: common_vendor.o(handleLikeChange),
-        ae: common_vendor.o(handleLuckyUser),
-        af: common_vendor.p({
+        ad: common_vendor.o(goToHome),
+        ae: common_vendor.o(handleLikeChange),
+        af: common_vendor.o(handleLuckyUser),
+        ag: common_vendor.p({
           articleId: __props.article_id,
           userId: common_vendor.unref(userStore).userInfo.uid,
           initialLikeCount: likeCount.value,
@@ -859,25 +978,76 @@ const _sfc_main = {
           userAvatar: common_vendor.unref(userStore).userInfo.avatarUrl,
           userNickname: common_vendor.unref(userStore).userInfo.nickName
         }),
-        ag: common_vendor.o(handleCall),
-        ah: showLuckyUserBanner.value
+        ah: common_vendor.o(handleCall),
+        ai: showLuckyUserBanner.value
       }, showLuckyUserBanner.value ? {
-        ai: common_vendor.o(($event) => showLuckyUserBanner.value = false),
-        aj: common_vendor.p({
+        aj: common_vendor.o(($event) => showLuckyUserBanner.value = false),
+        ak: common_vendor.p({
           rank: luckyUserRank.value,
           avatar: luckyUserInfo.value.avatar,
           nickname: luckyUserInfo.value.nickname
         })
       } : {}, {
-        ak: articleDetail.value._id,
-        al: common_vendor.o(closePreview),
-        am: common_vendor.o(handlePreviewChange),
-        an: common_vendor.p({
+        al: articleDetail.value._id,
+        am: common_vendor.o(closePreview),
+        an: common_vendor.o(handlePreviewChange),
+        ao: common_vendor.p({
           visible: previewVisible.value,
           images: previewImages.value,
           current: previewCurrent.value
         }),
-        ao: common_vendor.gei(_ctx, "")
+        ap: viewersListVisible.value
+      }, viewersListVisible.value ? common_vendor.e({
+        aq: common_vendor.t(viewersTotal.value),
+        ar: common_vendor.p({
+          type: "closeempty",
+          size: "24",
+          color: "#666"
+        }),
+        as: common_vendor.o(closeViewersList),
+        at: common_vendor.f(viewersList.value, (viewer, index, i0) => {
+          return common_vendor.e({
+            a: viewer.user_avatarUrl || "/static/images/touxiang.png",
+            b: common_vendor.t(viewer.user_nickName || "匿名用户"),
+            c: viewer.user_id && viewer.user_id.startsWith("guest_")
+          }, viewer.user_id && viewer.user_id.startsWith("guest_") ? {} : {}, {
+            d: common_vendor.t(common_vendor.unref(utils_formatTime.formatTime)(viewer.view_time)),
+            e: viewer.view_duration > 0
+          }, viewer.view_duration > 0 ? {
+            f: common_vendor.t(formatDuration(viewer.view_duration))
+          } : {}, {
+            g: viewer.user_mobile
+          }, viewer.user_mobile ? {
+            h: "786907d5-15-" + i0,
+            i: common_vendor.p({
+              type: "phone",
+              size: "20",
+              color: "#07C160"
+            })
+          } : {}, {
+            j: index
+          });
+        }),
+        av: viewersLoading.value
+      }, viewersLoading.value ? {} : {}, {
+        aw: !hasMoreViewers.value && viewersList.value.length > 0
+      }, !hasMoreViewers.value && viewersList.value.length > 0 ? {} : {}, {
+        ax: viewersList.value.length === 0 && !viewersLoading.value
+      }, viewersList.value.length === 0 && !viewersLoading.value ? {
+        ay: common_vendor.p({
+          type: "eye-slash",
+          size: "50",
+          color: "#CCCCCC"
+        })
+      } : {}, {
+        az: common_vendor.o(() => loadViewers(false)),
+        aA: viewersRefreshing.value,
+        aB: common_vendor.o(handleViewersRefresh),
+        aC: common_vendor.o(() => {
+        }),
+        aD: common_vendor.o(closeViewersList)
+      }) : {}, {
+        aE: common_vendor.gei(_ctx, "")
       });
     };
   }
