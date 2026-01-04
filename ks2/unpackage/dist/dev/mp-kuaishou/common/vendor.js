@@ -11632,6 +11632,7 @@ exports.m = m$1;
 exports.n = n$1;
 exports.nextTick$1 = nextTick$1;
 exports.o = o$1;
+exports.onBeforeUnmount = onBeforeUnmount;
 exports.onLoad = onLoad;
 exports.onMounted = onMounted;
 exports.onPullDownRefresh = onPullDownRefresh;

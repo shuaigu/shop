@@ -14,10 +14,12 @@ const _easycom_uni_icons = () => "../../uni_modules/uni-icons/components/uni-ico
 const _easycom_uni_load_more = () => "../../uni_modules/uni-load-more/components/uni-load-more/uni-load-more.js";
 const _easycom_comment_list = () => "../../components/comment-list/comment-list.js";
 if (!Math) {
-  (_easycom_up_loading_page + _easycom_uni_icons + _easycom_uni_load_more + _easycom_comment_list + tuijian + Tuouanyulan)();
+  (_easycom_up_loading_page + _easycom_uni_icons + _easycom_uni_load_more + _easycom_comment_list + tuijian + Dianzan + LuckyUserBanner + Tuouanyulan)();
 }
 const tuijian = () => "../../components/tuijian/tuijian.js";
+const LuckyUserBanner = () => "../../components/lucky-user/lucky-user-banner.js";
 const Tuouanyulan = () => "../../components/tuouanyulan/tuouanyulan.js";
+const Dianzan = () => "../../components/dianzan/dianzan.js";
 const _sfc_main = {
   __name: "articleDetail",
   props: {
@@ -120,6 +122,8 @@ const _sfc_main = {
           articleData.videoURL = articleData.video.compressedURL || articleData.video.url;
           videoLoadStatus.value = "loading";
         }
+        isLiked.value = articleData.is_liked || false;
+        likeCount.value = articleData.like_count || 0;
         if (articleData.cate_id) {
           try {
             const cateApi = common_vendor.tr.importObject("cateKs", { customUI: true });
@@ -620,12 +624,42 @@ const _sfc_main = {
         tuijianRef.value.loadMore();
       }
     });
-    common_vendor.ref(false);
-    common_vendor.ref(1);
-    common_vendor.ref({
+    const showLuckyUserBanner = common_vendor.ref(false);
+    const luckyUserRank = common_vendor.ref(1);
+    const luckyUserInfo = common_vendor.ref({
       avatar: "",
       nickname: "用户"
     });
+    const isLiked = common_vendor.ref(false);
+    const likeCount = common_vendor.ref(0);
+    const handleLikeChange = (data) => {
+      console.log("点赞状态变化:", data);
+      isLiked.value = data.isLiked;
+      likeCount.value = data.likeCount;
+      if (articleDetail.value) {
+        articleDetail.value.like_count = data.likeCount;
+        articleDetail.value.is_liked = data.isLiked;
+      }
+    };
+    const handleLuckyUser = (data) => {
+      console.log("收到幸运用户事件:", data);
+      if (!data) {
+        console.error("收到无效的幸运用户数据");
+        return;
+      }
+      if (data.isWinner === true) {
+        showLuckyUserBanner.value = true;
+        luckyUserRank.value = typeof data === "object" ? Number(data.likeRank) || 1 : Number(data) || 1;
+        if (data && typeof data === "object") {
+          const tempUserInfo = {
+            avatar: data.avatar || "/static/images/default-avatar.png",
+            nickname: data.nickname || "幸运用户"
+          };
+          luckyUserInfo.value = tempUserInfo;
+          console.log("更新幸运用户信息:", tempUserInfo);
+        }
+      }
+    };
     const processMediaURL = (url, type = "image") => {
       if (!url)
         return "";
@@ -812,16 +846,38 @@ const _sfc_main = {
           color: "#444444"
         }),
         ac: common_vendor.o(goToHome),
-        ad: common_vendor.o(handleCall),
-        ae: articleDetail.value._id,
-        af: common_vendor.o(closePreview),
-        ag: common_vendor.o(handlePreviewChange),
-        ah: common_vendor.p({
+        ad: common_vendor.o(handleLikeChange),
+        ae: common_vendor.o(handleLuckyUser),
+        af: common_vendor.p({
+          articleId: __props.article_id,
+          userId: common_vendor.unref(userStore).userInfo.uid,
+          initialLikeCount: likeCount.value,
+          initialIsLiked: isLiked.value,
+          size: 24,
+          showCount: true,
+          showText: false,
+          userAvatar: common_vendor.unref(userStore).userInfo.avatarUrl,
+          userNickname: common_vendor.unref(userStore).userInfo.nickName
+        }),
+        ag: common_vendor.o(handleCall),
+        ah: showLuckyUserBanner.value
+      }, showLuckyUserBanner.value ? {
+        ai: common_vendor.o(($event) => showLuckyUserBanner.value = false),
+        aj: common_vendor.p({
+          rank: luckyUserRank.value,
+          avatar: luckyUserInfo.value.avatar,
+          nickname: luckyUserInfo.value.nickname
+        })
+      } : {}, {
+        ak: articleDetail.value._id,
+        al: common_vendor.o(closePreview),
+        am: common_vendor.o(handlePreviewChange),
+        an: common_vendor.p({
           visible: previewVisible.value,
           images: previewImages.value,
           current: previewCurrent.value
         }),
-        ai: common_vendor.gei(_ctx, "")
+        ao: common_vendor.gei(_ctx, "")
       });
     };
   }

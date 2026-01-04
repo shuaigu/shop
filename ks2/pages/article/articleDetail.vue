@@ -10,6 +10,8 @@
 	import LuckyUserBanner from '@/components/lucky-user/lucky-user-banner.vue'
 	// 导入自定义图片预览组件
 	import Tuouanyulan from '@/components/tuouanyulan/tuouanyulan.vue'
+	// 导入点赞组件
+	import Dianzan from '@/components/dianzan/dianzan.vue'
 	// 接受传递过来的数据
 	const props = defineProps( {
 		article_id: String,
@@ -161,6 +163,10 @@
 				articleData.videoURL = articleData.video.compressedURL || articleData.video.url;
 				videoLoadStatus.value = 'loading';
 			}
+
+			// 初始化点赞状态
+			isLiked.value = articleData.is_liked || false
+			likeCount.value = articleData.like_count || 0
 
 			// 获取分类名称
 			if (articleData.cate_id) {
@@ -856,6 +862,23 @@
 		nickname: '用户'
 	})
 
+	// 添加点赞相关状态
+	const isLiked = ref(false)
+	const likeCount = ref(0)
+
+	// 处理点赞状态变化
+	const handleLikeChange = (data) => {
+		console.log('点赞状态变化:', data)
+		isLiked.value = data.isLiked
+		likeCount.value = data.likeCount
+		
+		// 更新文章详情中的点赞信息
+		if (articleDetail.value) {
+			articleDetail.value.like_count = data.likeCount
+			articleDetail.value.is_liked = data.isLiked
+		}
+	}
+
 	// 添加处理幸运用户横幅的方法
 	const handleLuckyUser = (data) => {
 		console.log('收到幸运用户事件:', data);
@@ -1166,6 +1189,7 @@
 			</scroll-view>
 
 			<!-- 底部栏 -->
+			<!-- 底部栏 -->
 			<view class="footer">
 				<view class="footer-content">
 					<view class="action-item" @click="goToHome">
@@ -1174,11 +1198,38 @@
 							首页
 						</view>
 					</view>
+					
+					<!-- 点赞组件 -->
+					<view class="action-item like-item">
+						<Dianzan
+							:articleId="article_id"
+							:userId="userStore.userInfo.uid"
+							:initialLikeCount="likeCount"
+							:initialIsLiked="isLiked"
+							:size="24"
+							:showCount="true"
+							:showText="false"
+							:userAvatar="userStore.userInfo.avatarUrl"
+							:userNickname="userStore.userInfo.nickName"
+							@likeChange="handleLikeChange"
+							@luckyUser="handleLuckyUser"
+						/>
+					</view>
+					
 					<view class="call-btn phone-btn" @click="handleCall">
 						打电话
 					</view>
 				</view>
 			</view>
+			
+			<!-- 幸运用户横幅 -->
+			<LuckyUserBanner
+				v-if="showLuckyUserBanner"
+				:rank="luckyUserRank"
+				:avatar="luckyUserInfo.avatar"
+				:nickname="luckyUserInfo.nickname"
+				@close="showLuckyUserBanner = false"
+			/>
 		</view>
 
 		<!-- 添加自定义图片预览组件 -->
@@ -1642,6 +1693,7 @@
 		
 		.footer-content {
 			display: flex;
+			align-items: center;
 			padding: 12rpx 20rpx;
 			height: 90rpx;
 			font-size: 24rpx;
@@ -1663,6 +1715,11 @@
 
 				&:active {
 					opacity: 0.7;
+				}
+				
+				&.like-item {
+					width: auto;
+					min-width: 80rpx;
 				}
 			}
 

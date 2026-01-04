@@ -401,6 +401,7 @@ to {
 }
 .footer .footer-content.data-v-786907d5 {
   display: flex;
+  align-items: center;
   padding: 12rpx 20rpx;
   height: 90rpx;
   font-size: 24rpx;
@@ -421,6 +422,10 @@ to {
 }
 .footer .footer-content .action-item.data-v-786907d5:active {
   opacity: 0.7;
+}
+.footer .footer-content .action-item.like-item.data-v-786907d5 {
+  width: auto;
+  min-width: 80rpx;
 }
 .footer .footer-content .call-btn.data-v-786907d5 {
   flex: 1;
