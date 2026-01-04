@@ -186,7 +186,7 @@ const _sfc_main = {
                 tempFilePath,
                 cloudPath
               });
-              common_vendor.nr.uploadFile({
+              common_vendor.tr.uploadFile({
                 filePath: tempFilePath,
                 cloudPath,
                 success: (uploadRes) => {
@@ -226,16 +226,12 @@ const _sfc_main = {
         b: common_vendor.o(handleCancel),
         c: common_vendor.t(__props.title),
         d: inputValue.value,
-        e: {
-          "input": common_vendor.o(handleInput)
-        },
-        f: common_vendor.j({
-          "success": common_vendor.o(onFileUploadSuccess),
-          "fail": common_vendor.o(onFileUploadFail),
-          "delete": common_vendor.o(onFileRemove),
-          "updateValue": common_vendor.o(($event) => fileList.value = $event)
-        }),
-        g: common_vendor.p({
+        e: common_vendor.o(handleInput),
+        f: common_vendor.o(onFileUploadSuccess),
+        g: common_vendor.o(onFileUploadFail),
+        h: common_vendor.o(onFileRemove),
+        i: common_vendor.o(($event) => fileList.value = $event),
+        j: common_vendor.p({
           fileMediatype: "image",
           mode: "grid",
           limit: 1,
@@ -249,28 +245,26 @@ const _sfc_main = {
           ["file-extname"]: "jpg,png,webp",
           value: fileList.value
         }),
-        h: fileList.value.length === 0
+        k: fileList.value.length === 0
       }, fileList.value.length === 0 ? {
-        i: defaultImg,
-        j: common_vendor.o(selectDefaultImage)
+        l: defaultImg,
+        m: common_vendor.o(selectDefaultImage)
       } : {}, {
-        k: isUploading.value
+        n: isUploading.value
       }, isUploading.value ? {} : fileList.value.length === 0 ? {} : imageUrl.value && imageUrl.value.startsWith("cloud://") ? {} : {}, {
-        l: fileList.value.length === 0,
-        m: imageUrl.value && imageUrl.value.startsWith("cloud://"),
-        n: {
-          "input": common_vendor.o(common_vendor.m(($event) => sortValue.value = $event.detail.value, {
-            number: true
-          }))
-        },
-        o: sortValue.value,
-        p: isVisible.value,
-        q: common_vendor.o(($event) => isVisible.value = $event.detail.value),
-        r: common_vendor.t(isVisible.value ? "显示" : "隐藏"),
-        s: common_vendor.o(handleCancel),
-        t: common_vendor.o(handleConfirm),
-        v: isUploading.value,
-        w: common_vendor.gei(_ctx, "")
+        o: fileList.value.length === 0,
+        p: imageUrl.value && imageUrl.value.startsWith("cloud://"),
+        q: sortValue.value,
+        r: common_vendor.o(common_vendor.m(($event) => sortValue.value = $event.detail.value, {
+          number: true
+        })),
+        s: isVisible.value,
+        t: common_vendor.o(($event) => isVisible.value = $event.detail.value),
+        v: common_vendor.t(isVisible.value ? "显示" : "隐藏"),
+        w: common_vendor.o(handleCancel),
+        x: common_vendor.o(handleConfirm),
+        y: isUploading.value,
+        z: common_vendor.gei(_ctx, "")
       }) : {});
     };
   }

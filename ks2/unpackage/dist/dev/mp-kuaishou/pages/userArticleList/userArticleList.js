@@ -30,7 +30,7 @@ const _sfc_main = {
       let likeArray = userArticleData.value.map((item) => item.like_count) || [];
       return likeArray.reduce((sum, item) => sum + item, 0);
     });
-    const articleApi = common_vendor.nr.importObject("articleKs", { customUI: true });
+    const articleApi = common_vendor.tr.importObject("articleKs", { customUI: true });
     const pageNo = common_vendor.ref(1);
     const pageSize = common_vendor.ref(8);
     const userArticleData = common_vendor.ref([]);
@@ -133,9 +133,7 @@ const _sfc_main = {
     });
     return (_ctx, _cache) => {
       return common_vendor.e({
-        a: common_vendor.j({
-          "contact": common_vendor.o(handleContact)
-        }),
+        a: common_vendor.o(handleContact),
         b: common_vendor.p({
           articleTotal: articleTotal.value,
           likesTotal: likesTotal.value,
@@ -159,23 +157,21 @@ const _sfc_main = {
             })
           };
         }),
-        h: common_vendor.j({
-          "preview": common_vendor.o((url, urls) => previewImage(urls, url)),
-          "contact": common_vendor.o(handleContact),
-          "delete": common_vendor.o(handleDelete)
-        })
+        h: common_vendor.o((url, urls) => previewImage(urls, url)),
+        i: common_vendor.o(handleContact),
+        j: common_vendor.o(handleDelete)
       }, {
         e: userArticleData.value.length === 0,
-        i: userArticleData.value.length > 0
+        k: userArticleData.value.length > 0
       }, userArticleData.value.length > 0 ? {
-        j: common_vendor.p({
+        l: common_vendor.p({
           color: "#cccccc",
           iconType: "auto",
           status: status.value
         })
       } : {}, {
-        k: common_vendor.o(scrolltolower),
-        l: common_vendor.gei(_ctx, "")
+        m: common_vendor.o(scrolltolower),
+        n: common_vendor.gei(_ctx, "")
       });
     };
   }

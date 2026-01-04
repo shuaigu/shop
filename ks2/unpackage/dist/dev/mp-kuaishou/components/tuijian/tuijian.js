@@ -34,8 +34,8 @@ const _sfc_main = {
     const pageSize = common_vendor.ref(8);
     const isLoadingMore = common_vendor.ref(false);
     const loadMoreStatus = common_vendor.ref("more");
-    const articleApi = common_vendor.nr.importObject("articleKs", { customUI: true });
-    const cateApi = common_vendor.nr.importObject("cateKs", { customUI: true });
+    const articleApi = common_vendor.tr.importObject("articleKs", { customUI: true });
+    const cateApi = common_vendor.tr.importObject("cateKs", { customUI: true });
     const getCategoryName = async (cateId) => {
       try {
         if (!cateId)

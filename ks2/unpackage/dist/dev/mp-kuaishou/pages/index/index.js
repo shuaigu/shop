@@ -26,9 +26,9 @@ const _sfc_main = {
       { _id: "01", cate_name: "最新" },
       { _id: "02", cate_name: "最热" }
     ];
-    const cateApi = common_vendor.nr.importObject("cateKs", { customUI: true });
-    const articleApi = common_vendor.nr.importObject("articleKs", { customUI: true });
-    const daohangApi = common_vendor.nr.importObject("daohang", { customUI: true });
+    const cateApi = common_vendor.tr.importObject("cateKs", { customUI: true });
+    const articleApi = common_vendor.tr.importObject("articleKs", { customUI: true });
+    const daohangApi = common_vendor.tr.importObject("daohang", { customUI: true });
     const isLoading = common_vendor.ref(true);
     const navInfo = common_vendor.ref(null);
     const isNavLoading = common_vendor.ref(true);
@@ -180,13 +180,13 @@ const _sfc_main = {
     const preloadArticleDetail = (articleId) => {
       setTimeout(() => {
         try {
-          const articleCloud = common_vendor.nr.importObject("articleKs", {
+          const articleCloud = common_vendor.tr.importObject("articleKs", {
             customUI: true
             // 禁用默认UI
           });
           Promise.all([
             articleCloud.getArticleDetal(articleId),
-            common_vendor.nr.importObject("commentList", { customUI: true }).getCommentList(articleId)
+            common_vendor.tr.importObject("commentList", { customUI: true }).getCommentList(articleId)
           ]).catch((err) => {
             console.warn("文章预加载失败:", err);
           });
@@ -280,7 +280,7 @@ const _sfc_main = {
           });
         }
       });
-      common_vendor.nr.addInterceptor("callObject", {
+      common_vendor.tr.addInterceptor("callObject", {
         invoke(param) {
           param.options = param.options || {};
           param.options.customUI = true;
@@ -327,31 +327,29 @@ const _sfc_main = {
         j: common_vendor.f(articleList.value, (item, k0, i0) => {
           return {
             a: item._id,
-            b: "1cf27b2a-2-" + i0,
-            c: common_vendor.j({
-              "mouseenter": common_vendor.o(($event) => handleItemHover(item._id)),
-              "contact": common_vendor.o(handelContact),
-              "userList": common_vendor.o(handelGoUserList),
-              "delete": common_vendor.o(handleDelete),
-              "navigateToDetail": common_vendor.o(navigateToArticleDetail)
-            }),
+            b: common_vendor.o(($event) => handleItemHover(item._id)),
+            c: "1cf27b2a-2-" + i0,
             d: common_vendor.p({
               item
             })
           };
-        })
+        }),
+        k: common_vendor.o(handelContact),
+        l: common_vendor.o(handelGoUserList),
+        m: common_vendor.o(handleDelete),
+        n: common_vendor.o(navigateToArticleDetail)
       }, {
         h: articleList.value.length === 0,
-        k: !isLoading.value && articleList.value.length > 0
+        o: !isLoading.value && articleList.value.length > 0
       }, !isLoading.value && articleList.value.length > 0 ? {
-        l: common_vendor.p({
+        p: common_vendor.p({
           color: "#666666",
           iconType: "auto",
           status: status.value
         })
       } : {}, {
-        m: common_vendor.o(scrolltolower),
-        n: common_vendor.gei(_ctx, "")
+        q: common_vendor.o(scrolltolower),
+        r: common_vendor.gei(_ctx, "")
       });
     };
   }

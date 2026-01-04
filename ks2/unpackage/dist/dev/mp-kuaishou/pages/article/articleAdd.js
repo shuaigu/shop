@@ -13,8 +13,8 @@ const _sfc_main = {
   __name: "articleAdd",
   setup(__props) {
     const userStore = store_user.useUserInfoStore();
-    const articleApi = common_vendor.nr.importObject("articleKs");
-    const extStorageCo = common_vendor.nr.importObject("ext-storage-co");
+    const articleApi = common_vendor.tr.importObject("articleKs");
+    const extStorageCo = common_vendor.tr.importObject("ext-storage-co");
     common_vendor.ref(null);
     const categoryList = common_vendor.ref([]);
     const cateIndex = common_vendor.ref(0);
@@ -449,10 +449,8 @@ const _sfc_main = {
         e: cateIndex.value,
         f: textareaFocus.value,
         g: common_vendor.o(($event) => textareaFocus.value = false),
-        h: {
-          "input": common_vendor.o(($event) => content.value = $event.detail.value)
-        },
-        i: content.value,
+        h: content.value,
+        i: common_vendor.o(($event) => content.value = $event.detail.value),
         j: common_vendor.o(focusTextarea),
         k: common_vendor.f(imageList.value, (image, index, i0) => {
           return common_vendor.e({

@@ -16,7 +16,7 @@ const _sfc_main = {
     const loading = common_vendor.ref(true);
     const getFeedbackList = async () => {
       try {
-        const feedbackApi = common_vendor.nr.importObject("feedback", { customUI: true });
+        const feedbackApi = common_vendor.tr.importObject("feedback", { customUI: true });
         const res = await feedbackApi.getList();
         if (res.success) {
           feedbackList.value = res.data;
@@ -37,7 +37,7 @@ const _sfc_main = {
         async success(res) {
           if (res.confirm) {
             try {
-              const feedbackApi = common_vendor.nr.importObject("feedback", { customUI: true });
+              const feedbackApi = common_vendor.tr.importObject("feedback", { customUI: true });
               const res2 = await feedbackApi.remove(id);
               if (res2.success) {
                 common_vendor.index.showToast({

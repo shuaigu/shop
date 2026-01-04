@@ -68,7 +68,7 @@ const _sfc_main = {
           title: "提交中...",
           mask: true
         });
-        const feedbackApi = common_vendor.nr.importObject("feedback");
+        const feedbackApi = common_vendor.tr.importObject("feedback");
         const res = await feedbackApi.add({
           type: selectedType.value,
           content: feedbackContent.value,
@@ -109,25 +109,19 @@ const _sfc_main = {
             d: common_vendor.o(($event) => selectType(type))
           };
         }),
-        b: common_vendor.j({
-          "updateModelValue": common_vendor.o(($event) => feedbackContent.value = $event)
-        }),
+        b: common_vendor.o(($event) => feedbackContent.value = $event),
         c: common_vendor.p({
           placeholder: "请详细描述您的问题或建议（最少10字）",
           count: true,
           modelValue: feedbackContent.value
         }),
-        d: {
-          "input": common_vendor.o(($event) => contactInfo.value = $event.detail.value)
-        },
-        e: contactInfo.value,
-        f: common_vendor.j({
-          "success": common_vendor.o(success),
-          "fail": common_vendor.o(fail),
-          "delete": common_vendor.o(deleteImage),
-          "updateModelValue": common_vendor.o(($event) => imageValue.value = $event)
-        }),
-        g: common_vendor.p({
+        d: contactInfo.value,
+        e: common_vendor.o(($event) => contactInfo.value = $event.detail.value),
+        f: common_vendor.o(success),
+        g: common_vendor.o(fail),
+        h: common_vendor.o(deleteImage),
+        i: common_vendor.o(($event) => imageValue.value = $event),
+        j: common_vendor.p({
           fileMediatype: "image",
           mode: "grid",
           limit: 3,
@@ -137,10 +131,10 @@ const _sfc_main = {
           },
           modelValue: imageValue.value
         }),
-        h: common_vendor.t(isSubmitting.value ? "提交中..." : "提交反馈"),
-        i: common_vendor.o(submitFeedback),
-        j: isSubmitting.value,
-        k: common_vendor.gei(_ctx, "")
+        k: common_vendor.t(isSubmitting.value ? "提交中..." : "提交反馈"),
+        l: common_vendor.o(submitFeedback),
+        m: isSubmitting.value,
+        n: common_vendor.gei(_ctx, "")
       };
     };
   }

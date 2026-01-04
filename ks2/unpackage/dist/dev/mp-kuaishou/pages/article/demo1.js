@@ -33,7 +33,7 @@ const _sfc_main = {
     const getVideoArticle = async (id) => {
       try {
         console.log("Fetching video article with ID:", id);
-        const db = common_vendor.nr.database();
+        const db = common_vendor.tr.database();
         const res = await db.collection("articleList").get();
         console.log("Database response:", res);
         if (res.result.data && res.result.data.length > 0) {
@@ -54,7 +54,7 @@ const _sfc_main = {
     const updateLookCount = async (id) => {
       try {
         console.log("Updating look count for ID:", id);
-        const db = common_vendor.nr.database();
+        const db = common_vendor.tr.database();
         await db.collection("articleList").doc(id).update({
           look_count: article.value.look_count + 1
         });

@@ -29,7 +29,7 @@ const _sfc_main = {
     const saving = common_vendor.ref(false);
     const getCompanyInfo = async () => {
       try {
-        const companyApi = common_vendor.nr.importObject("company", { customUI: true });
+        const companyApi = common_vendor.tr.importObject("company", { customUI: true });
         const res = await companyApi.getInfo();
         if (res.success) {
           companyInfo.value = res.data || companyInfo.value;
@@ -64,7 +64,7 @@ const _sfc_main = {
       }
       try {
         saving.value = true;
-        const companyApi = common_vendor.nr.importObject("company", { customUI: true });
+        const companyApi = common_vendor.tr.importObject("company", { customUI: true });
         const res = await companyApi.updateInfo(companyInfo.value);
         if (res.success) {
           common_vendor.index.showToast({
@@ -91,30 +91,18 @@ const _sfc_main = {
         }),
         b: !loading.value
       }, !loading.value ? {
-        c: {
-          "input": common_vendor.o(($event) => companyInfo.value.name = $event.detail.value)
-        },
-        d: companyInfo.value.name,
-        e: {
-          "input": common_vendor.o(($event) => companyInfo.value.slogan = $event.detail.value)
-        },
-        f: companyInfo.value.slogan,
-        g: {
-          "input": common_vendor.o(($event) => companyInfo.value.address = $event.detail.value)
-        },
-        h: companyInfo.value.address,
-        i: {
-          "input": common_vendor.o(($event) => companyInfo.value.phone = $event.detail.value)
-        },
-        j: companyInfo.value.phone,
-        k: {
-          "input": common_vendor.o(($event) => companyInfo.value.email = $event.detail.value)
-        },
-        l: companyInfo.value.email,
-        m: {
-          "input": common_vendor.o(($event) => companyInfo.value.workTime = $event.detail.value)
-        },
-        n: companyInfo.value.workTime,
+        c: companyInfo.value.name,
+        d: common_vendor.o(($event) => companyInfo.value.name = $event.detail.value),
+        e: companyInfo.value.slogan,
+        f: common_vendor.o(($event) => companyInfo.value.slogan = $event.detail.value),
+        g: companyInfo.value.address,
+        h: common_vendor.o(($event) => companyInfo.value.address = $event.detail.value),
+        i: companyInfo.value.phone,
+        j: common_vendor.o(($event) => companyInfo.value.phone = $event.detail.value),
+        k: companyInfo.value.email,
+        l: common_vendor.o(($event) => companyInfo.value.email = $event.detail.value),
+        m: companyInfo.value.workTime,
+        n: common_vendor.o(($event) => companyInfo.value.workTime = $event.detail.value),
         o: common_vendor.t(saving.value ? "保存中..." : "保存"),
         p: saving.value,
         q: saving.value,

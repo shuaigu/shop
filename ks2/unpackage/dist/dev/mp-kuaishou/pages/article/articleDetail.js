@@ -45,7 +45,7 @@ const _sfc_main = {
             fail: (err) => {
               console.error("跳转到首页失败:", err);
               try {
-                const cateApi = common_vendor.nr.importObject("cateKs", { customUI: true });
+                const cateApi = common_vendor.tr.importObject("cateKs", { customUI: true });
                 cateApi.get().catch((err2) => {
                   console.warn("预加载首页数据失败", err2);
                 });
@@ -67,10 +67,10 @@ const _sfc_main = {
     const commentContent = common_vendor.ref("");
     const isCommentsLoading = common_vendor.ref(true);
     const userStore = store_user.useUserInfoStore();
-    const articleApi = common_vendor.nr.importObject("articleKs", { customUI: true });
-    const commentApi = common_vendor.nr.importObject("commentList", { customUI: true });
-    common_vendor.nr.importObject("likeRecord", { customUI: true });
-    const loginApi = common_vendor.nr.importObject("login", { customUI: true });
+    const articleApi = common_vendor.tr.importObject("articleKs", { customUI: true });
+    const commentApi = common_vendor.tr.importObject("commentList", { customUI: true });
+    common_vendor.tr.importObject("likeRecord", { customUI: true });
+    const loginApi = common_vendor.tr.importObject("login", { customUI: true });
     const articleDetail = common_vendor.ref({});
     const articleComment = common_vendor.ref([]);
     const commentCount = common_vendor.computed(() => {
@@ -122,7 +122,7 @@ const _sfc_main = {
         }
         if (articleData.cate_id) {
           try {
-            const cateApi = common_vendor.nr.importObject("cateKs", { customUI: true });
+            const cateApi = common_vendor.tr.importObject("cateKs", { customUI: true });
             const cateRes = await cateApi.get(articleData.cate_id);
             if (cateRes.data && cateRes.data[0]) {
               articleData.cate_name = cateRes.data[0].cate_name;
@@ -159,7 +159,7 @@ const _sfc_main = {
           isAnyImageLoading.value = false;
         }
         try {
-          const configApi = common_vendor.nr.importObject("config", { customUI: true });
+          const configApi = common_vendor.tr.importObject("config", { customUI: true });
           const configRes = await configApi.getConfig("commentDisplay");
           navInfo.value = {
             isVisible: ((_a = configRes == null ? void 0 : configRes.data) == null ? void 0 : _a.isVisible) ?? true,
@@ -786,9 +786,7 @@ const _sfc_main = {
       }) : {}, {
         R: navInfo.value && navInfo.value.isVisible
       }, navInfo.value && navInfo.value.isVisible ? {
-        S: common_vendor.j({
-          "delComment": common_vendor.o(handelDelComment)
-        }),
+        S: common_vendor.o(handelDelComment),
         T: common_vendor.p({
           comments: articleComment.value
         })
@@ -796,9 +794,7 @@ const _sfc_main = {
         U: common_vendor.sr(tuijianRef, "786907d5-9", {
           "k": "tuijianRef"
         }),
-        V: common_vendor.j({
-          "click": common_vendor.o(handleArticleClick)
-        }),
+        V: common_vendor.o(handleArticleClick),
         W: common_vendor.p({
           ["current-article-id"]: __props.article_id,
           cate_id: articleDetail.value.cate_id
@@ -818,16 +814,14 @@ const _sfc_main = {
         ac: common_vendor.o(goToHome),
         ad: common_vendor.o(handleCall),
         ae: articleDetail.value._id,
-        af: common_vendor.j({
-          "close": common_vendor.o(closePreview),
-          "change": common_vendor.o(handlePreviewChange)
-        }),
-        ag: common_vendor.p({
+        af: common_vendor.o(closePreview),
+        ag: common_vendor.o(handlePreviewChange),
+        ah: common_vendor.p({
           visible: previewVisible.value,
           images: previewImages.value,
           current: previewCurrent.value
         }),
-        ah: common_vendor.gei(_ctx, "")
+        ai: common_vendor.gei(_ctx, "")
       });
     };
   }

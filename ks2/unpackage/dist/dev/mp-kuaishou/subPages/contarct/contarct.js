@@ -25,7 +25,7 @@ const _sfc_main = {
     const loading = common_vendor.ref(true);
     const getCompanyInfo = async () => {
       try {
-        const companyApi = common_vendor.nr.importObject("company", { customUI: true });
+        const companyApi = common_vendor.tr.importObject("company", { customUI: true });
         const res = await companyApi.getInfo();
         if (res.success && res.data) {
           companyInfo.value = res.data;

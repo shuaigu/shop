@@ -14,7 +14,7 @@ const managePopup = () => "../../components/manage-popup/manage-popup.js";
 const _sfc_main = {
   __name: "cateManage",
   setup(__props) {
-    const cateApi = common_vendor.nr.importObject("cateKs");
+    const cateApi = common_vendor.tr.importObject("cateKs");
     const cateList = common_vendor.ref([]);
     const globalCategoryVisibility = common_vendor.ref(true);
     const cateListGet = async () => {
@@ -581,22 +581,18 @@ const _sfc_main = {
         v: !isSelectMode.value,
         w: !isSelectMode.value,
         x: !isSelectMode.value,
-        y: common_vendor.j({
-          "confirm": common_vendor.o(handleConfirm),
-          "updateShow": common_vendor.o(watchPopupState),
-          "updateShow": common_vendor.o(($event) => showPopup.value = $event)
-        }),
-        z: common_vendor.p({
+        y: common_vendor.o(handleConfirm),
+        z: common_vendor.o(watchPopupState),
+        A: common_vendor.o(($event) => showPopup.value = $event),
+        B: common_vendor.p({
           title: isEdit.value ? "编辑分类" : "添加分类",
           ["edit-value"]: editValue.value,
           ["edit-img"]: editImg.value,
           ["edit-sort"]: editSort.value,
           show: showPopup.value
         }),
-        A: common_vendor.j({
-          "click": common_vendor.o(handleAddCate)
-        }),
-        B: common_vendor.p({
+        C: common_vendor.o(handleAddCate),
+        D: common_vendor.p({
           icon: "plus",
           size: 100,
           position: {

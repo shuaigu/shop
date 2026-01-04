@@ -11,7 +11,7 @@ const _sfc_main = {
     async createOrder() {
       const total_fee = 1;
       const out_trade_no = "KS" + Date.now();
-      const payment = common_vendor.nr.importObject("payment");
+      const payment = common_vendor.tr.importObject("payment");
       const res = await payment.createOrder({ total_fee, out_trade_no });
       if (res.code === 0) {
         const { order_no, order_info_token } = res.data;

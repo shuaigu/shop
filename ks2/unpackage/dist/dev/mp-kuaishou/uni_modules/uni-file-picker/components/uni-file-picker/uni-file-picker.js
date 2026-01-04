@@ -166,9 +166,9 @@ const _sfc_main = {
     }
   },
   created() {
-    if (!(common_vendor.nr.config && common_vendor.nr.config.provider)) {
+    if (!(common_vendor.tr.config && common_vendor.tr.config.provider)) {
       this.noSpace = true;
-      common_vendor.nr.chooseAndUploadFile = uni_modules_uniFilePicker_components_uniFilePicker_chooseAndUploadFile.chooseAndUploadFile;
+      common_vendor.tr.chooseAndUploadFile = uni_modules_uniFilePicker_components_uniFilePicker_chooseAndUploadFile.chooseAndUploadFile;
     }
     this.form = this.getForm("uniForms");
     this.formItem = this.getForm("uniFormsItem");
@@ -268,7 +268,7 @@ const _sfc_main = {
      */
     chooseFiles() {
       const _extname = uni_modules_uniFilePicker_components_uniFilePicker_utils.get_extname(this.fileExtname);
-      common_vendor.nr.chooseAndUploadFile({
+      common_vendor.tr.chooseAndUploadFile({
         type: this.fileMediatype,
         compressed: false,
         sizeType: this.sizeType,
@@ -492,7 +492,7 @@ const _sfc_main = {
       fileList = {
         fileList: [].concat(fileList)
       };
-      const urls = await common_vendor.nr.getTempFileURL(fileList);
+      const urls = await common_vendor.tr.getTempFileURL(fileList);
       return urls.fileList[0].tempFileURL || "";
     },
     /**
@@ -526,12 +526,10 @@ function _sfc_render(_ctx, _cache, $props, $setup, $data, $options) {
   } : {}, {
     e: $props.fileMediatype === "image" && $options.showType === "grid"
   }, $props.fileMediatype === "image" && $options.showType === "grid" ? {
-    f: common_vendor.j({
-      "uploadFiles": common_vendor.o($options.uploadFiles),
-      "choose": common_vendor.o($options.choose),
-      "delFile": common_vendor.o($options.delFile)
-    }),
-    g: common_vendor.p({
+    f: common_vendor.o($options.uploadFiles),
+    g: common_vendor.o($options.choose),
+    h: common_vendor.o($options.delFile),
+    i: common_vendor.p({
       readonly: $props.readonly,
       ["image-styles"]: $props.imageStyles,
       ["files-list"]: $options.filesList,
@@ -540,14 +538,12 @@ function _sfc_render(_ctx, _cache, $props, $setup, $data, $options) {
       delIcon: $props.delIcon
     })
   } : {}, {
-    h: $props.fileMediatype !== "image" || $options.showType !== "grid"
+    j: $props.fileMediatype !== "image" || $options.showType !== "grid"
   }, $props.fileMediatype !== "image" || $options.showType !== "grid" ? {
-    i: common_vendor.j({
-      "uploadFiles": common_vendor.o($options.uploadFiles),
-      "choose": common_vendor.o($options.choose),
-      "delFile": common_vendor.o($options.delFile)
-    }),
-    j: common_vendor.p({
+    k: common_vendor.o($options.uploadFiles),
+    l: common_vendor.o($options.choose),
+    m: common_vendor.o($options.delFile),
+    n: common_vendor.p({
       readonly: $props.readonly,
       ["list-styles"]: $props.listStyles,
       ["files-list"]: $options.filesList,
@@ -555,7 +551,7 @@ function _sfc_render(_ctx, _cache, $props, $setup, $data, $options) {
       delIcon: $props.delIcon
     })
   } : {}, {
-    k: common_vendor.gei(_ctx, "")
+    o: common_vendor.gei(_ctx, "")
   });
 }
 const Component = /* @__PURE__ */ common_vendor._export_sfc(_sfc_main, [["render", _sfc_render]]);

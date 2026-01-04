@@ -15,7 +15,7 @@ const _sfc_main = {
   __name: "login",
   setup(__props) {
     const userStore = store_user.useUserInfoStore();
-    const userApi = common_vendor.nr.importObject("userKs");
+    const userApi = common_vendor.tr.importObject("userKs");
     const aloneChecked = common_vendor.ref(false);
     const modelShow = common_vendor.ref(false);
     const navigateToAgreement = (type) => {
@@ -211,9 +211,7 @@ const _sfc_main = {
     return (_ctx, _cache) => {
       return common_vendor.e({
         a: common_assets._imports_0,
-        b: common_vendor.j({
-          "updateChecked": common_vendor.o(($event) => aloneChecked.value = $event)
-        }),
+        b: common_vendor.o(($event) => aloneChecked.value = $event),
         c: common_vendor.p({
           activeColor: "#46b0fe",
           name: "agree",
@@ -228,9 +226,7 @@ const _sfc_main = {
       }, modelShow.value ? {
         h: common_vendor.o(closeModel),
         i: common_assets._imports_1,
-        j: {
-          "getphonenumber": common_vendor.o(getMobile)
-        }
+        j: common_vendor.o(getMobile)
       } : {}, {
         k: common_vendor.gei(_ctx, "")
       });

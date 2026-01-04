@@ -14,7 +14,7 @@ const _sfc_main = {
   __name: "articleManage",
   setup(__props) {
     const userInfoStore = store_user.useUserInfoStore();
-    const articleApi = common_vendor.nr.importObject("articleKs", { customUI: true });
+    const articleApi = common_vendor.tr.importObject("articleKs", { customUI: true });
     const articleList = common_vendor.ref([]);
     const stats = common_vendor.ref({
       pending: 0,

@@ -122,11 +122,9 @@ function _sfc_render(_ctx, _cache, $props, $setup, $data, $options) {
     v: common_vendor.o((...args) => $options.onFocus && $options.onFocus(...args)),
     w: common_vendor.o((...args) => $options.onBlur && $options.onBlur(...args)),
     x: common_vendor.o((...args) => $options.onLinechange && $options.onLinechange(...args)),
-    y: common_vendor.o((...args) => $options.onConfirm && $options.onConfirm(...args)),
-    z: common_vendor.o((...args) => $options.onKeyboardheightchange && $options.onKeyboardheightchange(...args)),
-    A: {
-      "input": common_vendor.o((...args) => $options.onInput && $options.onInput(...args))
-    },
+    y: common_vendor.o((...args) => $options.onInput && $options.onInput(...args)),
+    z: common_vendor.o((...args) => $options.onConfirm && $options.onConfirm(...args)),
+    A: common_vendor.o((...args) => $options.onKeyboardheightchange && $options.onKeyboardheightchange(...args)),
     B: _ctx.count
   }, _ctx.count ? {
     C: common_vendor.t($data.innerValue.length),

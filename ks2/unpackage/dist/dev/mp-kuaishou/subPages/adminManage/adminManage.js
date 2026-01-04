@@ -19,15 +19,15 @@ const _sfc_main = {
     const commentDisplay = common_vendor.ref({
       isVisible: false
     });
-    const daohangApi = common_vendor.nr.importObject("daohang", { customUI: true });
-    const configApi = common_vendor.nr.importObject("config", { customUI: true });
+    const daohangApi = common_vendor.tr.importObject("daohang", { customUI: true });
+    const configApi = common_vendor.tr.importObject("config", { customUI: true });
     const luckyUserConfig = common_vendor.ref({
       lucky_ranks: [1, 8, 18],
       rewards: "幸运用户专属奖励",
       is_enabled: true
     });
     const newLuckyRank = common_vendor.ref("");
-    const likeApi = common_vendor.nr.importObject("likeRecord", { customUI: true });
+    const likeApi = common_vendor.tr.importObject("likeRecord", { customUI: true });
     const getNavInfo = async () => {
       try {
         common_vendor.index.showLoading({ title: "加载中..." });
@@ -289,14 +289,10 @@ const _sfc_main = {
     });
     return (_ctx, _cache) => {
       return {
-        a: {
-          "input": common_vendor.o(($event) => navInfo.value.title = $event.detail.value)
-        },
-        b: navInfo.value.title,
-        c: {
-          "input": common_vendor.o(($event) => navInfo.value.url = $event.detail.value)
-        },
-        d: navInfo.value.url,
+        a: navInfo.value.title,
+        b: common_vendor.o(($event) => navInfo.value.title = $event.detail.value),
+        c: navInfo.value.url,
+        d: common_vendor.o(($event) => navInfo.value.url = $event.detail.value),
         e: navInfo.value.isVisible,
         f: common_vendor.o(handleNavVisibilityChange),
         g: common_vendor.o(saveNavSettings),
@@ -304,10 +300,8 @@ const _sfc_main = {
         i: common_vendor.o(handleCommentVisibilityChange),
         j: luckyUserConfig.value.is_enabled,
         k: common_vendor.o(handleLuckyUserEnabledChange),
-        l: {
-          "input": common_vendor.o(($event) => luckyUserConfig.value.rewards = $event.detail.value)
-        },
-        m: luckyUserConfig.value.rewards,
+        l: luckyUserConfig.value.rewards,
+        m: common_vendor.o(($event) => luckyUserConfig.value.rewards = $event.detail.value),
         n: common_vendor.f(luckyUserConfig.value.lucky_ranks, (rank, k0, i0) => {
           return {
             a: common_vendor.t(rank),
@@ -316,10 +310,8 @@ const _sfc_main = {
           };
         }),
         o: common_vendor.o(addLuckyRank),
-        p: {
-          "input": common_vendor.o(($event) => newLuckyRank.value = $event.detail.value)
-        },
-        q: newLuckyRank.value,
+        p: newLuckyRank.value,
+        q: common_vendor.o(($event) => newLuckyRank.value = $event.detail.value),
         r: common_vendor.o(addLuckyRank),
         s: common_vendor.o(saveLuckyUserConfig),
         t: common_vendor.f(data.value, (item, k0, i0) => {
