@@ -86,12 +86,11 @@ to {
 .article-detail .articleVideo.data-v-786907d5 {
   position: relative;
   width: 100%;
-  height: 422rpx;
+  aspect-ratio: 4/3;
+  /* 固定4:3比例 */
   border-radius: 0;
-  /* 修改为0，使视频与页面边缘无间隙 */
   background-color: #000;
-  margin: 5rpx 0 20rpx;
-  /* 修改顶部margin为0 */
+  margin: 0;
   overflow: hidden;
   /* 中间播放按钮 */
 }
@@ -510,6 +509,20 @@ to {
     opacity: 1;
 }
 }
+@keyframes heartbeat-786907d5 {
+0%, 100% {
+    transform: scale(1);
+}
+25% {
+    transform: scale(1.2);
+}
+50% {
+    transform: scale(1);
+}
+75% {
+    transform: scale(1.15);
+}
+}
 .viewers-container.data-v-786907d5 {
   width: 90%;
   max-width: 650rpx;
@@ -618,6 +631,46 @@ to {
   border-radius: 6rpx;
   flex-shrink: 0;
 }
+.viewer-item .viewer-info .viewer-name .wx-badge.data-v-786907d5 {
+  margin-left: 12rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.viewer-item .viewer-info .viewer-name .wx-badge text.data-v-786907d5 {
+  font-size: 20rpx;
+  color: #07C160;
+  background: linear-gradient(135deg, #D4F5E5 0%, #C2F0DC 100%);
+  padding: 4rpx 12rpx;
+  border-radius: 6rpx;
+  border: 1rpx solid #07C160;
+  font-weight: 500;
+}
+.viewer-item .viewer-info .viewer-name .ks-badge.data-v-786907d5 {
+  margin-left: 12rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.viewer-item .viewer-info .viewer-name .ks-badge text.data-v-786907d5 {
+  font-size: 20rpx;
+  color: #FF6600;
+  background: linear-gradient(135deg, #FFE5CC 0%, #FFD9B3 100%);
+  padding: 4rpx 12rpx;
+  border-radius: 6rpx;
+  border: 1rpx solid #FF9933;
+  font-weight: 500;
+}
+.viewer-item .viewer-info .viewer-name .like-badge.data-v-786907d5 {
+  margin-left: 8rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  animation: heartbeat-786907d5 0.6s ease-in-out;
+}
 .viewer-item .viewer-info .viewer-detail.data-v-786907d5 {
   display: flex;
   align-items: center;
@@ -638,6 +691,36 @@ to {
 .viewer-item .viewer-contact.data-v-786907d5 {
   margin-left: 16rpx;
   flex-shrink: 0;
+  padding: 8rpx;
+  border-radius: 50%;
+  transition: all 0.3s ease;
+  cursor: pointer;
+  position: relative;
+}
+.viewer-item .viewer-contact.data-v-786907d5:active {
+  background-color: rgba(7, 193, 96, 0.1);
+  transform: scale(0.9);
+}
+.viewer-item .viewer-contact .call-badge.data-v-786907d5 {
+  position: absolute;
+  top: 0;
+  right: 0;
+  min-width: 32rpx;
+  height: 32rpx;
+  background-color: #FF5D5B;
+  border-radius: 16rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 8rpx;
+  box-shadow: 0 2rpx 8rpx rgba(255, 93, 91, 0.3);
+}
+.viewer-item .viewer-contact .call-badge text.data-v-786907d5 {
+  font-size: 20rpx;
+  color: #FFFFFF;
+  font-weight: 500;
+  line-height: 1;
+  white-space: nowrap;
 }
 .loading-more.data-v-786907d5 {
   text-align: center;

@@ -6,7 +6,6 @@
     "uni-load-more": "../../uni_modules/uni-load-more/components/uni-load-more/uni-load-more",
     "comment-list": "../../components/comment-list/comment-list",
     "tuijian": "../../components/tuijian/tuijian",
-    "lucky-user-banner": "../../components/lucky-user/lucky-user-banner",
     "tuouanyulan": "../../components/tuouanyulan/tuouanyulan",
     "dianzan": "../../components/dianzan/dianzan"
   }

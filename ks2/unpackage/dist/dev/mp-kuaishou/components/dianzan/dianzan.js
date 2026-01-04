@@ -61,53 +61,9 @@ const _sfc_main = {
     const isLikeAnimating = common_vendor.ref(false);
     const isProcessing = common_vendor.ref(false);
     const lastClickTime = common_vendor.ref(0);
-    const showLikeRankModal = common_vendor.ref(false);
+    common_vendor.ref(false);
     const likeRank = common_vendor.ref(1);
     const isWinner = common_vendor.ref(false);
-    const checkIfLuckyUser = async () => {
-      try {
-        const likeApi = common_vendor.tr.importObject("likeRecord", { customUI: true });
-        const result = await likeApi.getLikeRank(props.articleId, props.userId);
-        if (result.code === 0 && result.like_rank) {
-          likeRank.value = result.like_rank;
-          const configResult = await likeApi.getLuckyConfig();
-          let luckyRanks = [1, 8, 18];
-          let isEnabled = true;
-          if (configResult.code === 0 && configResult.data) {
-            if (Array.isArray(configResult.data.lucky_ranks) && configResult.data.lucky_ranks.length > 0) {
-              luckyRanks = configResult.data.lucky_ranks;
-            }
-            if (typeof configResult.data.is_enabled === "boolean") {
-              isEnabled = configResult.data.is_enabled;
-            }
-          }
-          console.log("幸运用户配置:", {
-            luckyRanks,
-            isEnabled,
-            currentRank: likeRank.value
-          });
-          isWinner.value = isEnabled && luckyRanks.includes(likeRank.value);
-          console.log("初始化时检查幸运用户状态:", {
-            likeRank: likeRank.value,
-            isWinner: isWinner.value,
-            nickname: result.nickname,
-            avatar: result.avatar
-          });
-          if (isWinner.value) {
-            const resultData = result || {};
-            emit("luckyUser", {
-              likeRank: likeRank.value,
-              isWinner: true,
-              // 优先使用服务器返回的用户信息，如果没有则使用传入的信息
-              avatar: resultData.avatar || props.userAvatar || "",
-              nickname: resultData.nickname || props.userNickname || ""
-            });
-          }
-        }
-      } catch (err) {
-        console.error("检查幸运用户状态失败:", err);
-      }
-    };
     const updateLikeStatus = (data) => {
       if (data.articleId === props.articleId) {
         console.log("收到点赞状态更新事件:", {
@@ -232,41 +188,6 @@ const _sfc_main = {
             });
             if (isLiked.value && !previousLikeState && result.like_rank) {
               likeRank.value = result.like_rank || 1;
-              try {
-                const configResult = await likeApi.getLuckyConfig();
-                let luckyRanks = [1, 8, 18];
-                let isEnabled = true;
-                if (configResult.code === 0 && configResult.data) {
-                  if (Array.isArray(configResult.data.lucky_ranks) && configResult.data.lucky_ranks.length > 0) {
-                    luckyRanks = configResult.data.lucky_ranks;
-                  }
-                  if (typeof configResult.data.is_enabled === "boolean") {
-                    isEnabled = configResult.data.is_enabled;
-                  }
-                }
-                console.log("点赞时获取幸运用户配置:", {
-                  luckyRanks,
-                  isEnabled,
-                  currentRank: likeRank.value
-                });
-                isWinner.value = isEnabled && luckyRanks.includes(likeRank.value);
-              } catch (err) {
-                console.error("获取幸运用户配置失败:", err);
-                isWinner.value = [1, 8, 18].includes(likeRank.value);
-              }
-              console.log("点赞排名信息:", {
-                likeRank: likeRank.value,
-                isWinner: isWinner.value
-              });
-              if (isWinner.value) {
-                if (common_vendor.index.vibrateLong) {
-                  common_vendor.index.vibrateLong({
-                    success: () => {
-                      console.log("震动反馈成功");
-                    }
-                  });
-                }
-              }
             }
             if (isLiked.value && !previousLikeState) {
               isLikeAnimating.value = true;
@@ -278,50 +199,21 @@ const _sfc_main = {
               isLiked: isLiked.value,
               likeCount: likeCount.value,
               likeRank: likeRank.value,
-              isWinner: isWinner.value
+              isWinner: false
             });
-            if (isWinner.value && isLiked.value) {
-              const resultData = result || {};
-              emit("luckyUser", {
-                likeRank: likeRank.value,
-                isWinner: true,
-                // 优先使用服务器返回的用户信息，如果没有则使用传入的信息
-                avatar: resultData.avatar || props.userAvatar || "",
-                nickname: resultData.nickname || props.userNickname || ""
-              });
-              common_vendor.index.showToast({
-                title: "恭喜您成为幸运用户！",
-                icon: "none",
-                duration: 2e3,
-                mask: true
-              });
-            }
             common_vendor.index.$emit("updateArticleLikeStatus", {
               articleId: props.articleId,
               isLiked: isLiked.value,
               likeCount: likeCount.value,
               likeRank: likeRank.value,
-              isWinner: isWinner.value
+              isWinner: false
             });
-            if (!isWinner.value || !isLiked.value) {
-              common_vendor.index.showToast({
-                title: isLiked.value ? "已点赞" : "已取消点赞",
-                icon: "none",
-                duration: 1e3,
-                mask: false
-              });
-            }
-            if (result.isLiked && !previousLikeState && result.like_rank) {
-              common_vendor.index.hideToast();
-              setTimeout(() => {
-                showLikeRankModal.value = true;
-                console.log("显示点赞排名模态框:", {
-                  likeRank: likeRank.value,
-                  showModal: showLikeRankModal.value,
-                  isWinner: isWinner.value
-                });
-              }, 100);
-            }
+            common_vendor.index.showToast({
+              title: isLiked.value ? "已点赞" : "已取消点赞",
+              icon: "none",
+              duration: 1e3,
+              mask: false
+            });
           } else {
             console.warn("服务器操作失败:", result);
             throw new Error(result.message || "操作失败");
@@ -343,12 +235,6 @@ const _sfc_main = {
         });
       }
     };
-    const closeLikeRankModal = () => {
-      console.log("关闭点赞排名模态框");
-      showLikeRankModal.value = false;
-      console.log("模态框已关闭:", showLikeRankModal.value);
-      return false;
-    };
     common_vendor.onMounted(() => {
       isLiked.value = props.initialIsLiked;
       likeCount.value = props.initialLikeCount;
@@ -361,9 +247,6 @@ const _sfc_main = {
         isLiked: isLiked.value,
         likeCount: likeCount.value
       });
-      if (isLiked.value) {
-        checkIfLuckyUser();
-      }
     });
     common_vendor.watch(() => props.initialIsLiked, (newValue, oldValue) => {
       console.log("initialIsLiked 变化:", {
@@ -404,30 +287,7 @@ const _sfc_main = {
       } : {}, {
         g: common_vendor.o(debounceHandleLike),
         h: isLikeAnimating.value ? 1 : "",
-        i: showLikeRankModal.value
-      }, showLikeRankModal.value ? common_vendor.e({
-        j: isWinner.value
-      }, isWinner.value ? {
-        k: common_vendor.f(6, (i, k0, i0) => {
-          return {
-            a: i
-          };
-        })
-      } : {}, {
-        l: common_vendor.t(isWinner.value ? "恭喜您中奖了！" : "恭喜您"),
-        m: common_vendor.t(likeRank.value || 1),
-        n: isWinner.value
-      }, isWinner.value ? {} : {}, {
-        o: isWinner.value
-      }, isWinner.value ? {} : {}, {
-        p: common_vendor.t(isWinner.value ? "太棒了" : "我知道了"),
-        q: common_vendor.o(closeLikeRankModal),
-        r: common_vendor.o(() => {
-        }),
-        s: isWinner.value ? 1 : "",
-        t: common_vendor.o(closeLikeRankModal)
-      }) : {}, {
-        v: common_vendor.gei(_ctx, "")
+        i: common_vendor.gei(_ctx, "")
       });
     };
   }

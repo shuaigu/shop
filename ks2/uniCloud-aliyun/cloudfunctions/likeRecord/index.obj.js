@@ -9,10 +9,10 @@
 const LUCKY_USER_CONFIG = {
 	// 幸运用户排名列表（默认值）
 	DEFAULT_LUCKY_RANKS: [2, 8, 18, 28],
-	// 是否启用幸运用户功能（默认值）
-	DEFAULT_IS_ENABLED: true,
-	// 是否显示幸运用户横幅（默认值）
-	DEFAULT_SHOW_MODAL: true,
+	// 是否启用幸运用户功能（默认值）- 已禁用
+	DEFAULT_IS_ENABLED: false,
+	// 是否显示幸运用户横幅（默认值）- 已禁用
+	DEFAULT_SHOW_MODAL: false,
 	// 幸运用户奖励消息（默认值）
 	DEFAULT_REWARD_MESSAGE: '恭喜您获得幸运用户奖励！',
 	// 配置在数据库中的键名

@@ -1566,12 +1566,21 @@
 			// 获取设备信息
 			const systemInfo = uni.getSystemInfoSync();
 			
+			// 检测当前平台
+			let platformType = 'unknown'
+			// #ifdef MP-WEIXIN
+			platformType = 'weixin'
+			// #endif
+			// #ifdef MP-KUAISHOU
+			platformType = 'kuaishou'
+			// #endif
+			
 			// 准备浏览者信息 - 无论是否登录都创建记录
 			let viewerInfo = {
 				view_source: 'direct', // 默认为直接访问
 				ip_address: '', // 小程序无法获取IP
 				device_info: {
-					platform: systemInfo.platform || '',
+					platform: platformType, // 使用检测到的平台类型
 					system: systemInfo.system || '',
 					model: systemInfo.model || ''
 				}

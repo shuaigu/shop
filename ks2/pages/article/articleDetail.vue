@@ -6,8 +6,7 @@
 	import { onReachBottom } from '@dcloudio/uni-app'
 	// 导入推荐组件
 	import tuijian from '@/components/tuijian/tuijian.vue'
-	// 导入幸运用户横幅组件
-	import LuckyUserBanner from '@/components/lucky-user/lucky-user-banner.vue'
+	// 幸运用户横幅组件已移除
 	// 导入自定义图片预览组件
 	import Tuouanyulan from '@/components/tuouanyulan/tuouanyulan.vue'
 	// 导入点赞组件
@@ -523,6 +522,70 @@
 		}
 	}
 
+	// 浏览者列表中拨打电话
+	const callPhone = async (phoneNumber, viewerInfo = {}) => {
+		if (!phoneNumber || phoneNumber === '未填写') {
+			return uni.showToast({
+				icon: 'none',
+				title: '没有联系方式'
+			})
+		}
+		
+		// 准备拨打记录数据
+		const recordParams = {
+			article_id: props.article_id,
+			caller_id: userStore.userInfo.uid || '',
+			caller_nickName: userStore.userInfo.nickName || '',
+			caller_avatarUrl: userStore.userInfo.avatarUrl || '',
+			callee_id: viewerInfo.user_id || '',
+			callee_nickName: viewerInfo.user_nickName || '',
+			callee_mobile: phoneNumber,
+			call_source: 'viewer_list',
+			call_status: 'success' // 默认成功，失败后会更新
+		}
+		
+		uni.makePhoneCall({
+			phoneNumber: phoneNumber,
+			success: async () => {
+				console.log('拨打电话成功:', phoneNumber)
+				// 拨打成功，记录拨打行为
+				try {
+					recordParams.call_status = 'success'
+					const result = await articleApi.recordPhoneCall(recordParams)
+					if (result.code === 0) {
+						console.log('拨打记录保存成功')
+						// 刷新浏览者列表，更新拨打次数
+						await loadViewers(true)
+					} else {
+						console.warn('拨打记录保存失败:', result.message)
+					}
+				} catch (err) {
+					console.error('保存拨打记录失败:', err)
+				}
+			},
+			fail: async (err) => {
+				console.error('拨打电话失败:', err)
+				// 拨打失败，也记录拨打尝试
+				try {
+					recordParams.call_status = 'failed'
+					const result = await articleApi.recordPhoneCall(recordParams)
+					if (result.code === 0) {
+						console.log('拨打失败记录保存成功')
+						// 刷新浏览者列表，更新拨打次数
+						await loadViewers(true)
+					}
+				} catch (recordErr) {
+					console.error('保存失败记录失败:', recordErr)
+				}
+				// 显示错误提示
+				uni.showToast({
+					title: '拨打电话失败',
+					icon: 'none'
+				})
+			}
+		})
+	}
+
 	// 修改 customTestLogin 方法
 	const customTestLogin = async () => {
 		if (isCheckingLogin.value) return false
@@ -572,20 +635,32 @@
 			// 记录浏览开始时间
 			viewStartTime.value = Date.now()
 			
+			// 检测当前平台
+			let platformType = 'unknown'
+			// #ifdef MP-KUAISHOU
+			platformType = 'kuaishou'
+			// #endif
+			// #ifdef MP-WEIXIN
+			platformType = 'weixin'
+			// #endif
+			
 			// 准备浏览者信息
 			const viewerInfo = {
 				user_id: userStore.userInfo.uid || `guest_${Date.now()}`,
 				user_nickName: userStore.userInfo.nickName || '访客',
 				user_avatarUrl: userStore.userInfo.avatarUrl || '/static/images/touxiang.png',
 				view_source: 'direct',
-				actual_view_duration: 0
+				actual_view_duration: 0,
+				device_info: {
+					platform: platformType  // 保存平台信息
+				}
 			}
 			
 			const result = await articleApi.updateLookCount(articleDetail.value._id, viewerInfo)
 			if (result.code === 0) {
 				// 更新本地浏览量显示
 				articleDetail.value.look_count = result.data.look_count
-				console.log('浏览量更新成功')
+				console.log('浏览量更新成功, 平台:', platformType)
 				
 				// 立即发送事件通知其他页面更新浏览量
 				uni.$emit('updateArticleLookCount', {
@@ -888,7 +963,7 @@
 		isSwiperAutoplay.value = false
 	}
 
-	// 添加幸运用户横幅相关的状态和方法
+	// 中奖功能已移除
 	const showLuckyUserBanner = ref(false)
 	const luckyUserRank = ref(1)
 	const luckyUserInfo = ref({
@@ -924,37 +999,9 @@
 		}
 	}
 
-	// 处理幸运用户横幅的方法
+	// 中奖功能已移除
 	const handleLuckyUser = (data) => {
-		console.log('收到幸运用户事件:', data);
-		
-		// 确保数据有效
-		if (!data) {
-			console.error('收到无效的幸运用户数据');
-			return;
-		}
-		
-		// 只有当用户真正中奖时才显示横幅
-		if (data.isWinner === true) {
-			showLuckyUserBanner.value = true;
-			
-			// 确保 rank 是数字类型
-			luckyUserRank.value = typeof data === 'object' ? (Number(data.likeRank) || 1) : (Number(data) || 1);
-			
-			// 如果有用户信息，使用接收到的用户信息
-			if (data && typeof data === 'object') {
-				// 临时存储用户信息
-				const tempUserInfo = {
-					avatar: data.avatar || '/static/images/default-avatar.png',
-					nickname: data.nickname || '幸运用户'
-				};
-				
-				// 更新用户信息
-				luckyUserInfo.value = tempUserInfo;
-				
-				console.log('更新幸运用户信息:', tempUserInfo);
-			}
-		}
+		console.log('中奖功能已禁用:', data);
 	}
 
 	// 显示浏览者列表
@@ -1003,6 +1050,7 @@
 			
 			if (result.code === 0) {
 				const { viewers, total, totalPages } = result.data
+				
 				if (refresh) {
 					viewersList.value = viewers
 				} else {
@@ -1042,6 +1090,38 @@
 		const minutes = Math.floor(totalSeconds / 60)
 		const secs = totalSeconds % 60
 		return `${minutes}分${secs}秒`
+	}
+	
+	// 判断是否为快手用户（根据浏览记录中的平台信息）
+	const isKuaishouUser = (viewer) => {
+		// 访客用户不显示快手标识
+		if (!viewer.user_id || viewer.user_id.startsWith('guest_')) {
+			return false
+		}
+		
+		// 检查 device_info.platform 是否为快手
+		if (viewer.device_info && viewer.device_info.platform) {
+			const platform = viewer.device_info.platform.toLowerCase()
+			return platform === 'kuaishou' || platform.includes('ks')
+		}
+		
+		return false
+	}
+	
+	// 判断是否为微信用户（根据浏览记录中的平台信息）
+	const isWeixinUser = (viewer) => {
+		// 访客用户不显示微信标识
+		if (!viewer.user_id || viewer.user_id.startsWith('guest_')) {
+			return false
+		}
+		
+		// 检查 device_info.platform 是否为微信
+		if (viewer.device_info && viewer.device_info.platform) {
+			const platform = viewer.device_info.platform.toLowerCase()
+			return platform === 'weixin' || platform.includes('wechat')
+		}
+		
+		return false
 	}
 
 	// 添加分享文章方法
@@ -1195,7 +1275,7 @@
 							class="video-player"
 							:src="articleDetail.videoURL"
 							autoplay
-							object-fit="cover"
+							object-fit="contain"
 							:poster="articleDetail.images && articleDetail.images[0] ? articleDetail.images[0].compressedURL : ''"
 							controls
 							@error="handleVideoError"
@@ -1358,14 +1438,7 @@
 				</view>
 			</view>
 			
-			<!-- 幸运用户横幅 -->
-			<LuckyUserBanner
-				v-if="showLuckyUserBanner"
-				:rank="luckyUserRank"
-				:avatar="luckyUserInfo.avatar"
-				:nickname="luckyUserInfo.nickname"
-				@close="showLuckyUserBanner = false"
-			/>
+			<!-- 幸运用户横幅已移除 -->
 		</view>
 
 		<!-- 添加自定义图片预览组件 -->
@@ -1406,14 +1479,30 @@
 							<view class="viewer-name">
 								<text>{{ viewer.user_nickName || '匿名用户' }}</text>
 								<text class="guest-badge" v-if="viewer.user_id && viewer.user_id.startsWith('guest_')">访客</text>
+								<!-- 微信用户标识 - 根据 device_info.platform 判断 -->
+								<view class="wx-badge" v-if="isWeixinUser(viewer)">
+									<text>微信</text>
+								</view>
+								<!-- 快手用户标识 - 根据 device_info.platform 判断 -->
+								<view class="ks-badge" v-if="isKuaishouUser(viewer)">
+									<text>快手</text>
+								</view>
+								<!-- 点赞状态标识 -->
+								<view class="like-badge" v-if="viewer.is_liked">
+									<uni-icons type="heart-filled" size="16" color="#FF5D5B"></uni-icons>
+								</view>
 							</view>
 							<view class="viewer-detail">
 								<text class="viewer-time">{{ formatTime(viewer.view_time) }}</text>
 								<text class="viewer-duration" v-if="viewer.view_duration > 0">浏览 {{ formatDuration(viewer.view_duration) }}</text>
 							</view>
 						</view>
-						<view class="viewer-contact" v-if="viewer.user_mobile">
+						<view class="viewer-contact" v-if="viewer.user_mobile" @click.stop="callPhone(viewer.user_mobile, viewer)">
 							<uni-icons type="phone" size="20" color="#07C160"></uni-icons>
+							<!-- 拨打次数徽章 -->
+							<view class="call-badge" v-if="viewer.call_count > 0">
+								<text>{{ viewer.call_count > 99 ? '99+' : viewer.call_count }}</text>
+							</view>
 						</view>
 					</view>
 					
@@ -1520,10 +1609,10 @@
 		.articleVideo {
 			position: relative;
 			width: 100%;
-			height: 422rpx;
-			border-radius: 0; /* 修改为0，使视频与页面边缘无间隙 */
+			aspect-ratio: 4 / 3; /* 固定4:3比例 */
+			border-radius: 0;
 			background-color: #000;
-			margin: 5rpx 0 20rpx; /* 修改顶部margin为0 */
+			margin: 0;
 			overflow: hidden;
 			
 			.video-player {
@@ -2008,6 +2097,21 @@
 		to { opacity: 1; }
 	}
 	
+	@keyframes heartbeat {
+		0%, 100% {
+			transform: scale(1);
+		}
+		25% {
+			transform: scale(1.2);
+		}
+		50% {
+			transform: scale(1);
+		}
+		75% {
+			transform: scale(1.15);
+		}
+	}
+	
 	.viewers-container {
 		width: 90%;
 		max-width: 650rpx;
@@ -2128,6 +2232,51 @@
 					border-radius: 6rpx;
 					flex-shrink: 0;
 				}
+				
+				.wx-badge {
+					margin-left: 12rpx;
+					display: flex;
+					align-items: center;
+					justify-content: center;
+					flex-shrink: 0;
+					
+					text {
+						font-size: 20rpx;
+						color: #07C160;
+						background: linear-gradient(135deg, #D4F5E5 0%, #C2F0DC 100%);
+						padding: 4rpx 12rpx;
+						border-radius: 6rpx;
+						border: 1rpx solid #07C160;
+						font-weight: 500;
+					}
+				}
+				
+				.ks-badge {
+					margin-left: 12rpx;
+					display: flex;
+					align-items: center;
+					justify-content: center;
+					flex-shrink: 0;
+					
+					text {
+						font-size: 20rpx;
+						color: #FF6600;
+						background: linear-gradient(135deg, #FFE5CC 0%, #FFD9B3 100%);
+						padding: 4rpx 12rpx;
+						border-radius: 6rpx;
+						border: 1rpx solid #FF9933;
+						font-weight: 500;
+					}
+				}
+						
+				.like-badge {
+					margin-left: 8rpx;
+					display: flex;
+					align-items: center;
+					justify-content: center;
+					flex-shrink: 0;
+					animation: heartbeat 0.6s ease-in-out;
+				}
 			}
 			
 			.viewer-detail {
@@ -2154,6 +2303,39 @@
 		.viewer-contact {
 			margin-left: 16rpx;
 			flex-shrink: 0;
+			padding: 8rpx;
+			border-radius: 50%;
+			transition: all 0.3s ease;
+			cursor: pointer;
+			position: relative;
+			
+			&:active {
+				background-color: rgba(7, 193, 96, 0.1);
+				transform: scale(0.9);
+			}
+			
+			.call-badge {
+				position: absolute;
+				top: 0;
+				right: 0;
+				min-width: 32rpx;
+				height: 32rpx;
+				background-color: #FF5D5B;
+				border-radius: 16rpx;
+				display: flex;
+				align-items: center;
+				justify-content: center;
+				padding: 0 8rpx;
+				box-shadow: 0 2rpx 8rpx rgba(255, 93, 91, 0.3);
+				
+				text {
+					font-size: 20rpx;
+					color: #FFFFFF;
+					font-weight: 500;
+					line-height: 1;
+					white-space: nowrap;
+				}
+			}
 		}
 	}
 	

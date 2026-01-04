@@ -14,10 +14,9 @@ const _easycom_uni_icons = () => "../../uni_modules/uni-icons/components/uni-ico
 const _easycom_uni_load_more = () => "../../uni_modules/uni-load-more/components/uni-load-more/uni-load-more.js";
 const _easycom_comment_list = () => "../../components/comment-list/comment-list.js";
 if (!Math) {
-  (_easycom_up_loading_page + _easycom_uni_icons + _easycom_uni_load_more + _easycom_comment_list + tuijian + Dianzan + LuckyUserBanner + Tuouanyulan)();
+  (_easycom_up_loading_page + _easycom_uni_icons + _easycom_uni_load_more + _easycom_comment_list + tuijian + Dianzan + Tuouanyulan)();
 }
 const tuijian = () => "../../components/tuijian/tuijian.js";
-const LuckyUserBanner = () => "../../components/lucky-user/lucky-user-banner.js";
 const Tuouanyulan = () => "../../components/tuouanyulan/tuouanyulan.js";
 const Dianzan = () => "../../components/dianzan/dianzan.js";
 const _sfc_main = {
@@ -406,6 +405,61 @@ const _sfc_main = {
         });
       }
     };
+    const callPhone = async (phoneNumber, viewerInfo = {}) => {
+      if (!phoneNumber || phoneNumber === "未填写") {
+        return common_vendor.index.showToast({
+          icon: "none",
+          title: "没有联系方式"
+        });
+      }
+      const recordParams = {
+        article_id: props.article_id,
+        caller_id: userStore.userInfo.uid || "",
+        caller_nickName: userStore.userInfo.nickName || "",
+        caller_avatarUrl: userStore.userInfo.avatarUrl || "",
+        callee_id: viewerInfo.user_id || "",
+        callee_nickName: viewerInfo.user_nickName || "",
+        callee_mobile: phoneNumber,
+        call_source: "viewer_list",
+        call_status: "success"
+        // 默认成功，失败后会更新
+      };
+      common_vendor.index.makePhoneCall({
+        phoneNumber,
+        success: async () => {
+          console.log("拨打电话成功:", phoneNumber);
+          try {
+            recordParams.call_status = "success";
+            const result = await articleApi.recordPhoneCall(recordParams);
+            if (result.code === 0) {
+              console.log("拨打记录保存成功");
+              await loadViewers(true);
+            } else {
+              console.warn("拨打记录保存失败:", result.message);
+            }
+          } catch (err) {
+            console.error("保存拨打记录失败:", err);
+          }
+        },
+        fail: async (err) => {
+          console.error("拨打电话失败:", err);
+          try {
+            recordParams.call_status = "failed";
+            const result = await articleApi.recordPhoneCall(recordParams);
+            if (result.code === 0) {
+              console.log("拨打失败记录保存成功");
+              await loadViewers(true);
+            }
+          } catch (recordErr) {
+            console.error("保存失败记录失败:", recordErr);
+          }
+          common_vendor.index.showToast({
+            title: "拨打电话失败",
+            icon: "none"
+          });
+        }
+      });
+    };
     const customTestLogin = async () => {
       if (isCheckingLogin.value)
         return false;
@@ -445,17 +499,23 @@ const _sfc_main = {
         if (!articleDetail.value._id)
           return;
         viewStartTime.value = Date.now();
+        let platformType = "unknown";
+        platformType = "kuaishou";
         const viewerInfo = {
           user_id: userStore.userInfo.uid || `guest_${Date.now()}`,
           user_nickName: userStore.userInfo.nickName || "访客",
           user_avatarUrl: userStore.userInfo.avatarUrl || "/static/images/touxiang.png",
           view_source: "direct",
-          actual_view_duration: 0
+          actual_view_duration: 0,
+          device_info: {
+            platform: platformType
+            // 保存平台信息
+          }
         };
         const result = await articleApi.updateLookCount(articleDetail.value._id, viewerInfo);
         if (result.code === 0) {
           articleDetail.value.look_count = result.data.look_count;
-          console.log("浏览量更新成功");
+          console.log("浏览量更新成功, 平台:", platformType);
           common_vendor.index.$emit("updateArticleLookCount", {
             articleId: articleDetail.value._id,
             lookCount: articleDetail.value.look_count
@@ -653,9 +713,9 @@ const _sfc_main = {
         tuijianRef.value.loadMore();
       }
     });
-    const showLuckyUserBanner = common_vendor.ref(false);
-    const luckyUserRank = common_vendor.ref(1);
-    const luckyUserInfo = common_vendor.ref({
+    common_vendor.ref(false);
+    common_vendor.ref(1);
+    common_vendor.ref({
       avatar: "",
       nickname: "用户"
     });
@@ -680,23 +740,7 @@ const _sfc_main = {
       }
     };
     const handleLuckyUser = (data) => {
-      console.log("收到幸运用户事件:", data);
-      if (!data) {
-        console.error("收到无效的幸运用户数据");
-        return;
-      }
-      if (data.isWinner === true) {
-        showLuckyUserBanner.value = true;
-        luckyUserRank.value = typeof data === "object" ? Number(data.likeRank) || 1 : Number(data) || 1;
-        if (data && typeof data === "object") {
-          const tempUserInfo = {
-            avatar: data.avatar || "/static/images/default-avatar.png",
-            nickname: data.nickname || "幸运用户"
-          };
-          luckyUserInfo.value = tempUserInfo;
-          console.log("更新幸运用户信息:", tempUserInfo);
-        }
-      }
+      console.log("中奖功能已禁用:", data);
     };
     const showViewersList = async () => {
       try {
@@ -777,6 +821,26 @@ const _sfc_main = {
       const minutes = Math.floor(totalSeconds / 60);
       const secs = totalSeconds % 60;
       return `${minutes}分${secs}秒`;
+    };
+    const isKuaishouUser = (viewer) => {
+      if (!viewer.user_id || viewer.user_id.startsWith("guest_")) {
+        return false;
+      }
+      if (viewer.device_info && viewer.device_info.platform) {
+        const platform = viewer.device_info.platform.toLowerCase();
+        return platform === "kuaishou" || platform.includes("ks");
+      }
+      return false;
+    };
+    const isWeixinUser = (viewer) => {
+      if (!viewer.user_id || viewer.user_id.startsWith("guest_")) {
+        return false;
+      }
+      if (viewer.device_info && viewer.device_info.platform) {
+        const platform = viewer.device_info.platform.toLowerCase();
+        return platform === "weixin" || platform.includes("wechat");
+      }
+      return false;
     };
     const processMediaURL = (url, type = "image") => {
       if (!url)
@@ -979,75 +1043,84 @@ const _sfc_main = {
           userNickname: common_vendor.unref(userStore).userInfo.nickName
         }),
         ah: common_vendor.o(handleCall),
-        ai: showLuckyUserBanner.value
-      }, showLuckyUserBanner.value ? {
-        aj: common_vendor.o(($event) => showLuckyUserBanner.value = false),
-        ak: common_vendor.p({
-          rank: luckyUserRank.value,
-          avatar: luckyUserInfo.value.avatar,
-          nickname: luckyUserInfo.value.nickname
-        })
-      } : {}, {
-        al: articleDetail.value._id,
-        am: common_vendor.o(closePreview),
-        an: common_vendor.o(handlePreviewChange),
-        ao: common_vendor.p({
+        ai: articleDetail.value._id,
+        aj: common_vendor.o(closePreview),
+        ak: common_vendor.o(handlePreviewChange),
+        al: common_vendor.p({
           visible: previewVisible.value,
           images: previewImages.value,
           current: previewCurrent.value
         }),
-        ap: viewersListVisible.value
+        am: viewersListVisible.value
       }, viewersListVisible.value ? common_vendor.e({
-        aq: common_vendor.t(viewersTotal.value),
-        ar: common_vendor.p({
+        an: common_vendor.t(viewersTotal.value),
+        ao: common_vendor.p({
           type: "closeempty",
           size: "24",
           color: "#666"
         }),
-        as: common_vendor.o(closeViewersList),
-        at: common_vendor.f(viewersList.value, (viewer, index, i0) => {
+        ap: common_vendor.o(closeViewersList),
+        aq: common_vendor.f(viewersList.value, (viewer, index, i0) => {
           return common_vendor.e({
             a: viewer.user_avatarUrl || "/static/images/touxiang.png",
             b: common_vendor.t(viewer.user_nickName || "匿名用户"),
             c: viewer.user_id && viewer.user_id.startsWith("guest_")
           }, viewer.user_id && viewer.user_id.startsWith("guest_") ? {} : {}, {
-            d: common_vendor.t(common_vendor.unref(utils_formatTime.formatTime)(viewer.view_time)),
-            e: viewer.view_duration > 0
-          }, viewer.view_duration > 0 ? {
-            f: common_vendor.t(formatDuration(viewer.view_duration))
+            d: isWeixinUser(viewer)
+          }, isWeixinUser(viewer) ? {} : {}, {
+            e: isKuaishouUser(viewer)
+          }, isKuaishouUser(viewer) ? {} : {}, {
+            f: viewer.is_liked
+          }, viewer.is_liked ? {
+            g: "786907d5-14-" + i0,
+            h: common_vendor.p({
+              type: "heart-filled",
+              size: "16",
+              color: "#FF5D5B"
+            })
           } : {}, {
-            g: viewer.user_mobile
-          }, viewer.user_mobile ? {
-            h: "786907d5-15-" + i0,
-            i: common_vendor.p({
+            i: common_vendor.t(common_vendor.unref(utils_formatTime.formatTime)(viewer.view_time)),
+            j: viewer.view_duration > 0
+          }, viewer.view_duration > 0 ? {
+            k: common_vendor.t(formatDuration(viewer.view_duration))
+          } : {}, {
+            l: viewer.user_mobile
+          }, viewer.user_mobile ? common_vendor.e({
+            m: "786907d5-15-" + i0,
+            n: common_vendor.p({
               type: "phone",
               size: "20",
               color: "#07C160"
-            })
+            }),
+            o: viewer.call_count > 0
+          }, viewer.call_count > 0 ? {
+            p: common_vendor.t(viewer.call_count > 99 ? "99+" : viewer.call_count)
           } : {}, {
-            j: index
+            q: common_vendor.o(($event) => callPhone(viewer.user_mobile, viewer))
+          }) : {}, {
+            r: index
           });
         }),
-        av: viewersLoading.value
+        ar: viewersLoading.value
       }, viewersLoading.value ? {} : {}, {
-        aw: !hasMoreViewers.value && viewersList.value.length > 0
+        as: !hasMoreViewers.value && viewersList.value.length > 0
       }, !hasMoreViewers.value && viewersList.value.length > 0 ? {} : {}, {
-        ax: viewersList.value.length === 0 && !viewersLoading.value
+        at: viewersList.value.length === 0 && !viewersLoading.value
       }, viewersList.value.length === 0 && !viewersLoading.value ? {
-        ay: common_vendor.p({
+        av: common_vendor.p({
           type: "eye-slash",
           size: "50",
           color: "#CCCCCC"
         })
       } : {}, {
-        az: common_vendor.o(() => loadViewers(false)),
-        aA: viewersRefreshing.value,
-        aB: common_vendor.o(handleViewersRefresh),
-        aC: common_vendor.o(() => {
+        aw: common_vendor.o(() => loadViewers(false)),
+        ax: viewersRefreshing.value,
+        ay: common_vendor.o(handleViewersRefresh),
+        az: common_vendor.o(() => {
         }),
-        aD: common_vendor.o(closeViewersList)
+        aA: common_vendor.o(closeViewersList)
       }) : {}, {
-        aE: common_vendor.gei(_ctx, "")
+        aB: common_vendor.gei(_ctx, "")
       });
     };
   }

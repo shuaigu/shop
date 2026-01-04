@@ -8,24 +8,7 @@
 			<view v-if="showText" class="dianzan-text">{{ isLiked ? '已点赞' : '点赞' }}</view>
 		</view>
 		
-		<!-- 点赞排名模态框 - 使用v-if确保模态框能正确关闭 -->
-		<view v-if="showLikeRankModal" class="like-rank-modal-container" @click.stop="closeLikeRankModal">
-			<view class="like-rank-modal" @click.stop :class="{'winner-modal': isWinner}">
-				<view class="modal-decoration" v-if="isWinner">
-					<view class="decoration-item" v-for="i in 6" :key="i"></view>
-				</view>
-				<view class="like-rank-title">{{ isWinner ? '恭喜您中奖了！' : '恭喜您' }}</view>
-				<view class="like-rank-content">
-					<view class="like-rank-text">您是第 <text class="like-rank-number">{{ likeRank || 1 }}</text> 位点赞的用户</view>
-					<view v-if="isWinner" class="like-rank-winner-text">您已获得幸运用户奖励！</view>
-					<view v-if="isWinner" class="winner-badge">
-						<view class="badge-icon">🎁</view>
-						<view class="badge-text">幸运用户专属奖励</view>
-					</view>
-				</view>
-				<button class="like-rank-button" @click.stop="closeLikeRankModal">{{ isWinner ? '太棒了' : '我知道了' }}</button>
-			</view>
-		</view>
+		<!-- 点赞排名模态框已移除 -->
 	</view>
 </template>
 
@@ -85,72 +68,10 @@ const likeCount = ref(0);
 const isLikeAnimating = ref(false);
 const isProcessing = ref(false);
 const lastClickTime = ref(0);
+// 中奖功能已移除
 const showLikeRankModal = ref(false);
 const likeRank = ref(1);
 const isWinner = ref(false);
-
-// 检查是否为幸运用户
-const checkIfLuckyUser = async () => {
-	try {
-		// 调用API获取用户点赞排名
-		const likeApi = uniCloud.importObject('likeRecord', { customUI: true });
-		const result = await likeApi.getLikeRank(props.articleId, props.userId);
-		
-		if (result.code === 0 && result.like_rank) {
-			// 设置点赞排名
-			likeRank.value = result.like_rank;
-			
-			// 获取幸运用户配置
-			const configResult = await likeApi.getLuckyConfig();
-			
-			// 使用配置中的幸运用户排名列表，而不是硬编码的[1, 8, 18]
-			let luckyRanks = [1, 8, 18]; // 默认值
-			let isEnabled = true;
-			
-			if (configResult.code === 0 && configResult.data) {
-				if (Array.isArray(configResult.data.lucky_ranks) && configResult.data.lucky_ranks.length > 0) {
-					luckyRanks = configResult.data.lucky_ranks;
-				}
-				
-				if (typeof configResult.data.is_enabled === 'boolean') {
-					isEnabled = configResult.data.is_enabled;
-				}
-			}
-			
-			console.log('幸运用户配置:', {
-				luckyRanks,
-				isEnabled,
-				currentRank: likeRank.value
-			});
-			
-			// 判断是否为中奖用户（使用配置中的排名列表）
-			isWinner.value = isEnabled && luckyRanks.includes(likeRank.value);
-			
-			console.log('初始化时检查幸运用户状态:', {
-				likeRank: likeRank.value,
-				isWinner: isWinner.value,
-				nickname: result.nickname,
-				avatar: result.avatar
-			});
-			
-			// 如果是幸运用户，发送事件通知父组件
-			if (isWinner.value) {
-				// 确保 result 对象存在且有效
-				const resultData = result || {};
-				
-				emit('luckyUser', {
-					likeRank: likeRank.value,
-					isWinner: true,
-					// 优先使用服务器返回的用户信息，如果没有则使用传入的信息
-					avatar: (resultData.avatar || props.userAvatar || ''),
-					nickname: (resultData.nickname || props.userNickname || '')
-				});
-			}
-		}
-	} catch (err) {
-		console.error('检查幸运用户状态失败:', err);
-	}
-};
 
 // 更新点赞状态
 const updateLikeStatus = (data) => {
@@ -323,59 +244,9 @@ const handleLike = async () => {
 					likeCount: likeCount.value
 				});
 				
-				// 如果是点赞操作且服务器返回了点赞排名
+				// 中奖功能已移除，保留点赞排名记录
 				if (isLiked.value && !previousLikeState && result.like_rank) {
-					// 设置点赞排名
 					likeRank.value = result.like_rank || 1;
-					
-					// 获取幸运用户配置
-					try {
-						const configResult = await likeApi.getLuckyConfig();
-						
-						// 使用配置中的幸运用户排名列表，而不是硬编码的[1, 8, 18]
-						let luckyRanks = [1, 8, 18]; // 默认值
-						let isEnabled = true;
-						
-						if (configResult.code === 0 && configResult.data) {
-							if (Array.isArray(configResult.data.lucky_ranks) && configResult.data.lucky_ranks.length > 0) {
-								luckyRanks = configResult.data.lucky_ranks;
-							}
-							
-							if (typeof configResult.data.is_enabled === 'boolean') {
-								isEnabled = configResult.data.is_enabled;
-							}
-						}
-						
-						console.log('点赞时获取幸运用户配置:', {
-							luckyRanks,
-							isEnabled,
-							currentRank: likeRank.value
-						});
-						
-						// 判断是否为中奖用户（使用配置中的排名列表）
-						isWinner.value = isEnabled && luckyRanks.includes(likeRank.value);
-					} catch (err) {
-						console.error('获取幸运用户配置失败:', err);
-						// 使用默认判断逻辑
-						isWinner.value = [1, 8, 18].includes(likeRank.value);
-					}
-					
-					console.log('点赞排名信息:', {
-						likeRank: likeRank.value,
-						isWinner: isWinner.value
-					});
-					
-					// 如果是幸运用户，添加震动反馈
-					if (isWinner.value) {
-						// 使用长震动提供更强的反馈
-						if (uni.vibrateLong) {
-							uni.vibrateLong({
-								success: () => {
-									console.log('震动反馈成功');
-								}
-							});
-						}
-					}
 				}
 				
 				// 播放点赞动画（仅当点赞时）
@@ -393,66 +264,24 @@ const handleLike = async () => {
 					isLiked: isLiked.value,
 					likeCount: likeCount.value,
 					likeRank: likeRank.value,
-					isWinner: isWinner.value
+					isWinner: false
 				});
-				
-				// 如果是幸运用户，发送特殊事件通知父组件
-				if (isWinner.value && isLiked.value) {
-					// 确保 result 对象存在且有效
-					const resultData = result || {};
-					
-					emit('luckyUser', {
-						likeRank: likeRank.value,
-						isWinner: true,
-						// 优先使用服务器返回的用户信息，如果没有则使用传入的信息
-						avatar: (resultData.avatar || props.userAvatar || ''),
-						nickname: (resultData.nickname || props.userNickname || '')
-					});
-					
-					// 显示祝贺提示
-					uni.showToast({
-						title: '恭喜您成为幸运用户！',
-						icon: 'none',
-						duration: 2000,
-						mask: true
-					});
-				}
 				
 				uni.$emit('updateArticleLikeStatus', {
 					articleId: props.articleId,
 					isLiked: isLiked.value,
 					likeCount: likeCount.value,
 					likeRank: likeRank.value,
-					isWinner: isWinner.value
+					isWinner: false
 				});
 				
-				// 显示轻量级提示
-				if (!isWinner.value || !isLiked.value) {
-					uni.showToast({
-						title: isLiked.value ? '已点赞' : '已取消点赞',
-						icon: 'none',
-						duration: 1000,
-						mask: false
-					});
-				}
-				
-				// 如果是点赞操作且服务器返回了点赞排名，显示排名模态框
-				if (result.isLiked && !previousLikeState && result.like_rank) {
-					// 隐藏之前的轻量级提示
-					uni.hideToast();
-					
-					// 使用延时确保UI更新完成后再显示模态框
-					setTimeout(() => {
-						// 显示模态框
-						showLikeRankModal.value = true;
-						
-						console.log('显示点赞排名模态框:', {
-							likeRank: likeRank.value,
-							showModal: showLikeRankModal.value,
-							isWinner: isWinner.value
-						});
-					}, 100);
-				}
+				// 显示点赞提示
+				uni.showToast({
+					title: isLiked.value ? '已点赞' : '已取消点赞',
+					icon: 'none',
+					duration: 1000,
+					mask: false
+				});
 			} else {
 				// 服务器操作失败
 				console.warn('服务器操作失败:', result);
@@ -481,17 +310,9 @@ const handleLike = async () => {
 	}
 };
 
-// 关闭点赞排名模态框
+// 中奖功能已移除
 const closeLikeRankModal = () => {
-	console.log('关闭点赞排名模态框');
-	
-	// 直接设置状态为false
 	showLikeRankModal.value = false;
-	
-	// 添加调试日志
-	console.log('模态框已关闭:', showLikeRankModal.value);
-	
-	// 防止事件冒泡
 	return false;
 };
 
@@ -514,10 +335,7 @@ onMounted(() => {
 		likeCount: likeCount.value
 	});
 	
-	// 如果已经点赞，检查是否为幸运用户
-	if (isLiked.value) {
-		checkIfLuckyUser();
-	}
+	// 中奖功能已移除
 });
 
 // 监听prop变化，确保状态同步

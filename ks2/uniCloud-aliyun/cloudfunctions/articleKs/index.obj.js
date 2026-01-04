@@ -11,6 +11,7 @@ module.exports = {
 		this.articleCollection = this.db.collection('articleList')
 		this.commentCollection = this.db.collection('commentList')
 		this.viewRecordCollection = this.db.collection('viewRecord') // 浏览记录表
+		this.callRecordCollection = this.db.collection('callRecord') // 拨打记录表
 	},
 	/**
 	 * addReady 获取分类和定位
@@ -820,9 +821,57 @@ module.exports = {
 					view_duration: true,
 					sharer_id: true,
 					sharer_name: true,
-					sharer_avatar: true
+					sharer_avatar: true,
+					device_info: true // 添加设备信息字段
 				})
 				.get()
+			
+			// 为每个浏览者添加点赞状态和拨打次数
+			const likeRecordCollection = this.db.collection('likeRecord')
+			const viewersWithStatus = await Promise.all(
+				(viewersRes.data || []).map(async (viewer) => {
+					// 跳过访客用户（guest_开头的）
+					if (viewer.user_id && viewer.user_id.startsWith('guest_')) {
+						return {
+							...viewer,
+							is_liked: false,
+							call_count: 0
+						}
+					}
+					
+					try {
+						// 查询该用户是否已点赞
+						const likeRes = await likeRecordCollection
+							.where({
+								article_id: articleId,
+								user_id: viewer.user_id
+							})
+							.limit(1)
+							.get()
+						
+						// 查询该用户被拨打的次数
+						const callCountRes = await this.callRecordCollection
+							.where({
+								article_id: articleId,
+								callee_id: viewer.user_id
+							})
+							.count()
+						
+						return {
+							...viewer,
+							is_liked: likeRes.data && likeRes.data.length > 0,
+							call_count: callCountRes.total || 0
+						}
+					} catch (err) {
+						console.error('查询点赞状态或拨打次数失败:', err)
+						return {
+							...viewer,
+							is_liked: false,
+							call_count: 0
+						}
+					}
+				})
+			)
 			
 			// 获取总数
 			const totalRes = await this.viewRecordCollection
@@ -835,7 +884,7 @@ module.exports = {
 				code: 0,
 				message: '获取成功',
 				data: {
-					viewers: viewersRes.data || [],
+					viewers: viewersWithStatus,
 					total: totalRes.total || 0,
 					pageNo: pageNo,
 					pageSize: pageSize,
@@ -927,6 +976,137 @@ module.exports = {
 				code: -1,
 				message: '连接失败',
 				error: err
+			}
+		}
+	},
+	
+	/**
+	 * recordPhoneCall 记录拨打电话行为
+	 * @param {object} params 拨打记录参数
+	 * @param {string} params.article_id 文章ID
+	 * @param {string} params.caller_id 拨打者ID
+	 * @param {string} params.caller_nickName 拨打者昵称
+	 * @param {string} params.caller_avatarUrl 拨打者头像
+	 * @param {string} params.callee_id 被拨打者ID
+	 * @param {string} params.callee_nickName 被拨打者昵称
+	 * @param {string} params.callee_mobile 被拨打者手机号
+	 * @param {string} params.call_status 拨打状态 (success/failed/cancelled)
+	 * @param {string} params.call_source 拨打来源 (viewer_list/article_detail/comment_list)
+	 * @returns {object} 记录结果
+	 */
+	async recordPhoneCall(params) {
+		try {
+			// 参数验证
+			if (!params.article_id || !params.caller_id || !params.callee_id) {
+				return {
+					code: -1,
+					message: '必要参数不能为空'
+				}
+			}
+			
+			// 检查文章是否存在
+			const article = await this.articleCollection.doc(params.article_id).get()
+			if (!article.data || article.data.length === 0) {
+				return {
+					code: -1,
+					message: '文章不存在'
+				}
+			}
+			
+			// 构建拨打记录数据
+			const callRecord = {
+				article_id: params.article_id,
+				caller_id: params.caller_id,
+				caller_nickName: params.caller_nickName || '',
+				caller_avatarUrl: params.caller_avatarUrl || '',
+				callee_id: params.callee_id,
+				callee_nickName: params.callee_nickName || '',
+				callee_mobile: params.callee_mobile || '',
+				call_time: Date.now(),
+				call_status: params.call_status || 'success',
+				call_source: params.call_source || 'viewer_list'
+			}
+			
+			// 保存拨打记录
+			const result = await this.callRecordCollection.add(callRecord)
+			
+			console.log('拨打记录保存成功:', {
+				article_id: params.article_id,
+				caller_id: params.caller_id,
+				callee_id: params.callee_id,
+				call_status: params.call_status,
+				record_id: result.id
+			})
+			
+			return {
+				code: 0,
+				message: '记录成功',
+				data: {
+					record_id: result.id
+				}
+			}
+		} catch (err) {
+			console.error('记录拨打行为失败:', err)
+			return {
+				code: -1,
+				message: '记录失败',
+				error: err.message
+			}
+		}
+	},
+	
+	/**
+	 * getCallRecords 获取拨打记录列表
+	 * @param {string} articleId 文章ID
+	 * @param {object} params 分页参数
+	 * @returns {object} 拨打记录列表
+	 */
+	async getCallRecords(articleId, params = {}) {
+		try {
+			if (!articleId) {
+				return {
+					code: -1,
+					message: '文章ID不能为空'
+				}
+			}
+			
+			const pageNo = params.pageNo || 1
+			const pageSize = Math.min(params.pageSize || 20, 50)
+			
+			// 获取拨打记录
+			const recordsRes = await this.callRecordCollection
+				.where({
+					article_id: articleId
+				})
+				.orderBy('call_time', 'desc')
+				.skip((pageNo - 1) * pageSize)
+				.limit(pageSize)
+				.get()
+			
+			// 获取总数
+			const totalRes = await this.callRecordCollection
+				.where({
+					article_id: articleId
+				})
+				.count()
+			
+			return {
+				code: 0,
+				message: '获取成功',
+				data: {
+					records: recordsRes.data || [],
+					total: totalRes.total || 0,
+					pageNo: pageNo,
+					pageSize: pageSize,
+					totalPages: Math.ceil((totalRes.total || 0) / pageSize)
+				}
+			}
+		} catch (err) {
+			console.error('获取拨打记录失败:', err)
+			return {
+				code: -1,
+				message: '获取失败',
+				error: err.message
 			}
 		}
 	}
