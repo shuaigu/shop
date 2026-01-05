@@ -31,6 +31,13 @@
 			url: "/subPages/feedBack/feedBack"
 		} )
 	}
+	
+	// 备忘录跳转
+	const goToMemo = () => {
+		uni.navigateTo({
+			url: "/pages/memo/memo"
+		})
+	}
 
 	// 角色判断
 	const isAdmin = computed( ( ) => userStore.userInfo.role[ 0 ] === 'admin' )
@@ -96,6 +103,15 @@
 					<uni-icons style="padding-top: 2px;" color="#999999" custom-prefix="iconfont"
 						type="icon-yijianfankui" size="22"></uni-icons>
 					<text class="value">意见反馈</text>
+				</view>
+				<uni-icons color="#cccccc" custom-prefix="iconfont" type="icon-arrow-drop-right-line"
+					size="30"></uni-icons>
+			</view>
+			<!-- 我的备忘录 -->
+			<view class="memo" @click="goToMemo">
+				<view class="left">
+					<uni-icons style="padding-top: 2px;" color="#999999" type="paperplane" size="22"></uni-icons>
+					<text class="value">我的备忘录</text>
 				</view>
 				<uni-icons color="#cccccc" custom-prefix="iconfont" type="icon-arrow-drop-right-line"
 					size="30"></uni-icons>
@@ -195,6 +211,11 @@
 
 			/*意见反馈*/
 			.feedBack {
+				@include optionalCommon;
+			}
+			
+			/*我的备忘录*/
+			.memo {
 				@include optionalCommon;
 			}
 

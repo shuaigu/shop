@@ -68,6 +68,15 @@
 			{
 				"navigationBarTitleText" : ""
 			}
+		},
+		{
+			"path" : "pages/memo/memo",
+			"style" : 
+			{
+				"navigationBarTitleText" : "我的备忘录",
+				"navigationBarBackgroundColor": "#399bfe",
+				"navigationBarTextStyle": "white"
+			}
 		}
 	],
 	"subPackages": [ {

@@ -8677,6 +8677,14 @@ const pages = [
     style: {
       navigationBarTitleText: ""
     }
+  },
+  {
+    path: "pages/memo/memo",
+    style: {
+      navigationBarTitleText: "我的备忘录",
+      navigationBarBackgroundColor: "#399bfe",
+      navigationBarTextStyle: "white"
+    }
   }
 ];
 const subPackages = [
@@ -9087,7 +9095,7 @@ class S {
 function T(e2) {
   return e2 && "string" == typeof e2 ? JSON.parse(e2) : e2;
 }
-const b = true, E = "mp-kuaishou", A = T(define_process_env_UNI_SECURE_NETWORK_CONFIG_default), P = E, C = T('{"address":["127.0.0.1","192.168.31.133"],"servePort":7000,"debugPort":9000,"initialLaunchType":"remote","skipFiles":["<node_internals>/**","D:/软件/HBuilderX/HBuilderX/plugins/unicloud/**/*.js"]}'), O = T('[{"provider":"aliyun","spaceName":"aly-2","spaceId":"mp-4f80f767-c485-40d3-b143-9134b266a903","clientSecret":"Ob5LoJeG66OrmkXfG3NLNA==","endpoint":"https://api.next.bspapp.com"}]') || [];
+const b = true, E = "mp-kuaishou", A = T(define_process_env_UNI_SECURE_NETWORK_CONFIG_default), P = E, C = T('{"address":["127.0.0.1","192.168.31.133"],"servePort":7001,"debugPort":9001,"initialLaunchType":"remote","skipFiles":["<node_internals>/**","D:/软件/HBuilderX/HBuilderX/plugins/unicloud/**/*.js"]}'), O = T('[{"provider":"aliyun","spaceName":"aly-2","spaceId":"mp-4f80f767-c485-40d3-b143-9134b266a903","clientSecret":"Ob5LoJeG66OrmkXfG3NLNA==","endpoint":"https://api.next.bspapp.com"}]') || [];
 let N = "";
 try {
   N = "__UNI__EF9E83E";

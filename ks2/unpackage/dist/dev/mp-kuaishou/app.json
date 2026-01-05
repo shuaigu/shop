@@ -8,7 +8,8 @@
     "pages/article/articleDetail",
     "pages/userArticleList/userArticleList",
     "pages/article/demo1",
-    "pages/pay/index"
+    "pages/pay/index",
+    "pages/memo/memo"
   ],
   "subPackages": [
     {

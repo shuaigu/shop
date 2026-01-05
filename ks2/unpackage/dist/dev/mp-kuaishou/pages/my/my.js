@@ -34,6 +34,11 @@ const _sfc_main = {
         url: "/subPages/feedBack/feedBack"
       });
     };
+    const goToMemo = () => {
+      common_vendor.index.navigateTo({
+        url: "/pages/memo/memo"
+      });
+    };
     const isAdmin = common_vendor.computed(() => userStore.userInfo.role[0] === "admin");
     const adminManage = () => {
       if (isAdmin) {
@@ -88,39 +93,51 @@ const _sfc_main = {
           size: "30"
         }),
         k: common_vendor.o(feedBack),
-        l: common_vendor.unref(userStore).userInfo.role[0] == "admin"
-      }, common_vendor.unref(userStore).userInfo.role[0] == "admin" ? {
+        l: common_vendor.p({
+          color: "#999999",
+          type: "paperplane",
+          size: "22"
+        }),
         m: common_vendor.p({
+          color: "#cccccc",
+          ["custom-prefix"]: "iconfont",
+          type: "icon-arrow-drop-right-line",
+          size: "30"
+        }),
+        n: common_vendor.o(goToMemo),
+        o: common_vendor.unref(userStore).userInfo.role[0] == "admin"
+      }, common_vendor.unref(userStore).userInfo.role[0] == "admin" ? {
+        p: common_vendor.p({
           color: "#999999",
           ["custom-prefix"]: "iconfont",
           type: "icon-houtaiguanli",
           size: "22"
         }),
-        n: common_vendor.p({
+        q: common_vendor.p({
           color: "#cccccc",
           ["custom-prefix"]: "iconfont",
           type: "icon-arrow-drop-right-line",
           size: "30"
         }),
-        o: common_vendor.o(adminManage)
+        r: common_vendor.o(adminManage)
       } : {}, {
-        p: common_vendor.unref(userStore).userInfo.isLogin
+        s: common_vendor.unref(userStore).userInfo.isLogin
       }, common_vendor.unref(userStore).userInfo.isLogin ? {
-        q: common_vendor.p({
+        t: common_vendor.p({
           color: "#999999",
           ["custom-prefix"]: "iconfont",
           type: "icon-tuichudenglu",
           size: "22"
         }),
-        r: common_vendor.p({
+        v: common_vendor.p({
           color: "#cccccc",
           ["custom-prefix"]: "iconfont",
           type: "icon-arrow-drop-right-line",
           size: "30"
         }),
-        s: common_vendor.o(loginOut)
+        w: common_vendor.o(loginOut)
       } : {}, {
-        t: common_vendor.gei(_ctx, "")
+        x: common_vendor.gei(_ctx, "")
       });
     };
   }
