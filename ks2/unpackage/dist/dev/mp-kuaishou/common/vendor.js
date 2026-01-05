@@ -8622,6 +8622,14 @@ const easycom = {
 };
 const pages = [
   {
+    path: "pages/memo/memo",
+    style: {
+      navigationBarTitleText: "我的备忘录",
+      navigationBarBackgroundColor: "#399bfe",
+      navigationBarTextStyle: "white"
+    }
+  },
+  {
     path: "pages/index/index",
     style: {
       navigationBarTitleText: "酒旅圈圈",
@@ -8676,14 +8684,6 @@ const pages = [
     path: "pages/pay/index",
     style: {
       navigationBarTitleText: ""
-    }
-  },
-  {
-    path: "pages/memo/memo",
-    style: {
-      navigationBarTitleText: "我的备忘录",
-      navigationBarBackgroundColor: "#399bfe",
-      navigationBarTextStyle: "white"
     }
   }
 ];
@@ -8744,8 +8744,8 @@ const tabBar = {
     {
       iconPath: "static/tabBar/info.png",
       selectedIconPath: "static/tabBar/info_selected.png",
-      pagePath: "pages/index/index",
-      text: "信息"
+      pagePath: "pages/memo/memo",
+      text: "备忘录"
     },
     {
       iconPath: "static/tabBar/my.png",

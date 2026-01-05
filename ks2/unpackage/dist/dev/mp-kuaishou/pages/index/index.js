@@ -29,9 +29,7 @@ const _sfc_main = {
     const cateApi = common_vendor.tr.importObject("cateKs", { customUI: true });
     const articleApi = common_vendor.tr.importObject("articleKs", { customUI: true });
     const daohangApi = common_vendor.tr.importObject("daohang", { customUI: true });
-    const configApi = common_vendor.tr.importObject("config", { customUI: true });
     const isLoading = common_vendor.ref(true);
-    common_vendor.ref(false);
     const navInfo = common_vendor.ref(null);
     const isNavLoading = common_vendor.ref(true);
     const cateListGet = async () => {
@@ -117,22 +115,6 @@ const _sfc_main = {
         console.error("获取导航信息异常:", err);
       } finally {
         isNavLoading.value = false;
-      }
-    };
-    const checkMemoHomeDisplay = async () => {
-      try {
-        const res = await configApi.getConfig("memoHomeDisplay");
-        if (res && res.code === 0 && res.data && res.data.isEnabled) {
-          console.log("备忘录首页显示已开启,跳转到备忘录页面");
-          common_vendor.index.reLaunch({
-            url: "/pages/memo/memo"
-          });
-          return true;
-        }
-        return false;
-      } catch (err) {
-        console.error("检查备忘录首页显示配置失败:", err);
-        return false;
       }
     };
     const openNavLink = async () => {
@@ -262,12 +244,8 @@ const _sfc_main = {
         animationDuration: 300
       });
     };
-    common_vendor.onMounted(async () => {
+    common_vendor.onMounted(() => {
       console.log("=== 页面开始加载 ===");
-      const shouldRedirect = await checkMemoHomeDisplay();
-      if (shouldRedirect) {
-        return;
-      }
       try {
         const systemInfo = common_vendor.index.getSystemInfoSync();
         console.log("系统信息:", systemInfo);

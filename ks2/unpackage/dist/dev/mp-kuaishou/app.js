@@ -3,6 +3,7 @@ Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
 const common_vendor = require("./common/vendor.js");
 const uni_modules_uviewPlus_index = require("./uni_modules/uview-plus/index.js");
 if (!Math) {
+  "./pages/memo/memo.js";
   "./pages/index/index.js";
   "./pages/my/my.js";
   "./pages/login/login.js";
@@ -12,7 +13,6 @@ if (!Math) {
   "./pages/userArticleList/userArticleList.js";
   "./pages/article/demo1.js";
   "./pages/pay/index.js";
-  "./pages/memo/memo.js";
   "./subPages/contarct/contarct.js";
   "./subPages/feedBack/feedBack.js";
   "./subPages/adminManage/adminManage.js";

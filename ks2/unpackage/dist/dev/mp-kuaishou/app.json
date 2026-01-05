@@ -1,5 +1,6 @@
 {
   "pages": [
+    "pages/memo/memo",
     "pages/index/index",
     "pages/my/my",
     "pages/login/login",
@@ -8,8 +9,7 @@
     "pages/article/articleDetail",
     "pages/userArticleList/userArticleList",
     "pages/article/demo1",
-    "pages/pay/index",
-    "pages/memo/memo"
+    "pages/pay/index"
   ],
   "subPackages": [
     {
@@ -39,8 +39,8 @@
       {
         "iconPath": "static/tabBar/info.png",
         "selectedIconPath": "static/tabBar/info_selected.png",
-        "pagePath": "pages/index/index",
-        "text": "信息"
+        "pagePath": "pages/memo/memo",
+        "text": "备忘录"
       },
       {
         "iconPath": "static/tabBar/my.png",

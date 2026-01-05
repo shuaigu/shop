@@ -79,11 +79,6 @@
 
 		<!-- 底部按钮组 -->
 		<view class="bottom-buttons">
-			<!-- 个人中心按钮 -->
-			<view v-if="memoHomeDisplayEnabled" class="my-center-button" @click="goBack">
-				<text class="my-center-icon">👤</text>
-			</view>
-			
 			<!-- 添加按钮 -->
 			<view class="add-button" @click="openAddDialog">
 				<text class="add-icon">+</text>
@@ -197,10 +192,7 @@ export default {
 				priority: '中',
 				is_completed: false,
 				create_time: 0
-			},
-			
-			// 备忘录首页显示状态
-			memoHomeDisplayEnabled: false
+			}
 		};
 	},
 	
@@ -231,7 +223,6 @@ export default {
 	onLoad() {
 		console.log('=== 页面加载 onLoad ===');
 		this.loadMemos();
-		this.checkMemoHomeDisplay();
 	},
 	
 	methods: {
@@ -494,28 +485,6 @@ export default {
 			} else {
 				return `${date.getMonth() + 1}-${date.getDate()}`;
 			}
-		},
-		
-		// 检查备忘录首页显示配置
-		async checkMemoHomeDisplay() {
-			try {
-				const configApi = uniCloud.importObject('config', { customUI: true });
-				const res = await configApi.getConfig('memoHomeDisplay');
-				if (res && res.code === 0 && res.data) {
-					this.memoHomeDisplayEnabled = res.data.isEnabled || false;
-					console.log('备忘录首页显示状态:', this.memoHomeDisplayEnabled);
-				}
-			} catch (err) {
-				console.error('检查备忘录首页显示配置失败:', err);
-				this.memoHomeDisplayEnabled = false;
-			}
-		},
-		
-		// 返回个人中心
-		goBack() {
-			uni.reLaunch({
-				url: '/pages/my/my'
-			});
 		}
 	}
 };
@@ -755,32 +724,7 @@ export default {
 	position: fixed;
 	right: 40rpx;
 	bottom: 100rpx;
-	display: flex;
-	flex-direction: column;
-	gap: 24rpx;
 	z-index: 100;
-	
-	/* 个人中心按钮 */
-	.my-center-button {
-		width: 112rpx;
-		height: 112rpx;
-		background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-		border-radius: 50%;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		box-shadow: 0 8rpx 20rpx rgba(102, 126, 234, 0.4);
-		transition: all 0.3s;
-		
-		&:active {
-			transform: scale(0.95);
-			opacity: 0.8;
-		}
-		
-		.my-center-icon {
-			font-size: 48rpx;
-		}
-	}
 	
 	/* 添加按钮 */
 	.add-button {

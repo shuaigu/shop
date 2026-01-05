@@ -19,13 +19,9 @@
 	const articleApi = uniCloud.importObject( 'articleKs', { customUI: true } )
 	// 导航api
 	const daohangApi = uniCloud.importObject('daohang', { customUI: true })
-	// 配置api
-	const configApi = uniCloud.importObject('config', { customUI: true })
 
 	// 添加加载状态变量
 	const isLoading = ref(true)
-	// 备忘录首页显示状态
-	const memoHomeDisplay = ref(false)
 	
 	// 导航信息
 	const navInfo = ref(null)
@@ -134,25 +130,6 @@
 			console.error('获取导航信息异常:', err)
 		} finally {
 			isNavLoading.value = false
-		}
-	}
-	
-	// 检查备忘录首页显示配置
-	const checkMemoHomeDisplay = async () => {
-		try {
-			const res = await configApi.getConfig('memoHomeDisplay')
-			if (res && res.code === 0 && res.data && res.data.isEnabled) {
-				// 如果开启了备忘录首页显示,重定向到备忘录页面
-				console.log('备忘录首页显示已开启,跳转到备忘录页面')
-				uni.reLaunch({
-					url: '/pages/memo/memo'
-				})
-				return true
-			}
-			return false
-		} catch (err) {
-			console.error('检查备忘录首页显示配置失败:', err)
-			return false
 		}
 	}
 
@@ -349,15 +326,8 @@
 	}
 
 	// 页面加载完毕
-	onMounted( async () => {
+	onMounted( ( ) => {
 		console.log('=== 页面开始加载 ===');
-		
-		// 首先检查备忘录首页显示配置
-		const shouldRedirect = await checkMemoHomeDisplay()
-		if (shouldRedirect) {
-			// 如果需要重定向,直接返回,不再执行后续逻辑
-			return
-		}
 		
 		// 输出环境信息
 		try {

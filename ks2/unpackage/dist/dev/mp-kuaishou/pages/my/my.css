@@ -51,7 +51,6 @@
   /*功能区域*/
   /*icon的公共样式*/
   /*意见反馈*/
-  /*我的备忘录*/
   /*后台管理*/
   /*分割线提示信息*/
 }
@@ -72,13 +71,6 @@
   font-size: 32rpx;
 }
 .my .myContent .feedBack.data-v-2f1ef635 {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 24rpx;
-  border-top: 1px solid rgba(0, 0, 0, 0.1);
-}
-.my .myContent .memo.data-v-2f1ef635 {
   display: flex;
   align-items: center;
   justify-content: space-between;

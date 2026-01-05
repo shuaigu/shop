@@ -395,10 +395,16 @@
 	};
 	
 	// 后期想做新的功能，直接添加就好
-	const data = ref( [ '分类管理', '文章管理', '用户反馈', '公司信息', '文章权限' ] )
+	const data = ref( [ '信息页面', '分类管理', '文章管理', '用户反馈', '公司信息', '文章权限' ] )
 	// 处理点击事件跳转页面
 	const handleItem = ( dataItem ) => {
 		switch ( dataItem ) {
+			case '信息页面':
+				console.log( '跳转信息页面' )
+				uni.redirectTo( {
+					url: "/pages/index/index"
+				} )
+				break
 			case '分类管理':
 				console.log( '跳转分类管理' )
 				uni.navigateTo( {

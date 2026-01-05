@@ -286,9 +286,15 @@ const _sfc_main = {
         common_vendor.index.hideLoading();
       }
     };
-    const data = common_vendor.ref(["分类管理", "文章管理", "用户反馈", "公司信息", "文章权限"]);
+    const data = common_vendor.ref(["信息页面", "分类管理", "文章管理", "用户反馈", "公司信息", "文章权限"]);
     const handleItem = (dataItem) => {
       switch (dataItem) {
+        case "信息页面":
+          console.log("跳转信息页面");
+          common_vendor.index.redirectTo({
+            url: "/pages/index/index"
+          });
+          break;
         case "分类管理":
           console.log("跳转分类管理");
           common_vendor.index.navigateTo({
