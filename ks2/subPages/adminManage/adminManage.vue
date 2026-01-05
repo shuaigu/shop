@@ -44,6 +44,11 @@
 	const commentDisplay = ref({
 		isVisible: false
 	});
+	
+	// 备忘录首页显示控制
+	const memoHomeDisplay = ref({
+		isEnabled: false
+	});
 
 	// 导航API
 	const daohangApi = uniCloud.importObject('daohang', { customUI: true });
@@ -111,6 +116,21 @@
 			// 出错时也默认为不显示
 			commentDisplay.value = { isVisible: false };
 			uni.showToast({ title: '获取评论区设置失败', icon: 'none' });
+		}
+	};
+	
+	// 获取备忘录首页显示状态
+	const getMemoHomeDisplayStatus = async () => {
+		try {
+			const res = await configApi.getConfig('memoHomeDisplay');
+			if (res && res.data) {
+				memoHomeDisplay.value = res.data;
+			} else {
+				memoHomeDisplay.value = { isEnabled: false };
+			}
+		} catch (err) {
+			console.error('获取备忘录首页显示状态失败:', err);
+			memoHomeDisplay.value = { isEnabled: false };
 		}
 	};
 	
@@ -202,6 +222,37 @@
 			}
 		} catch (err) {
 			console.error('更新评论区设置失败:', err);
+			uni.showToast({ title: '更新失败，请重试', icon: 'none' });
+		} finally {
+			uni.hideLoading();
+		}
+	};
+	
+	// 处理备忘录首页显示状态变化
+	const handleMemoHomeDisplayChange = async (e) => {
+		try {
+			uni.showLoading({ title: '更新中...' });
+			const isEnabled = e.detail.value;
+			
+			// 调用云函数更新
+			const res = await configApi.updateConfig({
+				key: 'memoHomeDisplay',
+				data: {
+					isEnabled: isEnabled
+				}
+			});
+			
+			if (res && res.code === 0) {
+				memoHomeDisplay.value.isEnabled = isEnabled;
+				uni.showToast({ 
+					title: isEnabled ? '已开启备忘录首页显示' : '已关闭备忘录首页显示', 
+					icon: 'success' 
+				});
+			} else {
+				uni.showToast({ title: res?.message || '更新失败', icon: 'none' });
+			}
+		} catch (err) {
+			console.error('更新备忘录首页显示设置失败:', err);
 			uni.showToast({ title: '更新失败，请重试', icon: 'none' });
 		} finally {
 			uni.hideLoading();
@@ -384,7 +435,8 @@
 		await Promise.all([
 			getNavInfo(),
 			getCommentDisplayStatus(),
-			getLuckyUserConfig()
+			getLuckyUserConfig(),
+			getMemoHomeDisplayStatus()
 		]);
 		
 		// 确保评论区状态通知发送
@@ -393,6 +445,7 @@
 		});
 		
 		console.log('初始化完成，评论区显示状态:', commentDisplay.value.isVisible);
+		console.log('初始化完成，备忘录首页显示状态:', memoHomeDisplay.value.isEnabled);
 	});
 </script>
 
@@ -422,6 +475,17 @@
 					<view class="setting-item">
 						<text class="setting-label">显示评论区</text>
 						<switch :checked="commentDisplay.isVisible" @change="handleCommentVisibilityChange" color="#007AFF" />
+					</view>
+				</view>
+				
+				<view class="settings-section">
+					<view class="section-title">备忘录首页设置</view>
+					<view class="setting-item">
+						<text class="setting-label">开启备忘录首页显示</text>
+						<switch :checked="memoHomeDisplay.isEnabled" @change="handleMemoHomeDisplayChange" color="#007AFF" />
+					</view>
+					<view class="setting-tip">
+						<text class="tip-text">开启后，所有用户访问首页时将直接显示备忘录页面</text>
 					</view>
 				</view>
 				
@@ -529,6 +593,10 @@
 			}
 			
 			&:nth-child(3) {
+				border-left-color: #5856D6; /* 备忘录首页设置 - 紫色 */
+			}
+			
+			&:nth-child(4) {
 				border-left-color: #FF2D55; /* 幸运用户配置 - 红色 */
 			}
 			
@@ -668,6 +736,16 @@
 							opacity: 0.9;
 						}
 					}
+				}
+			}
+			
+			.setting-tip {
+				padding: 16rpx 0 0 0;
+				
+				.tip-text {
+					font-size: 24rpx;
+					color: #999;
+					line-height: 1.5;
 				}
 			}
 			

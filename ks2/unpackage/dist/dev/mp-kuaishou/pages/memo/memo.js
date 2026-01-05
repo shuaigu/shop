@@ -28,7 +28,9 @@ const _sfc_main = {
         priority: "中",
         is_completed: false,
         create_time: 0
-      }
+      },
+      // 备忘录首页显示状态
+      memoHomeDisplayEnabled: false
     };
   },
   computed: {
@@ -56,6 +58,7 @@ const _sfc_main = {
   onLoad() {
     console.log("=== 页面加载 onLoad ===");
     this.loadMemos();
+    this.checkMemoHomeDisplay();
   },
   methods: {
     // 加载备忘录
@@ -287,6 +290,26 @@ const _sfc_main = {
       } else {
         return `${date.getMonth() + 1}-${date.getDate()}`;
       }
+    },
+    // 检查备忘录首页显示配置
+    async checkMemoHomeDisplay() {
+      try {
+        const configApi = common_vendor.tr.importObject("config", { customUI: true });
+        const res = await configApi.getConfig("memoHomeDisplay");
+        if (res && res.code === 0 && res.data) {
+          this.memoHomeDisplayEnabled = res.data.isEnabled || false;
+          console.log("备忘录首页显示状态:", this.memoHomeDisplayEnabled);
+        }
+      } catch (err) {
+        console.error("检查备忘录首页显示配置失败:", err);
+        this.memoHomeDisplayEnabled = false;
+      }
+    },
+    // 返回个人中心
+    goBack() {
+      common_vendor.index.reLaunch({
+        url: "/pages/my/my"
+      });
     }
   }
 };
@@ -327,17 +350,21 @@ function _sfc_render(_ctx, _cache, $props, $setup, $data, $options) {
       });
     })
   }, {
-    e: common_vendor.o((...args) => $options.openAddDialog && $options.openAddDialog(...args)),
-    f: $data.showAddDialog
+    e: $data.memoHomeDisplayEnabled
+  }, $data.memoHomeDisplayEnabled ? {
+    f: common_vendor.o((...args) => $options.goBack && $options.goBack(...args))
+  } : {}, {
+    g: common_vendor.o((...args) => $options.openAddDialog && $options.openAddDialog(...args)),
+    h: $data.showAddDialog
   }, $data.showAddDialog ? {
-    g: common_vendor.t($data.isEdit ? "编辑备忘录" : "新建备忘录"),
-    h: common_vendor.o((...args) => $options.closeDialog && $options.closeDialog(...args)),
-    i: common_vendor.o((...args) => $options.handleContentInput && $options.handleContentInput(...args)),
-    j: common_vendor.o((...args) => $options.handleContentFocus && $options.handleContentFocus(...args)),
-    k: common_vendor.o((...args) => $options.handleContentBlur && $options.handleContentBlur(...args)),
-    l: common_vendor.o((...args) => $options.handleContentConfirm && $options.handleContentConfirm(...args)),
-    m: common_vendor.t($data.formData.content.length),
-    n: common_vendor.f($data.categories, (cat, k0, i0) => {
+    i: common_vendor.t($data.isEdit ? "编辑备忘录" : "新建备忘录"),
+    j: common_vendor.o((...args) => $options.closeDialog && $options.closeDialog(...args)),
+    k: common_vendor.o((...args) => $options.handleContentInput && $options.handleContentInput(...args)),
+    l: common_vendor.o((...args) => $options.handleContentFocus && $options.handleContentFocus(...args)),
+    m: common_vendor.o((...args) => $options.handleContentBlur && $options.handleContentBlur(...args)),
+    n: common_vendor.o((...args) => $options.handleContentConfirm && $options.handleContentConfirm(...args)),
+    o: common_vendor.t($data.formData.content.length),
+    p: common_vendor.f($data.categories, (cat, k0, i0) => {
       return {
         a: common_vendor.t(cat),
         b: cat,
@@ -345,7 +372,7 @@ function _sfc_render(_ctx, _cache, $props, $setup, $data, $options) {
         d: common_vendor.o(($event) => $options.selectCategory(cat))
       };
     }),
-    o: common_vendor.f($data.priorities, (pri, k0, i0) => {
+    q: common_vendor.f($data.priorities, (pri, k0, i0) => {
       return {
         a: common_vendor.t(pri),
         b: pri,
@@ -356,13 +383,13 @@ function _sfc_render(_ctx, _cache, $props, $setup, $data, $options) {
         e: common_vendor.o(($event) => $options.selectPriority(pri))
       };
     }),
-    p: common_vendor.o((...args) => $options.closeDialog && $options.closeDialog(...args)),
-    q: common_vendor.o((...args) => $options.saveMemo && $options.saveMemo(...args)),
-    r: common_vendor.o(() => {
+    r: common_vendor.o((...args) => $options.closeDialog && $options.closeDialog(...args)),
+    s: common_vendor.o((...args) => $options.saveMemo && $options.saveMemo(...args)),
+    t: common_vendor.o(() => {
     }),
-    s: common_vendor.o((...args) => $options.handleMaskClick && $options.handleMaskClick(...args))
+    v: common_vendor.o((...args) => $options.handleMaskClick && $options.handleMaskClick(...args))
   } : {}, {
-    t: common_vendor.gei(_ctx, "")
+    w: common_vendor.gei(_ctx, "")
   });
 }
 const MiniProgramPage = /* @__PURE__ */ common_vendor._export_sfc(_sfc_main, [["render", _sfc_render], ["__scopeId", "data-v-c0e26b37"]]);

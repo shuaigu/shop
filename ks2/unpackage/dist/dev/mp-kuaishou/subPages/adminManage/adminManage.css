@@ -62,6 +62,10 @@ image.data-v-b5b6feed {
   /* 评论区设置 - 橙色 */
 }
 .content .settings-section.data-v-b5b6feed:nth-child(3) {
+  border-left-color: #5856D6;
+  /* 备忘录首页设置 - 紫色 */
+}
+.content .settings-section.data-v-b5b6feed:nth-child(4) {
   border-left-color: #FF2D55;
   /* 幸运用户配置 - 红色 */
 }
@@ -190,6 +194,14 @@ image.data-v-b5b6feed {
   transform: translateY(2rpx);
   box-shadow: 0 2rpx 6rpx rgba(0, 122, 255, 0.1);
   opacity: 0.9;
+}
+.content .settings-section .setting-tip.data-v-b5b6feed {
+  padding: 16rpx 0 0 0;
+}
+.content .settings-section .setting-tip .tip-text.data-v-b5b6feed {
+  font-size: 24rpx;
+  color: #999;
+  line-height: 1.5;
 }
 .content .settings-section .save-btn.data-v-b5b6feed {
   margin-top: 30rpx;

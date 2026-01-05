@@ -203,11 +203,37 @@
   color: #f44336;
 }
 
-/* 添加按钮 */
-.add-button.data-v-c0e26b37 {
+/* 底部按钮组 */
+.bottom-buttons.data-v-c0e26b37 {
   position: fixed;
   right: 40rpx;
   bottom: 100rpx;
+  display: flex;
+  flex-direction: column;
+  gap: 24rpx;
+  z-index: 100;
+  /* 个人中心按钮 */
+  /* 添加按钮 */
+}
+.bottom-buttons .my-center-button.data-v-c0e26b37 {
+  width: 112rpx;
+  height: 112rpx;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 8rpx 20rpx rgba(102, 126, 234, 0.4);
+  transition: all 0.3s;
+}
+.bottom-buttons .my-center-button.data-v-c0e26b37:active {
+  transform: scale(0.95);
+  opacity: 0.8;
+}
+.bottom-buttons .my-center-button .my-center-icon.data-v-c0e26b37 {
+  font-size: 48rpx;
+}
+.bottom-buttons .add-button.data-v-c0e26b37 {
   width: 112rpx;
   height: 112rpx;
   background: linear-gradient(135deg, #399bfe 0%, #2979ff 100%);
@@ -216,8 +242,13 @@
   align-items: center;
   justify-content: center;
   box-shadow: 0 8rpx 20rpx rgba(57, 155, 254, 0.4);
+  transition: all 0.3s;
 }
-.add-button .add-icon.data-v-c0e26b37 {
+.bottom-buttons .add-button.data-v-c0e26b37:active {
+  transform: scale(0.95);
+  opacity: 0.8;
+}
+.bottom-buttons .add-button .add-icon.data-v-c0e26b37 {
   color: #fff;
   font-size: 64rpx;
   font-weight: 300;
