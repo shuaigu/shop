@@ -29,13 +29,38 @@
 
 	// 获取分类
 	const cateListGet = async ( ) => {
-		const res = await cateApi.get( )
-		// 过滤掉隐藏的分类（is_visible为false的项），并记录隐藏的分类ID
-		const hiddenCategoryIds = res.data.filter(item => item.is_visible === false).map(item => item._id)
-		const visibleCategories = res.data.filter(item => item.is_visible !== false)
-		cateList.value = [ ...headList, ...visibleCategories ]
-		pageNo.value = 1
-		getArticleList( cateList.value._id, pageNo.value, 8, hiddenCategoryIds )
+		try {
+			console.log('=== 开始获取分类 ===');
+			const res = await cateApi.get( )
+			console.log('分类获取成功:', res);
+			
+			if (!res || !res.data) {
+				throw new Error('分类数据为空')
+			}
+			
+			// 过滤掉隐藏的分类（is_visible为false的项），并记录隐藏的分类ID
+			const hiddenCategoryIds = res.data.filter(item => item.is_visible === false).map(item => item._id)
+			const visibleCategories = res.data.filter(item => item.is_visible !== false)
+			cateList.value = [ ...headList, ...visibleCategories ]
+			pageNo.value = 1
+			console.log('开始获取文章列表...');
+			await getArticleList( '01', pageNo.value, 8, hiddenCategoryIds )
+		} catch (err) {
+			console.error('=== 获取分类失败 ===', err);
+			console.error('错误详情:', JSON.stringify(err));
+			
+			uni.showToast({
+				title: '加载失败: ' + (err.message || err.errMsg || '网络错误'),
+				icon: 'none',
+				duration: 5000
+			})
+			
+			// 即使失败也尝试加载默认分类
+			cateList.value = headList
+			await getArticleList( '01', 1, 8, [] )
+		} finally {
+			isLoading.value = false
+		}
 	}
 	const pageNo = ref( 1 )
 	// 切换分类
@@ -60,17 +85,34 @@
 	// 获取文章
 	const getArticleList = async ( cate_id, pageNo = 1, pageSize = 8, hiddenCategoryIds = [] ) => {
 		try {
-			isLoading.value = true // 开始加载时设置为true
+			isLoading.value = true
 			currentCateId.value = cate_id
-			console.log( currentCateId.value, '临时id' )
+			console.log('=== 开始获取文章 ===');
+			console.log('分类ID:', cate_id, '页码:', pageNo);
+			
 			// 传递隐藏的分类ID数组
 			const res = await articleApi.getArticle( cate_id, pageNo, pageSize, hiddenCategoryIds )
 			console.log( '文章列表数据:', res )
+			
+			if (!res || !res.data) {
+				throw new Error('文章数据为空')
+			}
+			
 			articleList.value = res.data
+			console.log('文章加载成功, 数量:', res.data.length);
 		} catch ( err ) {
-			console.log( err )
+			console.error('=== 获取文章失败 ===', err);
+			console.error('错误详情:', JSON.stringify(err));
+			
+			uni.showToast({
+				title: '加载失败: ' + (err.message || err.errMsg || '网络错误'),
+				icon: 'none',
+				duration: 5000
+			})
+			
+			articleList.value = []
 		} finally {
-			isLoading.value = false // 无论成功或失败，都结束加载状态
+			isLoading.value = false
 		}
 	}
 
@@ -285,6 +327,21 @@
 
 	// 页面加载完毕
 	onMounted( ( ) => {
+		console.log('=== 页面开始加载 ===');
+		
+		// 输出环境信息
+		try {
+			const systemInfo = uni.getSystemInfoSync();
+			console.log('系统信息:', systemInfo);
+			console.log('uniCloud 配置:', uniCloud.config);
+		} catch(e) {
+			console.error('获取系统信息失败:', e);
+		}
+		
+		// 测试云函数连接
+		console.log('cateApi:', cateApi);
+		console.log('articleApi:', articleApi);
+		
 		cateListGet( )
 		// 获取导航信息
 		getNavInfo()

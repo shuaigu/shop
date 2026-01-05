@@ -6,7 +6,7 @@
                 "launchtype" : "local"
             },
             "mp-kuaishou" : {
-                "launchtype" : "local"
+                "launchtype" : "remote"
             },
             "mp-toutiao" : {
                 "launchtype" : "local"

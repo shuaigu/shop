@@ -1,4 +1,4 @@
-﻿<script setup>
+<script setup>
 	import { computed, onMounted, ref, watch, onUnmounted, onBeforeUnmount, onActivated, nextTick } from 'vue'
 	import { useUserInfoStore } from '@/store/user.js'
 	import formatTime from '@/utils/formatTime.js'

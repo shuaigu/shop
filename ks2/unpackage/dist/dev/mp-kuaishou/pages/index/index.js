@@ -33,12 +33,32 @@ const _sfc_main = {
     const navInfo = common_vendor.ref(null);
     const isNavLoading = common_vendor.ref(true);
     const cateListGet = async () => {
-      const res = await cateApi.get();
-      const hiddenCategoryIds = res.data.filter((item) => item.is_visible === false).map((item) => item._id);
-      const visibleCategories = res.data.filter((item) => item.is_visible !== false);
-      cateList.value = [...headList, ...visibleCategories];
-      pageNo.value = 1;
-      getArticleList(cateList.value._id, pageNo.value, 8, hiddenCategoryIds);
+      try {
+        console.log("=== 开始获取分类 ===");
+        const res = await cateApi.get();
+        console.log("分类获取成功:", res);
+        if (!res || !res.data) {
+          throw new Error("分类数据为空");
+        }
+        const hiddenCategoryIds = res.data.filter((item) => item.is_visible === false).map((item) => item._id);
+        const visibleCategories = res.data.filter((item) => item.is_visible !== false);
+        cateList.value = [...headList, ...visibleCategories];
+        pageNo.value = 1;
+        console.log("开始获取文章列表...");
+        await getArticleList("01", pageNo.value, 8, hiddenCategoryIds);
+      } catch (err) {
+        console.error("=== 获取分类失败 ===", err);
+        console.error("错误详情:", JSON.stringify(err));
+        common_vendor.index.showToast({
+          title: "加载失败: " + (err.message || err.errMsg || "网络错误"),
+          icon: "none",
+          duration: 5e3
+        });
+        cateList.value = headList;
+        await getArticleList("01", 1, 8, []);
+      } finally {
+        isLoading.value = false;
+      }
     };
     const pageNo = common_vendor.ref(1);
     const hanleHeadTab = (index, id) => {
@@ -60,12 +80,24 @@ const _sfc_main = {
       try {
         isLoading.value = true;
         currentCateId.value = cate_id;
-        console.log(currentCateId.value, "临时id");
+        console.log("=== 开始获取文章 ===");
+        console.log("分类ID:", cate_id, "页码:", pageNo2);
         const res = await articleApi.getArticle(cate_id, pageNo2, pageSize, hiddenCategoryIds);
         console.log("文章列表数据:", res);
+        if (!res || !res.data) {
+          throw new Error("文章数据为空");
+        }
         articleList.value = res.data;
+        console.log("文章加载成功, 数量:", res.data.length);
       } catch (err) {
-        console.log(err);
+        console.error("=== 获取文章失败 ===", err);
+        console.error("错误详情:", JSON.stringify(err));
+        common_vendor.index.showToast({
+          title: "加载失败: " + (err.message || err.errMsg || "网络错误"),
+          icon: "none",
+          duration: 5e3
+        });
+        articleList.value = [];
       } finally {
         isLoading.value = false;
       }
@@ -213,6 +245,16 @@ const _sfc_main = {
       });
     };
     common_vendor.onMounted(() => {
+      console.log("=== 页面开始加载 ===");
+      try {
+        const systemInfo = common_vendor.index.getSystemInfoSync();
+        console.log("系统信息:", systemInfo);
+        console.log("uniCloud 配置:", common_vendor.tr.config);
+      } catch (e) {
+        console.error("获取系统信息失败:", e);
+      }
+      console.log("cateApi:", cateApi);
+      console.log("articleApi:", articleApi);
       cateListGet();
       getNavInfo();
       common_vendor.index.showShareMenu({
