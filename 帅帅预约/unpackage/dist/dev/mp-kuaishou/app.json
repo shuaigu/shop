@@ -1,0 +1,59 @@
+{
+  "pages": [
+    "pages/memo/memo",
+    "pages/index/index",
+    "pages/my/my",
+    "pages/login/login",
+    "pages/webview/webview",
+    "pages/article/articleAdd",
+    "pages/article/articleDetail",
+    "pages/userArticleList/userArticleList",
+    "pages/article/demo1",
+    "pages/pay/index"
+  ],
+  "subPackages": [
+    {
+      "root": "subPages",
+      "pages": [
+        "contarct/contarct",
+        "feedBack/feedBack",
+        "adminManage/adminManage",
+        "cateManage/cateManage",
+        "articleManage/articleManage",
+        "feedManage/feedManage",
+        "companyInfo/companyInfo"
+      ]
+    }
+  ],
+  "window": {
+    "navigationBarTextStyle": "white",
+    "navigationBarTitleText": "帅帅预约",
+    "navigationBarBackgroundColor": "#399bfe",
+    "backgroundColor": "#F8F8F8"
+  },
+  "tabBar": {
+    "color": "#cccccc",
+    "selectedColor": "#399bfe",
+    "borderStyle": "black",
+    "list": [
+      {
+        "iconPath": "static/tabBar/info.png",
+        "selectedIconPath": "static/tabBar/info_selected.png",
+        "pagePath": "pages/memo/memo",
+        "text": "备忘录"
+      },
+      {
+        "iconPath": "static/tabBar/my.png",
+        "selectedIconPath": "static/tabBar/my_selected.png",
+        "pagePath": "pages/my/my",
+        "text": "我的"
+      }
+    ]
+  },
+  "permission": {
+    "scope.userLocation": {
+      "desc": "发布文章获取位置"
+    }
+  },
+  "usingComponents": {}
+}
