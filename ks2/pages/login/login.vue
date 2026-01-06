@@ -1,5 +1,6 @@
 <script setup>
 	import { ref, onMounted } from 'vue'
+	import { onLoad } from '@dcloudio/uni-app'
 	import { privacyAgreement, vipServer } from '@/utils/ag.js'
 	import { useUserInfoStore } from '@/store/user.js'
 	// userStore
@@ -10,6 +11,16 @@
 	const aloneChecked = ref( false )
 	// 弹框
 	const modelShow = ref( false )
+	// 保存 redirect 参数
+	const redirectUrl = ref('')
+	
+	// 页面加载时获取 redirect 参数
+	onLoad((options) => {
+		if (options.redirect) {
+			redirectUrl.value = decodeURIComponent(options.redirect)
+			console.log('登录成功后将跳转到:', redirectUrl.value)
+		}
+	})
 	// 服务和隐私协议
 	const navigateToAgreement = ( type ) => {
 		console.log( type )
@@ -235,12 +246,32 @@
 		}
 	}
 
-	// 修改 handleLoginSuccess 函数，直接跳转到首页
+	// 修改 handleLoginSuccess 函数，根据 redirect 参数跳转
 	function handleLoginSuccess() {
-		// 直接跳转到首页
-		uni.switchTab({
-			url: '/pages/index/index'
-		})
+		// 如果有 redirect 参数，跳转回原页面
+		if (redirectUrl.value) {
+			console.log('跳转回原页面:', redirectUrl.value)
+			// 判断是否是 tabBar 页面
+			const tabBarPages = ['/pages/memo/memo', '/pages/my/my']
+			const redirectPath = redirectUrl.value.split('?')[0] // 去掉参数
+			
+			if (tabBarPages.includes(redirectPath)) {
+				// 如果是 tabBar 页面，使用 switchTab
+				uni.switchTab({
+					url: redirectPath
+				})
+			} else {
+				// 普通页面使用 redirectTo
+				uni.redirectTo({
+					url: redirectUrl.value
+				})
+			}
+		} else {
+			// 没有 redirect 参数，跳转到默认页面（备忘录）
+			uni.switchTab({
+				url: '/pages/memo/memo'
+			})
+		}
 	}
 
 	// 优化登录方法
@@ -320,7 +351,10 @@
 	onMounted(() => {
 		// 如果已经登录，直接跳转
 		if (userStore.userInfo.uid) {
-			handleLoginSuccess()
+			// 延迟一下，等待 onLoad 获取 redirect 参数
+			setTimeout(() => {
+				handleLoginSuccess()
+			}, 100)
 		}
 	})
 
