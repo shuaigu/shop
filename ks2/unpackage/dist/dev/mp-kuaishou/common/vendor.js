@@ -8651,7 +8651,7 @@ const pages = [
   {
     path: "pages/webview/webview",
     style: {
-      navigationBarTitleText: "发布帖子"
+      navigationBarTitleText: "服务协议"
     }
   },
   {
