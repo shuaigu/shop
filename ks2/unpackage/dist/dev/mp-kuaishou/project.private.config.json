@@ -16,6 +16,20 @@
                             "/pages/article/articleDetail"
                         ]
                     }
+                },
+                {
+                    "configId": "e8d9ad7d-59b1-4e2a-affe-815a5e86a723",
+                    "scene": "011001",
+                    "name": "/pages/index/index",
+                    "path": "/pages/index/index",
+                    "params": "",
+                    "mockUpdate": false,
+                    "partialCompile": {
+                        "enabled": false,
+                        "pages": [
+                            "/pages/index/index"
+                        ]
+                    }
                 }
             ],
             "active": ""
