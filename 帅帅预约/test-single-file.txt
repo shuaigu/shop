@@ -1,0 +1,10 @@
+这是一个单独的测试文件
+
+文件说明：
+- 这是一个独立创建的测试文件
+- 用于演示单文件上传到 GitHub
+- 创建时间：2025-12-29
+
+测试内容：
+Hello, this is a test file for GitHub upload.
+测试成功！

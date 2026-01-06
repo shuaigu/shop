@@ -1,0 +1,108 @@
+{
+  "bsonType": "object",
+  "required": ["article_id", "caller_id", "callee_id", "call_time"],
+  "permission": {
+    "read": true,
+    "create": true,
+    "update": false,
+    "delete": false,
+    "count": true
+  },
+  "properties": {
+    "_id": {
+      "description": "ID，系统自动生成"
+    },
+    "article_id": {
+      "bsonType": "string",
+      "description": "文章ID",
+      "title": "文章ID",
+      "foreignKey": "articleList._id"
+    },
+    "caller_id": {
+      "bsonType": "string",
+      "description": "拨打者用户ID（文章作者）",
+      "title": "拨打者用户ID"
+    },
+    "caller_nickName": {
+      "bsonType": "string",
+      "description": "拨打者昵称",
+      "title": "拨打者昵称"
+    },
+    "caller_avatarUrl": {
+      "bsonType": "string",
+      "description": "拨打者头像",
+      "title": "拨打者头像"
+    },
+    "callee_id": {
+      "bsonType": "string",
+      "description": "被拨打者用户ID（浏览者）",
+      "title": "被拨打者用户ID"
+    },
+    "callee_nickName": {
+      "bsonType": "string",
+      "description": "被拨打者昵称",
+      "title": "被拨打者昵称"
+    },
+    "callee_mobile": {
+      "bsonType": "string",
+      "description": "被拨打者手机号",
+      "title": "被拨打者手机号"
+    },
+    "call_time": {
+      "bsonType": "timestamp",
+      "description": "拨打时间",
+      "title": "拨打时间",
+      "default": {
+        "$env": "now"
+      }
+    },
+    "call_status": {
+      "bsonType": "string",
+      "description": "拨打状态",
+      "title": "拨打状态",
+      "enum": ["success", "failed", "cancelled"],
+      "default": "success"
+    },
+    "call_source": {
+      "bsonType": "string",
+      "description": "拨打来源",
+      "title": "拨打来源",
+      "enum": ["viewer_list", "article_detail", "comment_list"],
+      "default": "viewer_list"
+    }
+  },
+  "indexes": [
+    {
+      "IndexName": "article_id_1",
+      "MongoCMD": {
+        "createIndex": {
+          "article_id": 1
+        }
+      }
+    },
+    {
+      "IndexName": "caller_id_1",
+      "MongoCMD": {
+        "createIndex": {
+          "caller_id": 1
+        }
+      }
+    },
+    {
+      "IndexName": "callee_id_1",
+      "MongoCMD": {
+        "createIndex": {
+          "callee_id": 1
+        }
+      }
+    },
+    {
+      "IndexName": "call_time_-1",
+      "MongoCMD": {
+        "createIndex": {
+          "call_time": -1
+        }
+      }
+    }
+  ]
+}

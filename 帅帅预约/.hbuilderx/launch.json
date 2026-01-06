@@ -1,0 +1,18 @@
+{
+    "version" : "1.0",
+    "configurations" : [
+        {
+            "default" : {
+                "launchtype" : "local"
+            },
+            "mp-kuaishou" : {
+                "launchtype" : "remote"
+            },
+            "mp-toutiao" : {
+                "launchtype" : "local"
+            },
+            "provider" : "aliyun",
+            "type" : "uniCloud"
+        }
+    ]
+}

@@ -1,0 +1,7 @@
+{
+  "navigationBarTitleText": "个人中心",
+  "usingComponents": {
+    "up-textarea": "../../uni_modules/uview-plus/components/u-textarea/u-textarea",
+    "uni-file-picker": "../../uni_modules/uni-file-picker/components/uni-file-picker/uni-file-picker"
+  }
+}
