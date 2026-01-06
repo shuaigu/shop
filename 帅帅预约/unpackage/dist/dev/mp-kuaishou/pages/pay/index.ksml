@@ -1,1 +1,0 @@
-<view class="{{('container') + ' ' + virtualHostClass}}" style="{{virtualHostStyle}}" hidden="{{virtualHostHidden || false}}" id="{{b}}"><button bindtap="{{a}}">支付</button></view>

@@ -1,6 +1,0 @@
-{
-  "navigationBarTitleText": "公司信息",
-  "usingComponents": {
-    "up-loading-page": "../../uni_modules/uview-plus/components/u-loading-page/u-loading-page"
-  }
-}
