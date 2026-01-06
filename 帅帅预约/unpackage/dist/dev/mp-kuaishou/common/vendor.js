@@ -8624,7 +8624,7 @@ const pages = [
   {
     path: "pages/memo/memo",
     style: {
-      navigationBarTitleText: "酒旅圈圈",
+      navigationBarTitleText: "帅帅预约",
       navigationBarBackgroundColor: "#399bfe",
       navigationBarTextStyle: "white"
     }
@@ -8632,7 +8632,7 @@ const pages = [
   {
     path: "pages/index/index",
     style: {
-      navigationBarTitleText: "酒旅圈圈",
+      navigationBarTitleText: "帅帅预约",
       enablePullDownRefresh: true
     }
   },
@@ -8757,7 +8757,7 @@ const tabBar = {
 };
 const globalStyle = {
   navigationBarTextStyle: "white",
-  navigationBarTitleText: "酒旅圈圈",
+  navigationBarTitleText: "帅帅预约",
   navigationBarBackgroundColor: "#399bfe",
   backgroundColor: "#F8F8F8"
 };

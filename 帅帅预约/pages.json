@@ -13,7 +13,7 @@
 			"path" : "pages/memo/memo",
 			"style" : 
 			{
-				"navigationBarTitleText" : "酒旅圈圈",
+				"navigationBarTitleText" : "帅帅预约",
 				"navigationBarBackgroundColor": "#399bfe",
 				"navigationBarTextStyle": "white"
 			}
@@ -21,7 +21,7 @@
 		{
 			"path": "pages/index/index",
 			"style": {
-				"navigationBarTitleText": "酒旅圈圈",
+				"navigationBarTitleText": "帅帅预约",
 				"enablePullDownRefresh": true
 			}
 		},
@@ -145,7 +145,7 @@
 	},
 	"globalStyle": {
 		"navigationBarTextStyle": "white",
-		"navigationBarTitleText": "酒旅圈圈",
+		"navigationBarTitleText": "帅帅预约",
 		"navigationBarBackgroundColor": "#399bfe",
 		"backgroundColor": "#F8F8F8"
 	},
