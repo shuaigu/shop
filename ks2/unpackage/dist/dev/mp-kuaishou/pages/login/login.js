@@ -18,6 +18,13 @@ const _sfc_main = {
     const userApi = common_vendor.tr.importObject("userKs");
     const aloneChecked = common_vendor.ref(false);
     const modelShow = common_vendor.ref(false);
+    const redirectUrl = common_vendor.ref("");
+    common_vendor.onLoad((options) => {
+      if (options.redirect) {
+        redirectUrl.value = decodeURIComponent(options.redirect);
+        console.log("登录成功后将跳转到:", redirectUrl.value);
+      }
+    });
     const navigateToAgreement = (type) => {
       console.log(type);
       let url = "";
@@ -195,13 +202,30 @@ const _sfc_main = {
       }
     };
     function handleLoginSuccess() {
-      common_vendor.index.switchTab({
-        url: "/pages/index/index"
-      });
+      if (redirectUrl.value) {
+        console.log("跳转回原页面:", redirectUrl.value);
+        const tabBarPages = ["/pages/memo/memo", "/pages/my/my"];
+        const redirectPath = redirectUrl.value.split("?")[0];
+        if (tabBarPages.includes(redirectPath)) {
+          common_vendor.index.switchTab({
+            url: redirectPath
+          });
+        } else {
+          common_vendor.index.redirectTo({
+            url: redirectUrl.value
+          });
+        }
+      } else {
+        common_vendor.index.switchTab({
+          url: "/pages/memo/memo"
+        });
+      }
     }
     common_vendor.onMounted(() => {
       if (userStore.userInfo.uid) {
-        handleLoginSuccess();
+        setTimeout(() => {
+          handleLoginSuccess();
+        }, 100);
       }
     });
     const closeModel = () => {
