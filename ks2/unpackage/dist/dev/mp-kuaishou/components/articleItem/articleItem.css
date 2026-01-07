@@ -170,6 +170,21 @@
   -webkit-box-orient: vertical;
   white-space: normal;
   margin: 10rpx 0rpx 16rpx 0rpx;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10rpx;
+}
+.pyqContent .text-content .activity-badge.data-v-caed195d {
+  display: inline-block;
+  padding: 4rpx 12rpx;
+  background-color: #ff4d4f;
+  color: #ffffff;
+  font-size: 22rpx;
+  border-radius: 20rpx;
+  line-height: 1.5;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 .pyqContent .pyq-img.data-v-caed195d {
   margin-left: 90rpx;

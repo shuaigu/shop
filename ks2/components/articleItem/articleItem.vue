@@ -251,7 +251,10 @@
 		</view>
 		<!-- 动态发布的内容 -->
 		<view class="pyq-c" @click="handleArticleClick">
-			<view class="text-content">{{item.content}}</view>
+			<view class="text-content">
+				<text>{{item.content}}</text>
+				<view class="activity-badge">点赞活动</view>
+			</view>
 		</view>
 		<!-- 在 text-content 后添加图片展示部分 -->
 		<view class="pyq-img" v-if="processedImages.length">
@@ -433,6 +436,22 @@
 		.text-content {
 			@include textShenglue(5);
 			margin: 10rpx 0rpx 16rpx 0rpx;
+			display: flex;
+			align-items: center;
+			flex-wrap: wrap;
+			gap: 10rpx;
+			
+			.activity-badge {
+				display: inline-block;
+				padding: 4rpx 12rpx;
+				background-color: #ff4d4f;
+				color: #ffffff;
+				font-size: 22rpx;
+				border-radius: 20rpx;
+				line-height: 1.5;
+				white-space: nowrap;
+				flex-shrink: 0;
+			}
 		}
 
 		/*发布的图片*/

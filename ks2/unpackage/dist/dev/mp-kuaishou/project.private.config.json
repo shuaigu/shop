@@ -30,9 +30,23 @@
                             "/pages/index/index"
                         ]
                     }
+                },
+                {
+                    "configId": "e67c6d91-bf77-4cc5-9105-313be587816f",
+                    "scene": "011001",
+                    "name": "/pages/index/index",
+                    "path": "/pages/index/index",
+                    "params": "",
+                    "mockUpdate": false,
+                    "partialCompile": {
+                        "enabled": false,
+                        "pages": [
+                            "/pages/index/index"
+                        ]
+                    }
                 }
             ],
-            "active": ""
+            "active": "e67c6d91-bf77-4cc5-9105-313be587816f"
         }
     }
 }

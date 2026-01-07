@@ -1,0 +1,1 @@
+<text ks:if="{{a}}" class="{{(c) + ' ' + d + ' ' + e + ' ' + f + ' ' + 'u-badge' + ' ' + 'data-v-06cca9b7' + ' ' + virtualHostClass}}" style="{{g + ';' + h + ';' + (virtualHostStyle || '')}}" hidden="{{virtualHostHidden || false}}" id="{{i}}">{{b}}</text>
