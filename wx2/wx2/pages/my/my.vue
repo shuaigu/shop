@@ -385,6 +385,13 @@
 	const onAvatarLoad = () => {
 		console.log('✅ 头像加载成功:', displayAvatarUrl.value);
 	}
+	
+	// 跳转到商品详情页
+	const goToProductDetail = () => {
+		uni.navigateTo({
+			url: '/pages/productDetail/productDetail'
+		})
+	}
 </script>
 
 <template>
@@ -447,6 +454,14 @@
 					<view class="left">
 						<uni-icons color="#46b0fe" type="wallet" size="22"></uni-icons>
 						<text class="value">信息公示</text>
+					</view>
+					<uni-icons color="#cccccc" custom-prefix="iconfont" type="icon-arrow-drop-right-line" size="30"></uni-icons>
+				</view>
+				<!-- 商品详情页示例 -->
+				<view class="menu-item" @click="goToProductDetail">
+					<view class="left">
+						<uni-icons color="#ff6b6b" type="cart" size="22"></uni-icons>
+						<text class="value">商品详情页示例</text>
 					</view>
 					<uni-icons color="#cccccc" custom-prefix="iconfont" type="icon-arrow-drop-right-line" size="30"></uni-icons>
 				</view>
