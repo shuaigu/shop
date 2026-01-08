@@ -372,7 +372,7 @@ const _sfc_main = {
       }
     };
     const goToHome = () => {
-      common_vendor.index.switchTab({
+      common_vendor.index.redirectTo({
         url: "/pages/index/index"
       });
     };

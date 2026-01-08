@@ -2,12 +2,12 @@
 const common_vendor = require("../../common/vendor.js");
 const store_user = require("../../store/user.js");
 if (!Array) {
-  const _easycom_uni_dateformat2 = common_vendor.resolveComponent("uni-dateformat");
-  _easycom_uni_dateformat2();
+  const _easycom_uni_icons2 = common_vendor.resolveComponent("uni-icons");
+  _easycom_uni_icons2();
 }
-const _easycom_uni_dateformat = () => "../../uni_modules/uni-dateformat/components/uni-dateformat/uni-dateformat.js";
+const _easycom_uni_icons = () => "../../uni_modules/uni-icons/components/uni-icons/uni-icons.js";
 if (!Math) {
-  _easycom_uni_dateformat();
+  _easycom_uni_icons();
 }
 const _sfc_main = {
   __name: "articleItem",
@@ -16,149 +16,220 @@ const _sfc_main = {
       type: Object,
       require: true,
       default: () => ({
-        user_nickName: "未知用户",
-        user_avatarUrl: "/static/images/default-avatar.png",
-        user_mobile: "未填写",
-        images: [],
-        look_count: 0
-        // 添加浏览量默认值
+        user_info: {
+          nickName: "未知用户",
+          avatarUrl: "/static/images/default-avatar.png",
+          mobile: "未填写"
+        }
       })
     },
     // 是否显示评论区
     showComments: {
       type: Boolean,
       default: false
+    },
+    // 是否启用头像点击功能
+    avatarClickEnabled: {
+      type: Boolean,
+      default: true
     }
   },
-  emits: ["delete", "contact", "comment", "like", "userList", "update:comments", "navigateToDetail"],
+  emits: ["delete", "contact", "comment", "like", "preview", "userList", "navigateToDetail"],
   setup(__props, { emit: __emit }) {
     const userStore = store_user.useUserInfoStore();
+    const isKuaishou = common_vendor.ref(false);
+    common_vendor.onMounted(() => {
+      isKuaishou.value = true;
+      console.log("运行在快手小程序环境");
+    });
     const props = __props;
+    const formatDate = (timestamp) => {
+      if (!timestamp)
+        return "未知时间";
+      const now = Date.now();
+      const diff = now - timestamp;
+      const seconds = Math.floor(diff / 1e3);
+      const minutes = Math.floor(seconds / 60);
+      const hours = Math.floor(minutes / 60);
+      const days = Math.floor(hours / 24);
+      const date = new Date(timestamp);
+      const year = date.getFullYear();
+      const month = date.getMonth() + 1;
+      const day = date.getDate();
+      const hour = date.getHours();
+      const minute = date.getMinutes();
+      const formattedMonth = month < 10 ? `0${month}` : month;
+      const formattedDay = day < 10 ? `0${day}` : day;
+      const formattedHour = hour < 10 ? `0${hour}` : hour;
+      const formattedMinute = minute < 10 ? `0${minute}` : minute;
+      const timeStr = `${formattedHour}:${formattedMinute}`;
+      if (days < 1) {
+        return `${year}年 今天${timeStr}`;
+      } else if (days < 2) {
+        return `${year}年 昨天${timeStr}`;
+      } else if (days < 10) {
+        return `${year}年 ${days}天前${timeStr}`;
+      } else {
+        return `${year}年${formattedMonth}月${formattedDay}日 ${timeStr}`;
+      }
+    };
     const emit = __emit;
-    const handleUserList = (userId) => emit("userList", userId);
-    const handleDelete = (id) => emit("delete", id);
-    const handleContact = (mobile) => emit("contact", mobile);
-    const goToDetail = (item) => {
-      if (!props.showComments) {
-        common_vendor.index.navigateTo({
-          url: `/pages/article/articleDetail?article_id=${item._id}&user_id=${item.user_id}`
+    const handleUserList = (user_id) => {
+      if (!props.avatarClickEnabled) {
+        console.log("头像点击功能已禁用");
+        common_vendor.index.showToast({
+          title: "此功能开发中",
+          icon: "none",
+          duration: 2e3
         });
+        return;
+      }
+      emit("userList", user_id);
+    };
+    const handleDelete = (id) => {
+      emit("delete", id);
+    };
+    const handleContact = (mobile, event) => {
+      if (event) {
+        event.stopPropagation();
+      }
+      emit("contact", mobile);
+    };
+    const isNavigating = common_vendor.ref(false);
+    const goToDetail = (item, event) => {
+      if (!props.showComments) {
+        if (isNavigating.value)
+          return;
+        isNavigating.value = true;
+        console.log("点击文章详情, articleId:", item._id);
+        emit("navigateToDetail", item._id);
+        setTimeout(() => {
+          isNavigating.value = false;
+        }, 500);
       }
     };
     const userInfo = common_vendor.computed(() => {
-      if (!props.item) {
-        return {
-          user_nickName: "未知用户",
-          user_avatarUrl: "/static/images/default-avatar.png",
-          user_mobile: "未填写"
-        };
-      }
-      const info = {
-        user_nickName: props.item.user_nickName || "未知用户",
-        user_avatarUrl: props.item.user_avatarUrl || "/static/images/default-avatar.png",
-        user_mobile: props.item.user_mobile || "未填写"
+      return props.item || {
+        nickName: "未知用户",
+        avatarUrl: "/static/images/default-avatar.png",
+        mobile: "未填写"
       };
-      return info;
     });
     const onAvatarError = (e) => {
       e.target.src = "/static/images/default-avatar.png";
     };
-    common_vendor.ref(false);
-    const processedImages = common_vendor.computed(() => {
-      var _a;
-      if (!((_a = props.item) == null ? void 0 : _a.images))
-        return [];
-      const allImages = props.item.images.map((img) => {
-        if (!img)
-          return null;
-        if (typeof img === "object") {
-          return {
-            // 缩略图优先使用 thumbnailURL
-            thumbnail: img.thumbnailURL || img.url || "",
-            // 原图优先使用 compressedURL，其次是 url，最后是 thumbnailURL
-            original: img.compressedURL || img.url || img.thumbnailURL || ""
-          };
-        }
-        return {
-          thumbnail: img,
-          original: img
-        };
-      }).filter(Boolean);
-      return allImages.slice(0, 9);
-    });
-    const extraImagesCount = common_vendor.computed(() => {
-      var _a;
-      if (!((_a = props.item) == null ? void 0 : _a.images))
-        return 0;
-      const totalImages = props.item.images.filter((img) => img).length;
-      return totalImages > 9 ? totalImages - 9 : 0;
-    });
-    const onImageError = (index) => {
-      var _a;
-      if ((_a = props.item.images) == null ? void 0 : _a[index]) {
-        if (typeof props.item.images[index] === "object") {
-          props.item.images[index].thumbnailURL = "/static/images/image-error.png";
-        } else {
-          props.item.images[index] = "/static/images/image-error.png";
-        }
+    const handlePreview = (url, index, event) => {
+      if (event) {
+        event.stopPropagation();
+      }
+      if (!url)
+        return;
+      console.log("Preview URL:", url);
+      const validImages = props.item.images.filter((img) => img.thumbnailURL || img.compressedURL || img.url);
+      if (validImages.length) {
+        const maxPreviewImages = validImages.length > 9 ? 8 : 9;
+        const limitedImages = validImages.slice(0, maxPreviewImages);
+        let urls = limitedImages.map((img) => img.compressedURL || img.thumbnailURL || img.url);
+        const previewIndex = Math.min(index, urls.length - 1);
+        common_vendor.index.previewImage({
+          urls,
+          current: urls[previewIndex],
+          indicator: "number",
+          loop: true,
+          success: () => {
+            console.log("图片预览成功");
+          },
+          fail: (err) => {
+            console.error("预览图片失败:", err);
+            common_vendor.index.showToast({
+              title: "预览图片失败",
+              icon: "none"
+            });
+          }
+        });
       }
     };
-    const handleArticleClick = () => {
-      emit("navigateToDetail", props.item._id);
-    };
     return (_ctx, _cache) => {
+      var _a, _b, _c, _d;
       return common_vendor.e({
         a: userInfo.value.user_avatarUrl,
         b: common_vendor.o(onAvatarError),
         c: common_vendor.t(userInfo.value.user_nickName),
-        d: common_vendor.t(__props.item.district || "未知位置"),
-        e: common_vendor.o(($event) => handleUserList(__props.item.user_id)),
-        f: __props.item.user_id === common_vendor.unref(userStore).userInfo.uid
+        d: common_vendor.p({
+          ["custom-prefix"]: "icon",
+          type: "lishuai-dingwei",
+          size: "12",
+          color: "#8a8a8a"
+        }),
+        e: common_vendor.t(__props.item.district || "未知位置"),
+        f: __props.item.create_time
+      }, __props.item.create_time ? {
+        g: common_vendor.t(formatDate(__props.item.create_time))
+      } : {}, {
+        h: common_vendor.o(($event) => handleUserList(__props.item.user_id)),
+        i: !__props.avatarClickEnabled ? 1 : "",
+        j: __props.item.user_id === common_vendor.unref(userStore).userInfo.uid
       }, __props.item.user_id === common_vendor.unref(userStore).userInfo.uid ? {
-        g: common_vendor.o(($event) => handleDelete(__props.item._id))
+        k: common_vendor.p({
+          color: "#999999",
+          ["custom-prefix"]: "icon",
+          type: "lishuai-shanchu",
+          size: "18"
+        }),
+        l: common_vendor.o(($event) => handleDelete(__props.item._id))
       } : {
-        h: common_vendor.o(($event) => handleContact(__props.item.user_mobile))
+        m: common_vendor.p({
+          color: "#5cb85c",
+          ["custom-prefix"]: "icon",
+          type: "lishuai-dianhua",
+          size: "18"
+        }),
+        n: common_vendor.o(($event) => handleContact(__props.item.user_mobile, $event))
       }, {
-        i: common_vendor.t(__props.item.content),
-        j: common_vendor.o(handleArticleClick),
-        k: processedImages.value.length
-      }, processedImages.value.length ? common_vendor.e({
-        l: processedImages.value.length === 1
-      }, processedImages.value.length === 1 ? {
-        m: processedImages.value[0].thumbnail,
-        n: common_vendor.o(() => onImageError(0)),
-        o: common_vendor.o(($event) => goToDetail(__props.item))
+        o: common_vendor.t(__props.item.content),
+        p: common_vendor.o(($event) => goToDetail(__props.item)),
+        q: (_a = __props.item.images) == null ? void 0 : _a.length
+      }, ((_b = __props.item.images) == null ? void 0 : _b.length) ? common_vendor.e({
+        r: __props.item.images.length === 1
+      }, __props.item.images.length === 1 ? {
+        s: __props.item.images[0].compressedURL || __props.item.images[0].thumbnailURL || __props.item.images[0].url,
+        t: common_vendor.o(($event) => handlePreview(__props.item.images[0].compressedURL || __props.item.images[0].thumbnailURL || __props.item.images[0].url, 0, $event))
+      } : common_vendor.e({
+        v: __props.item.images.length > 9
+      }, __props.item.images.length > 9 ? {
+        w: common_vendor.f(__props.item.images.slice(0, 8), (img, index, i0) => {
+          return {
+            a: index,
+            b: img.compressedURL || img.thumbnailURL || img.url,
+            c: common_vendor.o(($event) => handlePreview(img.compressedURL || img.thumbnailURL || img.url, index, $event))
+          };
+        }),
+        x: __props.item.images[8].compressedURL || __props.item.images[8].thumbnailURL || __props.item.images[8].url,
+        y: common_vendor.t(__props.item.images.length - 8),
+        z: common_vendor.o(($event) => goToDetail(__props.item))
       } : {
-        p: common_vendor.f(processedImages.value, (img, index, i0) => {
-          return common_vendor.e({
-            a: img.thumbnail,
-            b: common_vendor.o(() => onImageError(index)),
-            c: index === 8 && extraImagesCount.value > 0
-          }, index === 8 && extraImagesCount.value > 0 ? {
-            d: common_vendor.t(extraImagesCount.value)
-          } : {}, {
-            e: index,
-            f: index === 8 && extraImagesCount.value > 0 ? 1 : ""
-          });
-        }),
-        q: common_vendor.o(($event) => goToDetail(__props.item)),
-        r: common_vendor.n(`grid-${processedImages.value.length}`)
-      }) : {}, {
-        s: common_vendor.p({
-          date: Number(__props.item.create_time),
-          threshold: [0],
-          before: "",
-          pattern: {
-            year: "年前",
-            month: "个月前",
-            day: "天前",
-            hour: "小时前",
-            minute: "分钟前",
-            second: "刚刚"
-          }
-        }),
-        t: common_vendor.t(__props.item.look_count || 0),
-        v: common_vendor.gei(_ctx, "")
+        A: common_vendor.f(__props.item.images, (img, index, i0) => {
+          return {
+            a: index,
+            b: img.compressedURL || img.thumbnailURL || img.url,
+            c: common_vendor.o(($event) => handlePreview(img.compressedURL || img.thumbnailURL || img.url, index, $event))
+          };
+        })
+      }, {
+        B: common_vendor.n(`grid-${Math.min(__props.item.images.length, 9)}`)
+      })) : {}, {
+        C: __props.item.videoURL || ((_c = __props.item.video) == null ? void 0 : _c.videoURL)
+      }, __props.item.videoURL || ((_d = __props.item.video) == null ? void 0 : _d.videoURL) ? {
+        D: common_vendor.p({
+          ["custom-prefix"]: "icon",
+          type: "lishuai-shipin",
+          size: "14",
+          color: "#999999"
+        })
+      } : {}, {
+        E: common_vendor.t(formatDate(__props.item.create_time)),
+        F: common_vendor.t(__props.item.look_count || 0),
+        G: common_vendor.gei(_ctx, "")
       });
     };
   }

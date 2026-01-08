@@ -270,25 +270,19 @@ const _sfc_main = {
       common_vendor.index.$off("updateArticleLikeStatus", updateLikeStatus);
     });
     return (_ctx, _cache) => {
-      return common_vendor.e({
+      return {
         a: common_vendor.p({
           type: isLiked.value ? "heart-filled" : "heart",
           size: __props.size,
           color: isLiked.value ? "#FF5D5B" : __props.color
         }),
         b: isLiked.value ? 1 : "",
-        c: __props.showCount
-      }, __props.showCount ? {
-        d: common_vendor.t(likeCount.value)
-      } : {}, {
-        e: __props.showText
-      }, __props.showText ? {
-        f: common_vendor.t(isLiked.value ? "已点赞" : "点赞")
-      } : {}, {
-        g: common_vendor.o(debounceHandleLike),
-        h: isLikeAnimating.value ? 1 : "",
-        i: common_vendor.gei(_ctx, "")
-      });
+        c: common_vendor.t(isLiked.value ? "已点赞" : "点赞"),
+        d: isLiked.value ? 1 : "",
+        e: common_vendor.o(debounceHandleLike),
+        f: isLikeAnimating.value ? 1 : "",
+        g: common_vendor.gei(_ctx, "")
+      };
     };
   }
 };

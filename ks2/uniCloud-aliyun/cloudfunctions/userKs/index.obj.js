@@ -123,5 +123,92 @@ module.exports = {
 			message: '登录成功',
 			data: safeUserData
 		}
+	},
+
+	/**
+	 * 使用存储的手机号登录（跳过手机号解密步骤）
+	 * @param {object} params - { code, mobile, nickName, avatarUrl }
+	 * @returns {object}
+	 */
+	async loginByStoredMobile( params ) {
+		const { code, mobile, nickName, avatarUrl } = params
+		
+		if (!mobile) {
+			throw new Error('手机号不能为空')
+		}
+		
+		// 构造请求参数
+		const sessionParams = {
+			app_id: config.app_id_ks,
+			app_secret: config.app_secret_ks,
+			js_code: code
+		}
+		
+		// 1. 获取快手登录信息
+		const res = await uniCloud.request( {
+			url: 'https://open.kuaishou.com/oauth2/mp/code2session',
+			method: "POST",
+			header: {
+				'content-type': 'application/x-www-form-urlencoded'
+			},
+			data: sessionParams
+		} )
+
+		const { open_id, session_key } = res.data
+
+		if ( !open_id || !session_key ) {
+			throw new Error( '获取用户信息失败' )
+		}
+		
+		// 2. 使用手机号查找用户
+		const userRecord = await dbJQL.collection( "user" ).where( {
+			mobile: mobile
+		} ).limit( 1 ).get( )
+
+		if ( userRecord.data.length === 0 ) {
+			// 用户不存在，说明存储的手机号无效
+			throw new Error( '用户不存在，请重新授权' )
+		}
+		
+		// 3. 更新用户的openid和session_key
+		const userId = userRecord.data[ 0 ]._id
+		await dbJQL.collection("user").doc(userId).update({
+			openid_ks: open_id,
+			session_key: session_key,
+			nickName: nickName,  // 更新昵称
+			avatarUrl: avatarUrl, // 更新头像
+			token: createToken(open_id, session_key), // 更新token
+			update_time: Date.now()
+		})
+		
+		// 4. 获取更新后的用户信息
+		const userRes = await dbJQL.collection("user").doc(userId).get()
+		
+		console.log('使用存储手机号登录成功:', {
+			userId,
+			mobile,
+			nickName,
+			avatarUrl
+		})
+		
+		// 确保返回的数据都是可序列化的
+		const safeUserData = {
+			_id: userRes.data[0]._id || '',
+			uid: userRes.data[0]._id || '',
+			openid_ks: userRes.data[0].openid_ks || '',
+			token: userRes.data[0].token || '',
+			mobile: userRes.data[0].mobile || '',
+			nickName: userRes.data[0].nickName || '',
+			avatarUrl: userRes.data[0].avatarUrl || '',
+			role: Array.isArray(userRes.data[0].role) ? userRes.data[0].role : ['user'],
+			isLogin: true
+		};
+
+		// 返回
+		return {
+			code: 0,
+			message: '欢迎回来！',
+			data: safeUserData
+		}
 	}
 }

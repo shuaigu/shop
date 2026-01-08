@@ -4,8 +4,7 @@
 			<view class="dianzan-icon" :class="{ 'dianzan-active': isLiked }">
 				<uni-icons :type="isLiked ? 'heart-filled' : 'heart'" :size="size" :color="isLiked ? '#FF5D5B' : color"></uni-icons>
 			</view>
-			<view v-if="showCount" class="dianzan-count">{{ likeCount }}</view>
-			<view v-if="showText" class="dianzan-text">{{ isLiked ? '已点赞' : '点赞' }}</view>
+			<view class="dianzan-text" :class="{ 'text-active': isLiked }">{{ isLiked ? '已点赞' : '点赞' }}</view>
 		</view>
 		
 		<!-- 点赞排名模态框已移除 -->
@@ -397,12 +396,22 @@ onBeforeUnmount(() => {
 		font-size: 24rpx;
 		color: #999;
 		transition: color 0.3s ease, transform 0.3s ease;
+		
+		&.count-active {
+			color: #FF5D5B;
+			font-weight: 500;
+		}
 	}
 	
 	.dianzan-text {
 		font-size: 24rpx;
 		color: #999;
 		transition: color 0.3s ease, transform 0.3s ease;
+		
+		&.text-active {
+			color: #FF5D5B;
+			font-weight: 500;
+		}
 	}
 	
 	/* 点赞排名模态框样式 */

@@ -8663,7 +8663,7 @@ const pages = [
   {
     path: "pages/article/articleDetail",
     style: {
-      navigationBarTitleText: "内容推荐"
+      navigationBarTitleText: "详情页"
     }
   },
   {

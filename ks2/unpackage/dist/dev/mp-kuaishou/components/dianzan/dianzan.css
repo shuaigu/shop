@@ -33,10 +33,18 @@
   color: #999;
   transition: color 0.3s ease, transform 0.3s ease;
 }
+.dianzan-count.count-active.data-v-304aeb49 {
+  color: #FF5D5B;
+  font-weight: 500;
+}
 .dianzan-text.data-v-304aeb49 {
   font-size: 24rpx;
   color: #999;
   transition: color 0.3s ease, transform 0.3s ease;
+}
+.dianzan-text.text-active.data-v-304aeb49 {
+  color: #FF5D5B;
+  font-weight: 500;
 }
 
 /* 点赞排名模态框样式 */

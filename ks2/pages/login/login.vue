@@ -53,6 +53,10 @@
 				mask: true
 			})
 
+			// 检查本地是否有上次登录的手机号
+			const lastLoginMobile = uni.getStorageSync('lastLoginMobile')
+			console.log('检测到上次登录手机号:', lastLoginMobile)
+
 			// 获取登录code
 			const loginResult = await uni.login({
 				provider: 'kuaishou'  // 指定快手登录
@@ -66,14 +70,22 @@
 			
 			codeRes = loginResult
 
-			// 获取用户信息授权
-			try {
-				await getKsAuthInfo()
-				// 显示手机号登录弹窗
+			// 如果有上次登录的手机号，获取用户信息后直接登录
+			if (lastLoginMobile) {
+				console.log('检测到已登录过，先获取用户信息')
+				try {
+					await getKsAuthInfo()
+					console.log('使用手机号直接登录:', lastLoginMobile)
+					await loginWithStoredMobile(lastLoginMobile)
+				} catch (error) {
+					console.error('获取用户信息失败:', error)
+					throw new Error('获取用户信息失败，请重试')
+				}
+			} else {
+				// 新用户：先显示手机号授权弹窗
+				console.log('首次登录，先授权手机号')
+				uni.hideLoading()
 				modelShow.value = true
-			} catch (error) {
-				console.error('获取用户信息失败:', error)
-				throw new Error('获取用户信息失败，请重试')
 			}
 			
 		} catch (err) {
@@ -84,7 +96,10 @@
 				duration: 2000
 			})
 		} finally {
-			uni.hideLoading()
+			// 注意：这里不要关闭loading，因为新用户需要显示弹窗
+			if (!modelShow.value) {
+				uni.hideLoading()
+			}
 		}
 	}
 
@@ -159,6 +174,21 @@
 				title: '登录中...',
 				mask: true
 			})
+
+			// 新用户流程：先获取手机号，再获取头像和昵称
+			console.log('手机号授权成功，现在获取用户信息')
+			
+			// 先获取用户信息（头像和昵称）
+			try {
+				await getKsAuthInfo()
+			} catch (error) {
+				console.error('获取用户信息失败:', error)
+				// 即使获取用户信息失败，也继续登录，使用默认值
+				userData = {
+					nickName: '用户' + Math.floor(Math.random() * 10000),
+					avatarUrl: '/static/images/defalut.png'
+				}
+			}
 
 			const params = {
 				code: codeRes.code,
@@ -242,6 +272,83 @@
 				duration: 2000
 			})
 		} finally {
+			uni.hideLoading()
+		}
+	}
+
+	// 使用存储的手机号直接登录（跳过手机号授权步骤）
+	const loginWithStoredMobile = async (mobile) => {
+		try {
+			// 构建登录参数，使用存储的手机号
+			const params = {
+				code: codeRes.code,
+				mobile: mobile,  // 使用存储的手机号
+				nickName: userData.nickName,
+				avatarUrl: userData.avatarUrl
+			}
+
+			// 调用新的登录接口（不需要解密手机号）
+			const res = await userApi.loginByStoredMobile(params)
+			
+			if (!res.data?._id) {
+				throw new Error('登录失败，请重试')
+			}
+			
+			try {
+				console.log('使用存储手机号登录成功:', JSON.stringify(res.data))
+				
+				// 构建用户信息
+				const safeUserData = {
+					uid: res.data._id || '',
+					nickName: res.data.nickName || '',
+					avatarUrl: res.data.avatarUrl || "/static/images/defalut.png",
+					mobile: res.data.mobile || mobile,
+					isLogin: true,
+					role: Array.isArray(res.data.role) ? res.data.role : ['user'],
+				}
+				
+				// 保存用户信息到状态管理
+				userStore.setUserInfo(safeUserData)
+				
+				uni.showToast({
+					icon: "success",
+					title: res.message || '欢迎回来！'
+				})
+
+				// 延迟跳转
+				setTimeout(() => {
+					handleLoginSuccess()
+				}, 1500)
+			} catch (serializeError) {
+				console.error('处理用户数据失败:', serializeError)
+				
+				// 创建基本用户信息对象
+				const basicUserInfo = {
+					uid: res.data._id || '',
+					nickName: res.data.nickName || '',
+					avatarUrl: res.data.avatarUrl || "/static/images/defalut.png",
+					mobile: res.data.mobile || mobile,
+					isLogin: true,
+					role: Array.isArray(res.data.role) ? res.data.role : ['user']
+				}
+				
+				userStore.setUserInfo(basicUserInfo)
+				
+				uni.showToast({
+					icon: "success",
+					title: '欢迎回来！'
+				})
+				
+				setTimeout(() => {
+					handleLoginSuccess()
+				}, 1500)
+			}
+		} catch (err) {
+			console.error('使用存储手机号登录失败:', err)
+			// 如果使用存储手机号登录失败，清除存储的手机号，并显示授权弹窗
+			uni.removeStorageSync('lastLoginMobile')
+			console.log('清除存储的手机号，显示授权弹窗')
+			modelShow.value = true
 			uni.hideLoading()
 		}
 	}

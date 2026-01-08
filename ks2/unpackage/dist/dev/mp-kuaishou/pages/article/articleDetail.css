@@ -66,8 +66,7 @@ to {
 }
 .article-detail-scroll.data-v-786907d5 {
   flex: 1;
-  height: calc(100vh - 110rpx - 150rpx);
-  /* 100rpx + 50rpx安全区域 */
+  height: 100%;
   -webkit-overflow-scrolling: touch;
 }
 .article-detail.data-v-786907d5 {

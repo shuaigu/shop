@@ -1,8 +1,18 @@
 <script setup>
-	import { ref, watch, computed, onUnmounted, shallowRef } from 'vue'
+	import { ref, computed, onMounted } from 'vue'
 	import { useUserInfoStore } from '@/store/user.js'
-	import '@/static/styles/iconfont.scss'  // 确保路径正确
 	const userStore = useUserInfoStore()
+
+	// 快手小程序判断
+	const isKuaishou = ref(false)
+	
+	// 在组件挂载时检测平台
+	onMounted(() => {
+		// #ifdef MP-KUAISHOU
+		isKuaishou.value = true
+		console.log('运行在快手小程序环境')
+		// #endif
+	})
 
 	// 定义组件属性
 	const props = defineProps({
@@ -10,202 +20,198 @@
 			type: Object,
 			require: true,
 			default: () => ({
-				user_nickName: '未知用户',
-				user_avatarUrl: '/static/images/default-avatar.png',
-				user_mobile: '未填写',
-				images: [],
-				look_count: 0  // 添加浏览量默认值
+				user_info: {
+					nickName: '未知用户',
+					avatarUrl: '/static/images/default-avatar.png',
+					mobile: '未填写'
+				}
 			})
 		},
 		// 是否显示评论区
 		showComments: {
 			type: Boolean,
 			default: false
+		},
+		// 是否启用头像点击功能
+		avatarClickEnabled: {
+			type: Boolean,
+			default: true
 		}
 	})
 
-	// 定义事件
-	const emit = defineEmits(['delete', 'contact', 'comment', 'like', 'userList', 'update:comments', 'navigateToDetail'])
+	// 视频默认缩略图
+	const defaultVideoThumbnail = '/static/images/video-thumbnail.png'
+	
+	// 获取视频缩略图
+	const getVideoThumbnail = (video) => {
+		if (!video) return defaultVideoThumbnail
+		
+		if (video.thumbnailURL) {
+			return video.thumbnailURL
+		}
+		
+		return defaultVideoThumbnail
+	}
 
-	// 处理用户列表点击
-	const handleUserList = (userId) => emit('userList', userId)
-
-	// 处理删除
-	const handleDelete = (id) => emit('delete', id)
-
-	// 处理联系
-	const handleContact = (mobile) => emit('contact', mobile)
-
-	// 处理评论
-	const handleComment = (id) => {
-		if (props.showComments) {
-			// 在详情页中，触发评论事件
-			emit('comment')
+	// 自定义格式化日期函数
+	const formatDate = (timestamp) => {
+		if (!timestamp) return '未知时间'
+		
+		const now = Date.now()
+		const diff = now - timestamp
+		
+		// 转换为秒
+		const seconds = Math.floor(diff / 1000)
+		// 转换为分钟
+		const minutes = Math.floor(seconds / 60)
+		// 转换为小时
+		const hours = Math.floor(minutes / 60)
+		// 转换为天
+		const days = Math.floor(hours / 24)
+		
+		// 获取日期对象
+		const date = new Date(timestamp)
+		const year = date.getFullYear()
+		const month = date.getMonth() + 1
+		const day = date.getDate()
+		const hour = date.getHours()
+		const minute = date.getMinutes()
+		
+		// 格式化为两位数
+		const formattedMonth = month < 10 ? `0${month}` : month
+		const formattedDay = day < 10 ? `0${day}` : day
+		const formattedHour = hour < 10 ? `0${hour}` : hour
+		const formattedMinute = minute < 10 ? `0${minute}` : minute
+		const timeStr = `${formattedHour}:${formattedMinute}`
+		
+		// 在地址栏显示的时间格式：始终显示年份
+		if (days < 1) {
+			return `${year}年 今天${timeStr}`
+		} else if (days < 2) {
+			return `${year}年 昨天${timeStr}`
+		} else if (days < 10) {
+			return `${year}年 ${days}天前${timeStr}`
 		} else {
-			// 在其他页面中，跳转到详情页，同时传递必要的用户信息
-			uni.navigateTo({
-				url: `/pages/article/articleDetail/articleDetail?article_id=${id}&user_id=${props.item.user_id}`
-			})
+			return `${year}年${formattedMonth}月${formattedDay}日 ${timeStr}`
 		}
 	}
 
-	// 处理点赞
-	const handleLove = (id) => emit('like', id)
+	// 定义事件
+	const emit = defineEmits(['delete', 'contact', 'comment', 'like', 'preview', 'userList', 'navigateToDetail'])
 
-	// 处理评论更新
-	const handleCommentsUpdate = (newComments) => emit('update:comments', newComments)
-
-	// 跳转到文章详情
-	const goToDetail = (item) => {
-		if (!props.showComments) {
-			uni.navigateTo({
-				url: `/pages/article/articleDetail?article_id=${item._id}&user_id=${item.user_id}`
+	// 处理用户列表点击
+	const handleUserList = (user_id) => {
+		// 检查头像点击功能是否启用
+		if (!props.avatarClickEnabled) {
+			console.log('头像点击功能已禁用')
+			uni.showToast({
+				title: '此功能开发中',
+				icon: 'none',
+				duration: 2000
 			})
+			return
 		}
+		
+		emit('userList', user_id)
+	}
+
+	// 处理删除
+	const handleDelete = (id) => {
+		emit('delete', id)
+	}
+
+	// 处理联系
+	const handleContact = (mobile, event) => {
+		// 阻止事件冒泡，避免触发跳转详情页
+		if (event) {
+			event.stopPropagation()
+		}
+		emit('contact', mobile)
+	}
+
+	// 防抖变量
+	const isNavigating = ref(false)
+
+	// 跳转到文章详情 - 根据用户记忆，点击图片需要阻止跳转详情页
+	const goToDetail = (item, event) => {
+		if (!props.showComments) {
+			// 防止快速多次点击
+			if (isNavigating.value) return
+			isNavigating.value = true
+			
+			console.log('点击文章详情, articleId:', item._id)
+			
+			// 通知父组件处理跳转
+			emit('navigateToDetail', item._id)
+			
+			// 防抖处理，500ms后重置状态
+			setTimeout(() => {
+				isNavigating.value = false
+			}, 500)
+		}
+	}
+
+	// 处理图片点击 - 阻止事件冒泡，防止跳转详情页
+	const handleImageClick = (event) => {
+		// 阻止事件冒泡
+		if (event) {
+			event.stopPropagation()
+		}
+		console.log('点击图片，阻止跳转详情页')
 	}
 
 	// 计算用户信息
 	const userInfo = computed(() => {
-		if (!props.item) {
-			return {
-				user_nickName: '未知用户',
-				user_avatarUrl: '/static/images/default-avatar.png',
-				user_mobile: '未填写'
-			}
+		return props.item || {
+			nickName: '未知用户',
+			avatarUrl: '/static/images/default-avatar.png',
+			mobile: '未填写'
 		}
-		const info = {
-			user_nickName: props.item.user_nickName || '未知用户',
-			user_avatarUrl: props.item.user_avatarUrl || '/static/images/default-avatar.png',
-			user_mobile: props.item.user_mobile || '未填写'
-		}
-		return info
 	})
 
 	const onAvatarError = (e) => {
 		e.target.src = '/static/images/default-avatar.png'
 	}
 
-	// 使用 ref 来跟踪图标加载状态
-	const locationIconError = ref(false)
-
-	const onLocationIconError = () => {
-		locationIconError.value = true
-	}
-
-	// 修改图片处理相关的计算属性
-	const processedImages = computed(() => {
-		if (!props.item?.images) return []
-		
-		// 获取所有有效图片
-		const allImages = props.item.images.map(img => {
-			if (!img) return null
-			
-			// 如果是对象格式
-			if (typeof img === 'object') {
-				return {
-					// 缩略图优先使用 thumbnailURL
-					thumbnail: img.thumbnailURL || img.url || '',
-					// 原图优先使用 compressedURL，其次是 url，最后是 thumbnailURL
-					original: img.compressedURL || img.url || img.thumbnailURL || ''
-				}
-			}
-			// 如果是字符串格式（兼容旧数据）
-			return {
-				thumbnail: img,
-				original: img
-			}
-		}).filter(Boolean)
-		
-		// 返回最多9张图片
-		return allImages.slice(0, 9)
-	})
-
-	// 计算额外图片数量
-	const extraImagesCount = computed(() => {
-		if (!props.item?.images) return 0
-		const totalImages = props.item.images.filter(img => img).length
-		return totalImages > 9 ? totalImages - 9 : 0
-	})
-
-	// 修改图片错误处理，确保使用正确的属性
-	const onImageError = (index) => {
-		if (props.item.images?.[index]) {
-			// 如果是对象格式
-			if (typeof props.item.images[index] === 'object') {
-				props.item.images[index].thumbnailURL = '/static/images/image-error.png'
-			} else {
-				// 如果是字符串格式
-				props.item.images[index] = '/static/images/image-error.png'
-			}
+	// 处理图片预览
+	const handlePreview = (url, index, event) => {
+		// 阻止事件冒泡，防止触发跳转详情页
+		if (event) {
+			event.stopPropagation()
 		}
-	}
-
-	// 预加载指定图片
-	const preloadImage = (url) => {
-		if (!url) return
-		return new Promise((resolve, reject) => {
-			uni.getImageInfo({
-				src: url,
-				success: resolve,
-				fail: reject
-			})
-		})
-	}
-
-	// 修改预览图片方法，添加跳转详情页逻辑
-	const previewImage = async (index, event) => {
-		event.stopPropagation()
 		
-		// 如果是在详情页，只执行图片预览
-		if (props.showComments) {
-			const urls = processedImages.value.map(img => img.original)
-			if (!urls.length || !urls[index]) return
+		if (!url) return
+		console.log('Preview URL:', url)
+		
+		// 获取有效图片列表
+		const validImages = props.item.images.filter(img => img.thumbnailURL || img.compressedURL || img.url)
+		if (validImages.length) {
+			// 图片超过9张时，只预览前8张
+			const maxPreviewImages = validImages.length > 9 ? 8 : 9
+			const limitedImages = validImages.slice(0, maxPreviewImages)
+			let urls = limitedImages.map(img => img.compressedURL || img.thumbnailURL || img.url)
 			
+			// 确保索引不超过限制后的图片数量
+			const previewIndex = Math.min(index, urls.length - 1)
+			
+			// 使用uni.previewImage实现图片预览和左右滑动功能
 			uni.previewImage({
-				current: urls[index],
 				urls: urls,
+				current: urls[previewIndex],
+				indicator: 'number',
+				loop: true,
 				success: () => {
-					// 监听图片切换事件，处理循环逻辑
-					const loadNextImage = (currentUrl) => {
-						const currentIndex = urls.indexOf(currentUrl)
-						if (currentIndex === urls.length - 1) {
-							// 如果是最后一张，预加载第一张
-							preloadImage(urls[0])
-						} else if (currentIndex === 0) {
-							// 如果是第一张，预加载最后一张
-							preloadImage(urls[urls.length - 1])
-						}
-						// 预加载相邻图片
-						const prevIndex = (currentIndex - 1 + urls.length) % urls.length
-						const nextIndex = (currentIndex + 1) % urls.length
-						Promise.all([
-							preloadImage(urls[prevIndex]),
-							preloadImage(urls[nextIndex])
-						]).catch(() => {
-							// 忽略预加载错误
-						})
-					}
-
-					// 初始加载当前图片的相邻图片
-					loadNextImage(urls[index])
+					console.log('图片预览成功')
 				},
 				fail: (err) => {
-					console.error('预览失败:', err)
+					console.error('预览图片失败:', err)
 					uni.showToast({
-						title: '预览失败',
+						title: '预览图片失败',
 						icon: 'none'
 					})
 				}
 			})
-		} else {
-			// 如果不在详情页，跳转到详情页
-			goToDetail(props.item)
 		}
-	}
-
-	// 修改点击文章的处理函数
-	const handleArticleClick = () => {
-		emit('navigateToDetail', props.item._id)
 	}
 </script>
 
@@ -213,9 +219,9 @@
 	<view class="pyqContent">
 		<!-- 动态头部 -->
 		<view class="pyq-head">
-			<view class="left" @click="handleUserList(item.user_id)">
+			<view class="left" @click="handleUserList(item.user_id)" :class="{'disabled': !avatarClickEnabled}">
 				<view class="userAvatar">
-					<image :src="userInfo.user_avatarUrl" mode="aspectFill" @error="onAvatarError" show-loading="false"></image>
+					<image class="avatar-image" :src="userInfo.user_avatarUrl" mode="aspectFill" @error="onAvatarError"></image>
 				</view>
 				<view class="info">
 					<view class="top">
@@ -228,8 +234,9 @@
 						</view>
 					</view>
 					<view class="address">
-						<text class="iconfont icon-ditu-dibiao"></text>
-						{{item.district || '未知位置'}}
+						<uni-icons custom-prefix="icon" type="lishuai-dingwei" size="12" color="#8a8a8a"></uni-icons>
+						<text class="address-text">{{item.district || '未知位置'}}</text>
+						<text class="time-text" v-if="item.create_time">{{ formatDate(item.create_time) }}</text>
 					</view>
 				</view>
 			</view>
@@ -237,84 +244,98 @@
 			<!-- 文章的功能操作 -->
 			<view class="right">
 				<view class="operation">
-					<!-- 修改删除图标 -->
+					<!-- 统一根据用户ID判断显示按钮 -->
 					<view class="action-btn" v-if="item.user_id === userStore.userInfo.uid"
-						@click="handleDelete(item._id)">
-						<text class="icon">✕</text>
+						@click.stop="handleDelete(item._id)">
+						<uni-icons color="#999999" custom-prefix="icon" type="lishuai-shanchu" size="18"></uni-icons>
 					</view>
-					<!-- 修改电话图标 -->
-					<view class="action-btn" v-else @click="handleContact(item.user_mobile)">
-						<text class="iconfont icon-dianhua"></text>
+					<view class="action-btn" v-else @click.stop="handleContact(item.user_mobile, $event)">
+						<uni-icons color="#5cb85c" custom-prefix="icon" type="lishuai-dianhua" size="18"></uni-icons>
 					</view>
 				</view>
 			</view>
 		</view>
+		
 		<!-- 动态发布的内容 -->
-		<view class="pyq-c" @click="handleArticleClick">
-			<view class="text-content">
-				<text>{{item.content}}</text>
-				<view class="activity-badge">点赞活动</view>
-			</view>
+		<view class="pyq-c" @click="goToDetail(item)">
+			<view class="text-content">{{item.content}}</view>
 		</view>
-		<!-- 在 text-content 后添加图片展示部分 -->
-		<view class="pyq-img" v-if="processedImages.length">
-			<view class="single-img" v-if="processedImages.length === 1">
+		
+		<!-- 动态照片 -->
+		<view class="pyq-img" v-if="item.images?.length">
+			<!-- 单张图片显示 -->
+			<view class="single-img" v-if="item.images.length === 1">
 				<image 
-					:src="processedImages[0].thumbnail" 
-					mode="aspectFit"
-					@error="() => onImageError(0)"
-					:lazy-load="true"
-					show-loading="false"
-					@click.stop="goToDetail(item)"
-				/>
+					class="single-img-item" 
+					:lazy-load="true" 
+					:src="item.images[0].compressedURL || item.images[0].thumbnailURL || item.images[0].url" 
+					mode="widthFix"
+					@click.stop="handlePreview(item.images[0].compressedURL || item.images[0].thumbnailURL || item.images[0].url, 0, $event)"
+					show-menu-by-longpress
+				></image>
 			</view>
+			
+			<!-- 多张图片显示 -->
 			<view class="multi-img" v-else>
-				<view class="img-grid" :class="`grid-${processedImages.length}`">
-					<view class="img-wrapper" 
-						v-for="(img, index) in processedImages" 
-						:key="index"
-						:class="{'last-image': index === 8 && extraImagesCount > 0}"
-					>
+				<view :class="['img-grid', `grid-${Math.min(item.images.length, 9)}`]">
+					<!-- 如果超过9张图片，只显示8张+更多按钮；否则显示全部图片 -->
+					<template v-if="item.images.length > 9">
 						<image 
-							:src="img.thumbnail" 
-							mode="aspectFill"
-							@error="() => onImageError(index)"
-							:lazy-load="true"
-							show-loading="false"
-							@click.stop="goToDetail(item)"
-						/>
-						<!-- 如果是最后一张且有额外图片，显示+N -->
-						<view class="extra-count" v-if="index === 8 && extraImagesCount > 0">
-							<text>+{{extraImagesCount}}</text>
+							class="grid-item" 
+							:lazy-load="true" 
+							v-for="(img, index) in item.images.slice(0, 8)" 
+							:key="index" 
+							:src="img.compressedURL || img.thumbnailURL || img.url"
+							mode="aspectFill" 
+							@click.stop="handlePreview(img.compressedURL || img.thumbnailURL || img.url, index, $event)"
+							show-menu-by-longpress
+						></image>
+						
+						<!-- 第9个位置显示"更多"提示 -->
+						<view class="grid-item more-images-indicator" @click.stop="goToDetail(item)">
+							<image class="more-background-image" :src="item.images[8].compressedURL || item.images[8].thumbnailURL || item.images[8].url" mode="aspectFill"></image>
+							<view class="more-overlay">
+								<text>+{{item.images.length - 8}}</text>
+							</view>
 						</view>
-					</view>
+					</template>
+					
+					<!-- 数量小于等于9张时，正常显示 -->
+					<template v-else>
+						<image 
+							class="grid-item" 
+							:lazy-load="true" 
+							v-for="(img, index) in item.images" 
+							:key="index" 
+							:src="img.compressedURL || img.thumbnailURL || img.url"
+							mode="aspectFill" 
+							@click.stop="handlePreview(img.compressedURL || img.thumbnailURL || img.url, index, $event)"
+							show-menu-by-longpress
+						></image>
+					</template>
 				</view>
 			</view>
 		</view>
-		<!-- 修改功能区布局 -->
+		
+		<!-- 动态操作功能 -->
 		<view class="pyq-gn">
-			<view class="left-info">
-				<!-- 发布时间 -->
-				<view class="publicTime">
-					<uni-dateformat 
-						:date="Number(item.create_time)"
-						:threshold="[0]"
-						:before="''"
-						:pattern="{
-							year: '年前',
-							month: '个月前',
-							day: '天前',
-							hour: '小时前',
-							minute: '分钟前',
-							second: '刚刚'
-						}">
-					</uni-dateformat>
-				</view>
+			<!-- 左侧区域 -->
+			<view class="left-area">
+				<!-- 视频标识图标 -->
+				<uni-icons v-if="item.videoURL || item.video?.videoURL" custom-prefix="icon" type="lishuai-shipin" size="14" color="#999999"></uni-icons>
 			</view>
-			<!-- 浏览量移到这里 -->
-			<view class="view-count">
-				<text class="iconfont icon-liulan"></text>
-				<text>浏览:{{item.look_count || 0}}次</text>
+			
+			<!-- 右侧功能区 -->
+			<view class="right">
+				<!-- 发布时间 -->
+				<view class="publicTime time-info">
+					{{ formatDate(item.create_time) }}
+				</view>
+				
+				<!-- 浏览次数 -->
+				<view class="publicTime view-info">
+					{{ item.look_count || 0 }}次浏览
+				</view>
 			</view>
 		</view>
 	</view>
@@ -328,6 +349,15 @@
 		padding: 24rpx;
 		background-color: #fff;
 
+		/* 显示详情按钮 */
+		.detail-btn {
+			padding: 8rpx 20rpx;
+			background-color: #1890ff;
+			color: #ffffff;
+			border-radius: 8rpx;
+			font-size: 24rpx;
+		}
+		
 		/*头部-用户基本信息*/
 		.pyq-head {
 			display: flex;
@@ -339,12 +369,22 @@
 				display: flex;
 				align-items: center;
 
+				&.disabled {
+					cursor: not-allowed;
+					opacity: 0.9;
+				}
+
 				/*头像*/
 				.userAvatar {
 					width: 80rpx;
 					height: 80rpx;
 					border-radius: 8rpx;
 					overflow: hidden;
+					
+					.avatar-image {
+						width: 100%;
+						height: 100%;
+					}
 				}
 
 				.info {
@@ -368,16 +408,32 @@
 
 					/*定位*/
 					.address {
-						display: flex;
-						align-items: center;
 						font-size: 28rpx;
 						color: $pyq-text-color-helper;
-						line-height: 1;
-						margin-top: 12rpx;
-						.icon-ditu-dibiao {
-							font-size: 26rpx;
-							color: $pyq-text-color-helper;
-							line-height: 1;
+						display: flex;
+						align-items: center;
+						flex-wrap: wrap;
+						margin-top: 4rpx;
+						
+						.address-text {
+							margin-left: 4rpx;
+							margin-right: 8rpx;
+						}
+						
+						/* 时间文本样式 */
+						.time-text {
+							color: #999;
+							font-size: 24rpx;
+							position: relative;
+							padding-left: 12rpx;
+							margin-right: 8rpx;
+							
+							&:before {
+								content: '|';
+								position: absolute;
+								left: 0;
+								color: #ddd;
+							}
 						}
 					}
 				}
@@ -397,21 +453,6 @@
 						padding: 20rpx;
 						cursor: pointer;
 
-						.icon {
-							font-size: 36rpx;
-							color: #999999;
-						}
-
-						.contact-icon {
-							font-size: 40rpx;
-							color: #5cb85c;
-							line-height: 1;
-						}
-
-						&:first-child .icon {
-							color: #999999;  // 删除图标颜色
-						}
-
 						&:active {
 							opacity: 0.7;
 						}
@@ -422,154 +463,160 @@
 
 		/*内容-发布文字内容*/
 		.pyq-c {
-			margin-left: 90rpx;
+			margin-left: 96rpx;
 			font-size: 32rpx;
 			color: $pyq-text-color-body;
 			cursor: pointer;
 
 			&:active {
-				opacity: 0.9;
+				opacity: 0.7;
 			}
 		}
 
 		/*文字内容*/
 		.text-content {
 			@include textShenglue(5);
-			margin: 10rpx 0rpx 16rpx 0rpx;
-			display: flex;
-			align-items: center;
-			flex-wrap: wrap;
-			gap: 10rpx;
-			
-			.activity-badge {
-				display: inline-block;
-				padding: 4rpx 12rpx;
-				background-color: #ff4d4f;
-				color: #ffffff;
-				font-size: 22rpx;
-				border-radius: 20rpx;
-				line-height: 1.5;
-				white-space: nowrap;
-				flex-shrink: 0;
-			}
+			margin-bottom: 16rpx;
 		}
 
 		/*发布的图片*/
 		.pyq-img {
-			margin-left: 90rpx;
-			margin-bottom: 16rpx;
+			margin-left: 96rpx;
 
 			// 单张图片样式
 			.single-img {
 				width: 300rpx;
-				height: auto;
-				max-height: 500rpx;
+				min-height: 100rpx;
+				max-height: 600rpx;
 				border-radius: 8rpx;
 				overflow: hidden;
-				background-color: #f5f5f5;
+				position: relative;
+				font-size: 0;
 
-				image {
+				.single-img-item {
 					width: 100%;
 					height: auto;
-					min-height: 200rpx;
-					object-fit: contain;
-					display: block;
+					vertical-align: top;
 				}
 			}
 
 			// 多张图片样式
 			.multi-img {
+				width: 100%;
+				
 				.img-grid {
 					display: flex;
 					flex-wrap: wrap;
-					gap: 8rpx;
-					width: 500rpx;
+					position: relative;
+					width: 100%;
+					max-width: 630rpx;
+					margin: -5rpx;
+					padding: 5rpx;
 
-					.img-wrapper {
-						width: calc((500rpx - 16rpx) / 3);
-						height: calc((500rpx - 16rpx) / 3);
-						position: relative; /* 添加相对定位 */
+					.grid-item {
+						position: relative;
+						width: calc(33.333% - 10rpx);
+						height: 180rpx;
+						margin: 5rpx;
+						border-radius: 8rpx;
+						overflow: hidden;
+						box-sizing: border-box;
+					}
+					
+					// 更多图片指示器样式
+					.more-images-indicator {
+						position: relative;
+						width: calc(33.333% - 10rpx);
+						height: 180rpx;
+						margin: 5rpx;
+						border-radius: 8rpx;
+						overflow: hidden;
+						display: flex;
+						justify-content: center;
+						align-items: center;
+						box-sizing: border-box;
+						z-index: 1;
 						
-						image {
+						.more-background-image {
+							position: absolute;
 							width: 100%;
 							height: 100%;
-							border-radius: 8rpx;
-							background-color: #f5f5f5;
+							left: 0;
+							top: 0;
+							z-index: 1;
 							object-fit: cover;
 						}
 						
-						/* 添加额外图片计数样式 */
-						.extra-count {
+						.more-overlay {
 							position: absolute;
-							top: 0;
-							left: 0;
 							width: 100%;
 							height: 100%;
+							left: 0;
+							top: 0;
 							background-color: rgba(0, 0, 0, 0.5);
 							display: flex;
 							justify-content: center;
 							align-items: center;
-							border-radius: 8rpx;
-							
-							text {
-								color: #FFFFFF;
-								font-size: 36rpx;
-								font-weight: bold;
-							}
+							z-index: 2;
+						}
+						
+						text {
+							display: inline-block;
+							text-align: center;
+							position: relative;
+							z-index: 3;
+							font-size: 32rpx;
+							color: #fff;
+							font-weight: bold;
 						}
 					}
 
-					&.grid-2 .img-wrapper {
-						width: calc((500rpx - 8rpx) / 2);
-						height: calc((500rpx - 8rpx) / 2);
-					}
-
-					&.grid-4 .img-wrapper {
-						width: calc((500rpx - 8rpx) / 2);
-						height: calc((500rpx - 8rpx) / 2);
+					// 4张图片特殊处理 - 2x2布局
+					&.grid-4 {
+						max-width: 420rpx;
+						
+						.grid-item {
+							width: calc(50% - 10rpx);
+							height: 180rpx;
+						}
 					}
 				}
 			}
 		}
 
-		/*功能区*/
+		/*朋友圈动态操作功能区*/
 		.pyq-gn {
 			display: flex;
-			margin-top: 24rpx;
-			padding-left: 90rpx;
-			padding-right: 20rpx;
 			justify-content: space-between;
+			align-items: center;
+			margin-top: 24rpx;
+			padding-left: 96rpx;
 
-			.left-info {
-				display: flex;
-				align-items: center;
-				gap: 16rpx;
-
-				/*发布时间*/
-				.publicTime {
-					font-size: 28rpx;
-					color: $pyq-text-color-placeholder;
+			.left-area {
+				.uni-icons {
+					margin-right: 8rpx;
+					position: relative;
+					top: 2rpx;
 				}
 			}
 
-			/*浏览量 - 移到右侧*/
-			.view-count {
+			.right {
 				display: flex;
 				align-items: center;
-				font-size: 28rpx;
-				color: $pyq-text-color-placeholder;
-				margin-left: auto;
+
+				.publicTime {
+					font-size: 24rpx;
+					color: $pyq-text-color-placeholder;
+					display: flex;
+					align-items: center;
+				}
 				
-				.iconfont {
-					font-size: 28rpx;
-					margin-right: 8rpx;
+				.time-info:after {
+					content: '|';
+					margin: 0 10rpx;
+					color: #ddd;
 				}
 			}
 		}
-	}
-
-	/* 电话图标特殊样式 */
-	.operation .action-btn:last-child .icon {
-		color: #5cb85c;
 	}
 </style>

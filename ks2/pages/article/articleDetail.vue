@@ -480,7 +480,7 @@
 
 	// 跳转到首页
 	const goToHome = ( ) => {
-		uni.switchTab( {
+		uni.redirectTo( {
 			url: '/pages/index/index'
 		} )
 	}
@@ -1226,25 +1226,6 @@
 		<up-loading-page :loading="isLoading && !articleDetail._id"></up-loading-page>
 
 		<view class="article-detail-container" v-show="articleDetail._id">
-			<!-- 作者信息区域 -->
-			<view class="author-info-section">
-				<view class="author-avatar">
-					<image :src="articleDetail.user && articleDetail.user.avatarUrl || articleDetail.user_avatarUrl || articleDetail.avatarUrl || '/static/images/default-avatar.png'" mode="aspectFill"></image>
-				</view>
-				<view class="author-details">
-					<view class="author-name">{{ articleDetail.user && articleDetail.user.nickName || articleDetail.user_nickName || articleDetail.nickName || articleDetail.user_name || '匿名用户' }}</view>
-					<view 
-						class="post-time"
-						@click="userStore.userInfo && userStore.userInfo.uid === articleDetail.user_id ? showViewersList() : null"
-					>
-						{{ formatTime(articleDetail.create_time) }} | {{ articleDetail.look_count || 0 }}浏览
-					</view>
-				</view>
-				<view class="contact-btn" @click="handleCall">
-					<uni-icons type="phone-filled" size="24" color="#07C160"></uni-icons>
-				</view>
-			</view>
-			
 			<scroll-view 
 				class="article-detail-scroll" 
 				scroll-y 
@@ -1256,6 +1237,24 @@
 				:lower-threshold="150"
 				enable-back-to-top
 			>
+				<!-- 作者信息区域 -->
+				<view class="author-info-section">
+					<view class="author-avatar">
+						<image :src="articleDetail.user && articleDetail.user.avatarUrl || articleDetail.user_avatarUrl || articleDetail.avatarUrl || '/static/images/default-avatar.png'" mode="aspectFill"></image>
+					</view>
+					<view class="author-details">
+						<view class="author-name">{{ articleDetail.user && articleDetail.user.nickName || articleDetail.user_nickName || articleDetail.nickName || articleDetail.user_name || '匿名用户' }}</view>
+						<view 
+							class="post-time"
+							@click="userStore.userInfo && userStore.userInfo.uid === articleDetail.user_id ? showViewersList() : null"
+						>
+							{{ formatTime(articleDetail.create_time) }} | {{ articleDetail.look_count || 0 }}浏览
+						</view>
+					</view>
+					<view class="contact-btn" @click="handleCall">
+						<uni-icons type="phone-filled" size="24" color="#07C160"></uni-icons>
+					</view>
+				</view>
 				<view class="article-detail" :class="{ 'no-video': !hasVideo }">
 					<!-- 将视频组件放在最顶部，与参考代码中一致 -->
 					<view class="articleVideo" v-if="articleDetail.videoURL">
@@ -1592,7 +1591,7 @@
 
 	.article-detail-scroll {
 		flex: 1;
-		height: calc(100vh - 110rpx - 150rpx); /* 100rpx + 50rpx安全区域 */
+		height: 100%;
 		-webkit-overflow-scrolling: touch;
 	}
 
