@@ -94,15 +94,6 @@
 			"style": {
 				"navigationBarTitleText": ""
 			}
-		},
-		{
-			"path": "pages/productDetail/productDetail",
-			"style": {
-				"navigationBarTitleText": "商品详情",
-				"navigationBarBackgroundColor": "#ffffff",
-				"navigationBarTextStyle": "black",
-				"navigationStyle": "custom"
-			}
 		}
 	],
 	"subPackages": [ {
