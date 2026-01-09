@@ -44,9 +44,23 @@
                             "/pages/index/index"
                         ]
                     }
+                },
+                {
+                    "configId": "bde9cff2-dd13-4435-a6bb-4568dd4efc99",
+                    "scene": "011001",
+                    "name": "/subPages/customPageManage/customPageMa",
+                    "path": "/subPages/customPageManage/customPageManage",
+                    "params": "__id__=2",
+                    "mockUpdate": false,
+                    "partialCompile": {
+                        "enabled": false,
+                        "pages": [
+                            "/subPages/customPageManage/customPageManage"
+                        ]
+                    }
                 }
             ],
-            "active": "e67c6d91-bf77-4cc5-9105-313be587816f"
+            "active": "bde9cff2-dd13-4435-a6bb-4568dd4efc99"
         }
     }
 }

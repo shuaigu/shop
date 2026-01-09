@@ -49,6 +49,16 @@
 	const memoHomeDisplay = ref({
 		isEnabled: false
 	});
+	
+	// 自定义页面入口显示控制
+	const customPageEntryDisplay = ref({
+		isVisible: false
+	});
+	
+	// 我的页面显示控制
+	const myPageDisplay = ref({
+		isVisible: true  // 默认显示
+	});
 
 	// 导航API
 	const daohangApi = uniCloud.importObject('daohang', { customUI: true });
@@ -131,6 +141,64 @@
 		} catch (err) {
 			console.error('获取备忘录首页显示状态失败:', err);
 			memoHomeDisplay.value = { isEnabled: false };
+		}
+	};
+	
+	// 获取自定义页面入口显示状态
+	const getCustomPageEntryStatus = async () => {
+		try {
+			const res = await configApi.getConfig('customPageEntry');
+			if (res && res.data) {
+				customPageEntryDisplay.value = res.data;
+			} else {
+				// 默认显示（方便用户使用）
+				customPageEntryDisplay.value = { isVisible: true };
+				
+				// 创建默认配置
+				try {
+					await configApi.updateConfig({
+						key: 'customPageEntry',
+						data: {
+							isVisible: true
+						}
+					});
+					console.log('已创建默认自定义页面入口配置：显示');
+				} catch (createErr) {
+					console.error('创建默认自定义页面入口配置失败:', createErr);
+				}
+			}
+		} catch (err) {
+			console.error('获取自定义页面入口显示状态失败:', err);
+			customPageEntryDisplay.value = { isVisible: true };
+		}
+	};
+	
+	// 获取我的页面显示状态
+	const getMyPageDisplayStatus = async () => {
+		try {
+			const res = await configApi.getConfig('myPageDisplay');
+			if (res && res.data) {
+				myPageDisplay.value = res.data;
+			} else {
+				// 默认显示
+				myPageDisplay.value = { isVisible: true };
+				
+				// 创建默认配置
+				try {
+					await configApi.updateConfig({
+						key: 'myPageDisplay',
+						data: {
+							isVisible: true
+						}
+					});
+					console.log('已创建默认我的页面配置：显示');
+				} catch (createErr) {
+					console.error('创建默认我的页面配置失败:', createErr);
+				}
+			}
+		} catch (err) {
+			console.error('获取我的页面显示状态失败:', err);
+			myPageDisplay.value = { isVisible: true };
 		}
 	};
 	
@@ -253,6 +321,80 @@
 			}
 		} catch (err) {
 			console.error('更新备忘录首页显示设置失败:', err);
+			uni.showToast({ title: '更新失败，请重试', icon: 'none' });
+		} finally {
+			uni.hideLoading();
+		}
+	};
+	
+	// 处理自定义页面入口显示状态变化
+	const handleCustomPageEntryChange = async (e) => {
+		try {
+			uni.showLoading({ title: '更新中...' });
+			const isVisible = e.detail.value;
+			
+			// 调用云函数更新
+			const res = await configApi.updateConfig({
+				key: 'customPageEntry',
+				data: {
+					isVisible: isVisible
+				}
+			});
+			
+			if (res && res.code === 0) {
+				customPageEntryDisplay.value.isVisible = isVisible;
+				
+				// 发送全局事件，通知前端页面更新自定义页面入口状态
+				uni.$emit('updateCustomPageEntry', {
+					isVisible: isVisible
+				});
+				
+				uni.showToast({ 
+					title: isVisible ? '入口已显示' : '入口已隐藏', 
+					icon: 'success' 
+				});
+			} else {
+				uni.showToast({ title: res?.message || '更新失败', icon: 'none' });
+			}
+		} catch (err) {
+			console.error('更新自定义页面入口设置失败:', err);
+			uni.showToast({ title: '更新失败，请重试', icon: 'none' });
+		} finally {
+			uni.hideLoading();
+		}
+	};
+	
+	// 处理我的页面显示状态变化
+	const handleMyPageDisplayChange = async (e) => {
+		try {
+			uni.showLoading({ title: '更新中...' });
+			const isVisible = e.detail.value;
+			
+			// 调用云函数更新
+			const res = await configApi.updateConfig({
+				key: 'myPageDisplay',
+				data: {
+					isVisible: isVisible
+				}
+			});
+			
+			if (res && res.code === 0) {
+				myPageDisplay.value.isVisible = isVisible;
+				
+				// 发送全局事件，通知前端页面更新我的页面状态
+				uni.$emit('updateMyPageDisplay', {
+					isVisible: isVisible
+				});
+				
+				uni.showToast({ 
+					title: isVisible ? '我的页面已开启' : '我的页面已关闭', 
+					icon: 'success' 
+				});
+			} else {
+				uni.showToast({ title: res?.message || '更新失败', icon: 'none' });
+			}
+		} catch (err) {
+			console.error('更新我的页面设置失败:', err);
 			uni.showToast({ title: '更新失败，请重试', icon: 'none' });
 		} finally {
 			uni.hideLoading();
@@ -395,7 +537,7 @@
 	};
 	
 	// 后期想做新的功能，直接添加就好
-	const data = ref( [ '信息页面', '分类管理', '文章管理', '用户反馈', '公司信息', '文章权限' ] )
+	const data = ref( [ '信息页面', '分类管理', '文章管理', '用户反馈', '公司信息', '自定义页面管理', '文章权限' ] )
 	// 处理点击事件跳转页面
 	const handleItem = ( dataItem ) => {
 		switch ( dataItem ) {
@@ -429,6 +571,12 @@
 					url: "/subPages/companyInfo/companyInfo"
 				} )
 				break
+			case '自定义页面管理':
+				console.log( '跳转自定义页面管理' )
+				uni.navigateTo( {
+					url: "/subPages/customPageManage/customPageManage"
+				} )
+				break
 			case '文章权限':
 				showSendUpdate( )
 				break
@@ -442,7 +590,9 @@
 			getNavInfo(),
 			getCommentDisplayStatus(),
 			getLuckyUserConfig(),
-			getMemoHomeDisplayStatus()
+			getMemoHomeDisplayStatus(),
+			getCustomPageEntryStatus(),
+			getMyPageDisplayStatus()
 		]);
 		
 		// 确保评论区状态通知发送
@@ -492,6 +642,28 @@
 					</view>
 					<view class="setting-tip">
 						<text class="tip-text">开启后，所有用户访问首页时将直接显示备忘录页面</text>
+					</view>
+				</view>
+				
+				<view class="settings-section">
+					<view class="section-title">自定义页面设置</view>
+					<view class="setting-item">
+						<text class="setting-label">显示“更多服务”入口</text>
+						<switch :checked="customPageEntryDisplay.isVisible" @change="handleCustomPageEntryChange" color="#007AFF" />
+					</view>
+					<view class="setting-tip">
+						<text class="tip-text">开启后，“我的”页面将显示“更多服务”入口，用户可以访问自定义页面列表</text>
+					</view>
+				</view>
+				
+				<view class="settings-section">
+					<view class="section-title">我的页面设置</view>
+					<view class="setting-item">
+						<text class="setting-label">开启“我的”页面</text>
+						<switch :checked="myPageDisplay.isVisible" @change="handleMyPageDisplayChange" color="#007AFF" />
+					</view>
+					<view class="setting-tip">
+						<text class="tip-text">关闭后，用户无法访问“我的”页面，仅显示系统维护提示</text>
 					</view>
 				</view>
 				
@@ -603,6 +775,14 @@
 			}
 			
 			&:nth-child(4) {
+				border-left-color: #5AC8FA; /* 自定义页面设置 - 青色 */
+			}
+							
+			&:nth-child(5) {
+				border-left-color: #34C759; /* 我的页面设置 - 绿色 */
+			}
+							
+			&:nth-child(6) {
 				border-left-color: #FF2D55; /* 幸运用户配置 - 红色 */
 			}
 			

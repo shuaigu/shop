@@ -66,6 +66,14 @@ image.data-v-b5b6feed {
   /* 备忘录首页设置 - 紫色 */
 }
 .content .settings-section.data-v-b5b6feed:nth-child(4) {
+  border-left-color: #5AC8FA;
+  /* 自定义页面设置 - 青色 */
+}
+.content .settings-section.data-v-b5b6feed:nth-child(5) {
+  border-left-color: #34C759;
+  /* 我的页面设置 - 绿色 */
+}
+.content .settings-section.data-v-b5b6feed:nth-child(6) {
   border-left-color: #FF2D55;
   /* 幸运用户配置 - 红色 */
 }

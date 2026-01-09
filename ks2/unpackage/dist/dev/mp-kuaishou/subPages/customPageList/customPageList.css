@@ -1,0 +1,100 @@
+/* uni.scss */
+/* 主题色 */
+/* 页面背景颜色 */
+/* 边框颜色 -- 分割线  */
+/*功能设置*/
+/*文字渐变*/
+/*页面默认样式*/
+/*信息默认样式*/
+page.data-v-15865984,
+view.data-v-15865984,
+text.data-v-15865984,
+image.data-v-15865984,
+button.data-v-15865984 {
+  font-family: "PingFang SC", "Helvetica Neue", Arial, "Hiragino Sans GB", "Microsoft YaHei", "WenQuanYi Micro Hei", sans-serif;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+image.data-v-15865984 {
+  width: 100%;
+  height: 100%;
+}
+.page-list-container.data-v-15865984 {
+  min-height: 100vh;
+  background-color: #f7f7f7;
+  padding: 24rpx;
+}
+.page-list-container .loading-state.data-v-15865984 {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding-top: 200rpx;
+  gap: 20rpx;
+}
+.page-list-container .loading-state text.data-v-15865984 {
+  font-size: 28rpx;
+  color: #999999;
+}
+.page-list-container .list-content .page-item.data-v-15865984 {
+  display: flex;
+  align-items: center;
+  background-color: #fff;
+  border-radius: 24rpx;
+  padding: 32rpx 24rpx;
+  margin-bottom: 20rpx;
+  box-shadow: 0 2rpx 10rpx rgba(0, 0, 0, 0.05);
+  transition: all 0.3s;
+}
+.page-list-container .list-content .page-item.data-v-15865984:active {
+  transform: scale(0.98);
+  box-shadow: 0 1rpx 5rpx rgba(0, 0, 0, 0.1);
+}
+.page-list-container .list-content .page-item .item-icon.data-v-15865984 {
+  margin-right: 20rpx;
+}
+.page-list-container .list-content .page-item .item-content.data-v-15865984 {
+  flex: 1;
+}
+.page-list-container .list-content .page-item .item-content .item-title.data-v-15865984 {
+  font-size: 32rpx;
+  font-weight: 600;
+  color: #444444;
+  margin-bottom: 8rpx;
+}
+.page-list-container .list-content .page-item .item-content .item-desc.data-v-15865984 {
+  font-size: 26rpx;
+  color: #999999;
+  line-height: 1.5;
+  margin-bottom: 12rpx;
+}
+.page-list-container .list-content .page-item .item-content .item-meta.data-v-15865984 {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+}
+.page-list-container .list-content .page-item .item-content .item-meta .view-count.data-v-15865984 {
+  font-size: 24rpx;
+  color: #cccccc;
+}
+.page-list-container .list-content .page-item .item-arrow.data-v-15865984 {
+  margin-left: 16rpx;
+}
+.page-list-container .empty-state.data-v-15865984 {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding-top: 200rpx;
+  gap: 20rpx;
+}
+.page-list-container .empty-state .empty-text.data-v-15865984 {
+  font-size: 32rpx;
+  color: #555555;
+  margin-top: 10rpx;
+}
+.page-list-container .empty-state .empty-tip.data-v-15865984 {
+  font-size: 26rpx;
+  color: #999999;
+}

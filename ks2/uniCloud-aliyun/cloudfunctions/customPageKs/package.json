@@ -1,0 +1,10 @@
+{
+  "name": "customPageKs",
+  "version": "1.0.0",
+  "description": "自定义页面管理云函数",
+  "main": "index.obj.js",
+  "dependencies": {},
+  "extensions": {
+    "uni-cloud-jql": {}
+  }
+}

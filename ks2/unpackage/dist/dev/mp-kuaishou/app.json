@@ -21,7 +21,10 @@
         "cateManage/cateManage",
         "articleManage/articleManage",
         "feedManage/feedManage",
-        "companyInfo/companyInfo"
+        "companyInfo/companyInfo",
+        "customPageManage/customPageManage",
+        "customPageDisplay/customPageDisplay",
+        "customPageList/customPageList"
       ]
     }
   ],

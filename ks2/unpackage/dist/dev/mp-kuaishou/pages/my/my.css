@@ -6,6 +6,31 @@
 /*文字渐变*/
 /*页面默认样式*/
 /*信息默认样式*/
+.page-closed.data-v-2f1ef635 {
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(to bottom, #f5f7fa 0%, #ffffff 50%);
+}
+.page-closed .closed-content.data-v-2f1ef635 {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 60rpx 40rpx;
+}
+.page-closed .closed-content .closed-title.data-v-2f1ef635 {
+  font-size: 40rpx;
+  font-weight: 600;
+  color: #333;
+  margin: 40rpx 0 20rpx;
+}
+.page-closed .closed-content .closed-desc.data-v-2f1ef635 {
+  font-size: 28rpx;
+  color: #999;
+  text-align: center;
+  line-height: 1.6;
+}
 .my.data-v-2f1ef635 {
   height: 100vh;
   overflow: hidden;
@@ -51,6 +76,7 @@
   /*功能区域*/
   /*icon的公共样式*/
   /*意见反馈*/
+  /*更多服务*/
   /*后台管理*/
   /*分割线提示信息*/
 }
@@ -71,6 +97,13 @@
   font-size: 32rpx;
 }
 .my .myContent .feedBack.data-v-2f1ef635 {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 24rpx;
+  border-top: 1px solid rgba(0, 0, 0, 0.1);
+}
+.my .myContent .moreServices.data-v-2f1ef635 {
   display: flex;
   align-items: center;
   justify-content: space-between;

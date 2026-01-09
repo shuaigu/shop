@@ -1,8 +1,17 @@
 <script setup>
-	import { computed, ref, } from 'vue'
+	import { computed, ref, onMounted, onUnmounted } from 'vue'
 	import { useUserInfoStore } from '@/store/user.js'
 	// 导入用户信息store
 	const userStore = useUserInfoStore( )
+	
+	// 自定义页面入口显示控制
+	const showCustomPageEntry = ref(true)  // 默认显示
+	
+	// 我的页面显示控制
+	const showMyPage = ref(true)  // 默认显示
+	
+	// 配置 API
+	const configApi = uniCloud.importObject('config', { customUI: true })
 
 	// 手机号中间4位用*代替
 	const maskedMobile = computed(() => {
@@ -32,6 +41,73 @@
 		} )
 	}
 
+	// 更多服务跳转（自定义页面列表）
+	const moreServices = () => {
+		uni.navigateTo({
+			url: "/subPages/customPageList/customPageList"
+		})
+	}
+	
+	// 获取自定义页面入口显示状态
+	const getCustomPageEntryStatus = async () => {
+		try {
+			const res = await configApi.getConfig('customPageEntry')
+			if (res && res.data) {
+				showCustomPageEntry.value = res.data.isVisible !== false
+			} else {
+				showCustomPageEntry.value = true  // 默认显示
+			}
+		} catch (err) {
+			console.error('获取自定义页面入口配置失败:', err)
+			showCustomPageEntry.value = true  // 出错时默认显示
+		}
+	}
+	
+	// 获取我的页面显示状态
+	const getMyPageDisplayStatus = async () => {
+		try {
+			const res = await configApi.getConfig('myPageDisplay')
+			if (res && res.data) {
+				showMyPage.value = res.data.isVisible !== false
+			} else {
+				showMyPage.value = true  // 默认显示
+			}
+		} catch (err) {
+			console.error('获取我的页面配置失败:', err)
+			showMyPage.value = true  // 出错时默认显示
+		}
+	}
+	
+	// 监听全局事件，更新自定义页面入口状态
+	const handleCustomPageEntryUpdate = (e) => {
+		showCustomPageEntry.value = e.isVisible
+		console.log('收到自定义页面入口状态更新:', e.isVisible)
+	}
+	
+	// 监听全局事件，更新我的页面显示状态
+	const handleMyPageDisplayUpdate = (e) => {
+		showMyPage.value = e.isVisible
+		console.log('收到我的页面状态更新:', e.isVisible)
+	}
+	
+	// 页面加载时获取配置
+	onMounted(async () => {
+		await Promise.all([
+			getCustomPageEntryStatus(),
+			getMyPageDisplayStatus()
+		])
+		
+		// 监听全局事件
+		uni.$on('updateCustomPageEntry', handleCustomPageEntryUpdate)
+		uni.$on('updateMyPageDisplay', handleMyPageDisplayUpdate)
+	})
+	
+	// 页面销毁时移除事件监听
+	onUnmounted(() => {
+		uni.$off('updateCustomPageEntry', handleCustomPageEntryUpdate)
+		uni.$off('updateMyPageDisplay', handleMyPageDisplayUpdate)
+	})
+
 	// 角色判断
 	const isAdmin = computed( ( ) => userStore.userInfo.role[ 0 ] === 'admin' )
 	// 后台管理
@@ -58,7 +134,17 @@
 </script>
 
 <template>
-	<view class="my">
+	<!-- 页面关闭提示 -->
+	<view class="page-closed" v-if="!showMyPage">
+		<view class="closed-content">
+			<uni-icons type="info-filled" size="80" color="#999"></uni-icons>
+			<view class="closed-title">页面维护中</view>
+			<view class="closed-desc">“我的”页面暂时关闭，请稍后再试</view>
+		</view>
+	</view>
+	
+	<!-- 正常页面 -->
+	<view class="my" v-else>
 		<!-- 头部 -->
 		<view class="myHead">
 			<view class="avatar">
@@ -100,6 +186,15 @@
 				<uni-icons color="#cccccc" custom-prefix="iconfont" type="icon-arrow-drop-right-line"
 					size="30"></uni-icons>
 			</view>
+			<!-- 更多服务 -->
+			<view class="moreServices" @click="moreServices" v-if="showCustomPageEntry">
+				<view class="left">
+					<uni-icons style="padding-top: 2px;" color="#999999" type="star" size="22"></uni-icons>
+					<text class="value">更多服务</text>
+				</view>
+				<uni-icons color="#cccccc" custom-prefix="iconfont" type="icon-arrow-drop-right-line"
+					size="30"></uni-icons>
+			</view>
 			<!-- 后台管理 -->
 			<view class="adminManage" @click="adminManage" v-if="userStore.userInfo.role[0]=='admin'">
 				<view class="left">
@@ -126,6 +221,36 @@
 
 
 <style lang="scss" scoped>
+	// 页面关闭提示
+	.page-closed {
+		height: 100vh;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		background: linear-gradient(to bottom, #f5f7fa 0%, #ffffff 50%);
+		
+		.closed-content {
+			display: flex;
+			flex-direction: column;
+			align-items: center;
+			padding: 60rpx 40rpx;
+			
+			.closed-title {
+				font-size: 40rpx;
+				font-weight: 600;
+				color: #333;
+				margin: 40rpx 0 20rpx;
+			}
+			
+			.closed-desc {
+				font-size: 28rpx;
+				color: #999;
+				text-align: center;
+				line-height: 1.6;
+			}
+		}
+	}
+	
 	.my {
 		height: 100vh;
 		overflow: hidden;
@@ -195,6 +320,11 @@
 
 			/*意见反馈*/
 			.feedBack {
+				@include optionalCommon;
+			}
+
+			/*更多服务*/
+			.moreServices {
 				@include optionalCommon;
 			}
 

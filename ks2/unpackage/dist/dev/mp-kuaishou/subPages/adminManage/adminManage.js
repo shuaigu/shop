@@ -22,6 +22,13 @@ const _sfc_main = {
     const memoHomeDisplay = common_vendor.ref({
       isEnabled: false
     });
+    const customPageEntryDisplay = common_vendor.ref({
+      isVisible: false
+    });
+    const myPageDisplay = common_vendor.ref({
+      isVisible: true
+      // 默认显示
+    });
     const daohangApi = common_vendor.tr.importObject("daohang", { customUI: true });
     const configApi = common_vendor.tr.importObject("config", { customUI: true });
     const luckyUserConfig = common_vendor.ref({
@@ -83,6 +90,54 @@ const _sfc_main = {
       } catch (err) {
         console.error("获取备忘录首页显示状态失败:", err);
         memoHomeDisplay.value = { isEnabled: false };
+      }
+    };
+    const getCustomPageEntryStatus = async () => {
+      try {
+        const res = await configApi.getConfig("customPageEntry");
+        if (res && res.data) {
+          customPageEntryDisplay.value = res.data;
+        } else {
+          customPageEntryDisplay.value = { isVisible: true };
+          try {
+            await configApi.updateConfig({
+              key: "customPageEntry",
+              data: {
+                isVisible: true
+              }
+            });
+            console.log("已创建默认自定义页面入口配置：显示");
+          } catch (createErr) {
+            console.error("创建默认自定义页面入口配置失败:", createErr);
+          }
+        }
+      } catch (err) {
+        console.error("获取自定义页面入口显示状态失败:", err);
+        customPageEntryDisplay.value = { isVisible: true };
+      }
+    };
+    const getMyPageDisplayStatus = async () => {
+      try {
+        const res = await configApi.getConfig("myPageDisplay");
+        if (res && res.data) {
+          myPageDisplay.value = res.data;
+        } else {
+          myPageDisplay.value = { isVisible: true };
+          try {
+            await configApi.updateConfig({
+              key: "myPageDisplay",
+              data: {
+                isVisible: true
+              }
+            });
+            console.log("已创建默认我的页面配置：显示");
+          } catch (createErr) {
+            console.error("创建默认我的页面配置失败:", createErr);
+          }
+        }
+      } catch (err) {
+        console.error("获取我的页面显示状态失败:", err);
+        myPageDisplay.value = { isVisible: true };
       }
     };
     const getLuckyUserConfig = async () => {
@@ -187,6 +242,64 @@ const _sfc_main = {
         common_vendor.index.hideLoading();
       }
     };
+    const handleCustomPageEntryChange = async (e) => {
+      try {
+        common_vendor.index.showLoading({ title: "更新中..." });
+        const isVisible = e.detail.value;
+        const res = await configApi.updateConfig({
+          key: "customPageEntry",
+          data: {
+            isVisible
+          }
+        });
+        if (res && res.code === 0) {
+          customPageEntryDisplay.value.isVisible = isVisible;
+          common_vendor.index.$emit("updateCustomPageEntry", {
+            isVisible
+          });
+          common_vendor.index.showToast({
+            title: isVisible ? "入口已显示" : "入口已隐藏",
+            icon: "success"
+          });
+        } else {
+          common_vendor.index.showToast({ title: (res == null ? void 0 : res.message) || "更新失败", icon: "none" });
+        }
+      } catch (err) {
+        console.error("更新自定义页面入口设置失败:", err);
+        common_vendor.index.showToast({ title: "更新失败，请重试", icon: "none" });
+      } finally {
+        common_vendor.index.hideLoading();
+      }
+    };
+    const handleMyPageDisplayChange = async (e) => {
+      try {
+        common_vendor.index.showLoading({ title: "更新中..." });
+        const isVisible = e.detail.value;
+        const res = await configApi.updateConfig({
+          key: "myPageDisplay",
+          data: {
+            isVisible
+          }
+        });
+        if (res && res.code === 0) {
+          myPageDisplay.value.isVisible = isVisible;
+          common_vendor.index.$emit("updateMyPageDisplay", {
+            isVisible
+          });
+          common_vendor.index.showToast({
+            title: isVisible ? "我的页面已开启" : "我的页面已关闭",
+            icon: "success"
+          });
+        } else {
+          common_vendor.index.showToast({ title: (res == null ? void 0 : res.message) || "更新失败", icon: "none" });
+        }
+      } catch (err) {
+        console.error("更新我的页面设置失败:", err);
+        common_vendor.index.showToast({ title: "更新失败，请重试", icon: "none" });
+      } finally {
+        common_vendor.index.hideLoading();
+      }
+    };
     const handleLuckyUserEnabledChange = async (e) => {
       try {
         common_vendor.index.showLoading({ title: "更新中..." });
@@ -286,7 +399,7 @@ const _sfc_main = {
         common_vendor.index.hideLoading();
       }
     };
-    const data = common_vendor.ref(["信息页面", "分类管理", "文章管理", "用户反馈", "公司信息", "文章权限"]);
+    const data = common_vendor.ref(["信息页面", "分类管理", "文章管理", "用户反馈", "公司信息", "自定义页面管理", "文章权限"]);
     const handleItem = (dataItem) => {
       switch (dataItem) {
         case "信息页面":
@@ -319,6 +432,12 @@ const _sfc_main = {
             url: "/subPages/companyInfo/companyInfo"
           });
           break;
+        case "自定义页面管理":
+          console.log("跳转自定义页面管理");
+          common_vendor.index.navigateTo({
+            url: "/subPages/customPageManage/customPageManage"
+          });
+          break;
         case "文章权限":
           showSendUpdate();
           break;
@@ -329,7 +448,9 @@ const _sfc_main = {
         getNavInfo(),
         getCommentDisplayStatus(),
         getLuckyUserConfig(),
-        getMemoHomeDisplayStatus()
+        getMemoHomeDisplayStatus(),
+        getCustomPageEntryStatus(),
+        getMyPageDisplayStatus()
       ]);
       common_vendor.index.$emit("updateCommentVisibility", {
         isVisible: commentDisplay.value.isVisible
@@ -350,23 +471,27 @@ const _sfc_main = {
         i: common_vendor.o(handleCommentVisibilityChange),
         j: memoHomeDisplay.value.isEnabled,
         k: common_vendor.o(handleMemoHomeDisplayChange),
-        l: luckyUserConfig.value.is_enabled,
-        m: common_vendor.o(handleLuckyUserEnabledChange),
-        n: luckyUserConfig.value.rewards,
-        o: common_vendor.o(($event) => luckyUserConfig.value.rewards = $event.detail.value),
-        p: common_vendor.f(luckyUserConfig.value.lucky_ranks, (rank, k0, i0) => {
+        l: customPageEntryDisplay.value.isVisible,
+        m: common_vendor.o(handleCustomPageEntryChange),
+        n: myPageDisplay.value.isVisible,
+        o: common_vendor.o(handleMyPageDisplayChange),
+        p: luckyUserConfig.value.is_enabled,
+        q: common_vendor.o(handleLuckyUserEnabledChange),
+        r: luckyUserConfig.value.rewards,
+        s: common_vendor.o(($event) => luckyUserConfig.value.rewards = $event.detail.value),
+        t: common_vendor.f(luckyUserConfig.value.lucky_ranks, (rank, k0, i0) => {
           return {
             a: common_vendor.t(rank),
             b: common_vendor.o(($event) => removeLuckyRank(rank)),
             c: rank
           };
         }),
-        q: common_vendor.o(addLuckyRank),
-        r: newLuckyRank.value,
-        s: common_vendor.o(($event) => newLuckyRank.value = $event.detail.value),
-        t: common_vendor.o(addLuckyRank),
-        v: common_vendor.o(saveLuckyUserConfig),
-        w: common_vendor.f(data.value, (item, k0, i0) => {
+        v: common_vendor.o(addLuckyRank),
+        w: newLuckyRank.value,
+        x: common_vendor.o(($event) => newLuckyRank.value = $event.detail.value),
+        y: common_vendor.o(addLuckyRank),
+        z: common_vendor.o(saveLuckyUserConfig),
+        A: common_vendor.f(data.value, (item, k0, i0) => {
           return {
             a: common_vendor.t(item),
             b: "b5b6feed-0-" + i0,
@@ -374,13 +499,13 @@ const _sfc_main = {
             d: common_vendor.o(($event) => handleItem(item))
           };
         }),
-        x: common_vendor.p({
+        B: common_vendor.p({
           color: "#cccccc",
           ["custom-prefix"]: "iconfont",
           type: "icon-arrow-drop-right-line",
           size: "30"
         }),
-        y: common_vendor.gei(_ctx, "")
+        C: common_vendor.gei(_ctx, "")
       };
     };
   }

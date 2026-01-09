@@ -8624,7 +8624,7 @@ const pages = [
   {
     path: "pages/memo/memo",
     style: {
-      navigationBarTitleText: "酒旅圈圈",
+      navigationBarTitleText: "时光赞赞",
       navigationBarBackgroundColor: "#399bfe",
       navigationBarTextStyle: "white"
     }
@@ -8731,6 +8731,24 @@ const subPackages = [
         path: "companyInfo/companyInfo",
         style: {
           navigationBarTitleText: "公司信息"
+        }
+      },
+      {
+        path: "customPageManage/customPageManage",
+        style: {
+          navigationBarTitleText: "自定义页面管理"
+        }
+      },
+      {
+        path: "customPageDisplay/customPageDisplay",
+        style: {
+          navigationBarTitleText: "详情"
+        }
+      },
+      {
+        path: "customPageList/customPageList",
+        style: {
+          navigationBarTitleText: "更多服务"
         }
       }
     ]

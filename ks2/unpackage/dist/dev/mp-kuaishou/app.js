@@ -20,6 +20,9 @@ if (!Math) {
   "./subPages/articleManage/articleManage.js";
   "./subPages/feedManage/feedManage.js";
   "./subPages/companyInfo/companyInfo.js";
+  "./subPages/customPageManage/customPageManage.js";
+  "./subPages/customPageDisplay/customPageDisplay.js";
+  "./subPages/customPageList/customPageList.js";
 }
 const _sfc_main = {
   onLaunch: function() {

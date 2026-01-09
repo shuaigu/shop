@@ -122,6 +122,24 @@
 				"style": {
 					"navigationBarTitleText": "公司信息"
 				}
+			},
+			{
+				"path": "customPageManage/customPageManage",
+				"style": {
+					"navigationBarTitleText": "自定义页面管理"
+				}
+			},
+			{
+				"path": "customPageDisplay/customPageDisplay",
+				"style": {
+					"navigationBarTitleText": "详情"
+				}
+			},
+			{
+				"path": "customPageList/customPageList",
+				"style": {
+					"navigationBarTitleText": "更多服务"
+				}
 			}
 		]
 	} ],

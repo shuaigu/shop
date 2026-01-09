@@ -13,6 +13,9 @@ const _sfc_main = {
   __name: "my",
   setup(__props) {
     const userStore = store_user.useUserInfoStore();
+    const showCustomPageEntry = common_vendor.ref(true);
+    const showMyPage = common_vendor.ref(true);
+    const configApi = common_vendor.tr.importObject("config", { customUI: true });
     const maskedMobile = common_vendor.computed(() => {
       const mobile = userStore.userInfo.mobile;
       if (!mobile)
@@ -34,6 +37,57 @@ const _sfc_main = {
         url: "/subPages/feedBack/feedBack"
       });
     };
+    const moreServices = () => {
+      common_vendor.index.navigateTo({
+        url: "/subPages/customPageList/customPageList"
+      });
+    };
+    const getCustomPageEntryStatus = async () => {
+      try {
+        const res = await configApi.getConfig("customPageEntry");
+        if (res && res.data) {
+          showCustomPageEntry.value = res.data.isVisible !== false;
+        } else {
+          showCustomPageEntry.value = true;
+        }
+      } catch (err) {
+        console.error("获取自定义页面入口配置失败:", err);
+        showCustomPageEntry.value = true;
+      }
+    };
+    const getMyPageDisplayStatus = async () => {
+      try {
+        const res = await configApi.getConfig("myPageDisplay");
+        if (res && res.data) {
+          showMyPage.value = res.data.isVisible !== false;
+        } else {
+          showMyPage.value = true;
+        }
+      } catch (err) {
+        console.error("获取我的页面配置失败:", err);
+        showMyPage.value = true;
+      }
+    };
+    const handleCustomPageEntryUpdate = (e) => {
+      showCustomPageEntry.value = e.isVisible;
+      console.log("收到自定义页面入口状态更新:", e.isVisible);
+    };
+    const handleMyPageDisplayUpdate = (e) => {
+      showMyPage.value = e.isVisible;
+      console.log("收到我的页面状态更新:", e.isVisible);
+    };
+    common_vendor.onMounted(async () => {
+      await Promise.all([
+        getCustomPageEntryStatus(),
+        getMyPageDisplayStatus()
+      ]);
+      common_vendor.index.$on("updateCustomPageEntry", handleCustomPageEntryUpdate);
+      common_vendor.index.$on("updateMyPageDisplay", handleMyPageDisplayUpdate);
+    });
+    common_vendor.onUnmounted(() => {
+      common_vendor.index.$off("updateCustomPageEntry", handleCustomPageEntryUpdate);
+      common_vendor.index.$off("updateMyPageDisplay", handleMyPageDisplayUpdate);
+    });
     const isAdmin = common_vendor.computed(() => userStore.userInfo.role[0] === "admin");
     const adminManage = () => {
       if (isAdmin) {
@@ -55,73 +109,94 @@ const _sfc_main = {
     };
     return (_ctx, _cache) => {
       return common_vendor.e({
-        a: common_vendor.unref(userStore).userInfo.avatarUrl,
-        b: common_vendor.unref(userStore).userInfo.isLogin
+        a: !showMyPage.value
+      }, !showMyPage.value ? {
+        b: common_vendor.p({
+          type: "info-filled",
+          size: "80",
+          color: "#999"
+        })
+      } : common_vendor.e({
+        c: common_vendor.unref(userStore).userInfo.avatarUrl,
+        d: common_vendor.unref(userStore).userInfo.isLogin
       }, common_vendor.unref(userStore).userInfo.isLogin ? {
-        c: common_vendor.t(common_vendor.unref(userStore).userInfo.nickName),
-        d: common_vendor.t(maskedMobile.value)
+        e: common_vendor.t(common_vendor.unref(userStore).userInfo.nickName),
+        f: common_vendor.t(maskedMobile.value)
       } : {
-        e: common_vendor.o(clickLogin)
+        g: common_vendor.o(clickLogin)
       }, {
-        f: common_vendor.p({
+        h: common_vendor.p({
           color: "#999999",
           type: "wallet",
           size: "22"
         }),
-        g: common_vendor.p({
+        i: common_vendor.p({
           color: "#cccccc",
           ["custom-prefix"]: "iconfont",
           type: "icon-arrow-drop-right-line",
           size: "30"
         }),
-        h: common_vendor.o(contarct),
-        i: common_vendor.p({
+        j: common_vendor.o(contarct),
+        k: common_vendor.p({
           color: "#999999",
           ["custom-prefix"]: "iconfont",
           type: "icon-yijianfankui",
           size: "22"
         }),
-        j: common_vendor.p({
+        l: common_vendor.p({
           color: "#cccccc",
           ["custom-prefix"]: "iconfont",
           type: "icon-arrow-drop-right-line",
           size: "30"
         }),
-        k: common_vendor.o(feedBack),
-        l: common_vendor.unref(userStore).userInfo.role[0] == "admin"
+        m: common_vendor.o(feedBack),
+        n: showCustomPageEntry.value
+      }, showCustomPageEntry.value ? {
+        o: common_vendor.p({
+          color: "#999999",
+          type: "star",
+          size: "22"
+        }),
+        p: common_vendor.p({
+          color: "#cccccc",
+          ["custom-prefix"]: "iconfont",
+          type: "icon-arrow-drop-right-line",
+          size: "30"
+        }),
+        q: common_vendor.o(moreServices)
+      } : {}, {
+        r: common_vendor.unref(userStore).userInfo.role[0] == "admin"
       }, common_vendor.unref(userStore).userInfo.role[0] == "admin" ? {
-        m: common_vendor.p({
+        s: common_vendor.p({
           color: "#999999",
           ["custom-prefix"]: "iconfont",
           type: "icon-houtaiguanli",
           size: "22"
         }),
-        n: common_vendor.p({
+        t: common_vendor.p({
           color: "#cccccc",
           ["custom-prefix"]: "iconfont",
           type: "icon-arrow-drop-right-line",
           size: "30"
         }),
-        o: common_vendor.o(adminManage)
+        v: common_vendor.o(adminManage)
       } : {}, {
-        p: common_vendor.unref(userStore).userInfo.isLogin
+        w: common_vendor.unref(userStore).userInfo.isLogin
       }, common_vendor.unref(userStore).userInfo.isLogin ? {
-        q: common_vendor.p({
+        x: common_vendor.p({
           color: "#999999",
           ["custom-prefix"]: "iconfont",
           type: "icon-tuichudenglu",
           size: "22"
         }),
-        r: common_vendor.p({
+        y: common_vendor.p({
           color: "#cccccc",
           ["custom-prefix"]: "iconfont",
           type: "icon-arrow-drop-right-line",
           size: "30"
         }),
-        s: common_vendor.o(loginOut)
-      } : {}, {
-        t: common_vendor.gei(_ctx, "")
-      });
+        z: common_vendor.o(loginOut)
+      } : {}));
     };
   }
 };
