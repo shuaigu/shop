@@ -75,50 +75,6 @@ const getArticleLikeStatus = async () => {
       isLiked: isArticleLiked.value,
       likeCount: likeCount.value
     });
-    
-    // 获取幸运用户信息（无论当前用户是否点赞）
-    try {
-      // 获取文章的幸运用户信息
-      const luckyUsersResult = await likeApi.getLuckyUsers(props.article_id);
-      
-      // 添加防御性检查
-      if (!luckyUsersResult) {
-        console.log('获取幸运用户信息失败：返回结果为空');
-        showLuckyUserBanner.value = false;
-        return;
-      }
-      
-      console.log('获取幸运用户信息结果:', luckyUsersResult);
-      
-      // 检查返回结果的结构
-      if (luckyUsersResult.code === 0 && luckyUsersResult.data && luckyUsersResult.data.length > 0) {
-        // 获取第一个幸运用户（通常是第1位点赞的用户）
-        const luckyUser = luckyUsersResult.data[0];
-        
-        console.log('获取到幸运用户信息:', luckyUser);
-        
-        // 更新幸运用户信息
-        luckyUserRank.value = luckyUser.like_rank || 1;
-        luckyUserInfo.value = {
-          avatar: luckyUser.avatar || '/static/images/default-avatar.png',
-          nickname: luckyUser.nickname || '幸运用户'
-        };
-        
-        // 显示幸运用户横幅
-        showLuckyUserBanner.value = true;
-        
-        console.log('显示幸运用户横幅:', {
-          rank: luckyUserRank.value,
-          userInfo: luckyUserInfo.value
-        });
-      } else {
-        console.log('没有找到幸运用户或者还没有人点赞');
-        showLuckyUserBanner.value = false;
-      }
-    } catch (err) {
-      console.error('获取幸运用户信息失败:', err);
-      showLuckyUserBanner.value = false;
-    }
   } catch (err) {
     console.error('获取点赞状态失败:', err);
     // 设置默认值，避免UI显示错误

@@ -35,7 +35,7 @@ module.exports = {
 	 * @returns {object} 返回值
 	 */
 	async add(pageData) {
-		const { title, content, contact_info, qr_code_image, background_color, text_color, sort } = pageData
+		const { title, content, contact_info, qr_code_image, avatar_url, background_color, text_color, sort } = pageData
 		
 		if (!title) {
 			return {
@@ -49,6 +49,7 @@ module.exports = {
 			content: content || '',
 			contact_info: contact_info || '',
 			qr_code_image: qr_code_image || '',
+			avatar_url: avatar_url || '',
 			background_color: background_color || '#ffffff',
 			text_color: text_color || '#333333',
 			sort: sort || 0,
@@ -73,7 +74,7 @@ module.exports = {
 			}
 		}
 		
-		const { title, content, contact_info, qr_code_image, background_color, text_color, sort, is_visible } = pageData
+		const { title, content, contact_info, qr_code_image, avatar_url, background_color, text_color, sort, is_visible } = pageData
 		
 		if (!title) {
 			return {
@@ -92,6 +93,11 @@ module.exports = {
 			update_time: new Date().getTime()
 		}
 		
+		// 如果有头像地址，则更新头像
+		if (avatar_url !== undefined) {
+			updateData.avatar_url = avatar_url
+		}
+		
 		// 如果有排序值，则更新排序
 		if (sort !== undefined) {
 			updateData.sort = sort
@@ -103,7 +109,12 @@ module.exports = {
 		}
 		
 		const res = await dbJQL.collection("customPages").doc(id).update(updateData)
-		return res
+		
+		return {
+			code: 0,
+			msg: '更新成功',
+			updated: res.updated
+		}
 	},
 	
 	/**

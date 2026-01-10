@@ -739,9 +739,6 @@ const _sfc_main = {
         articleDetail.value.is_liked = data.isLiked;
       }
     };
-    const handleLuckyUser = (data) => {
-      console.log("中奖功能已禁用:", data);
-    };
     const showViewersList = async () => {
       try {
         const isLoggedIn = await customTestLogin();
@@ -1030,8 +1027,7 @@ const _sfc_main = {
         }),
         ad: common_vendor.o(goToHome),
         ae: common_vendor.o(handleLikeChange),
-        af: common_vendor.o(handleLuckyUser),
-        ag: common_vendor.p({
+        af: common_vendor.p({
           articleId: __props.article_id,
           userId: common_vendor.unref(userStore).userInfo.uid,
           initialLikeCount: likeCount.value,
@@ -1042,25 +1038,25 @@ const _sfc_main = {
           userAvatar: common_vendor.unref(userStore).userInfo.avatarUrl,
           userNickname: common_vendor.unref(userStore).userInfo.nickName
         }),
-        ah: common_vendor.o(handleCall),
-        ai: articleDetail.value._id,
-        aj: common_vendor.o(closePreview),
-        ak: common_vendor.o(handlePreviewChange),
-        al: common_vendor.p({
+        ag: common_vendor.o(handleCall),
+        ah: articleDetail.value._id,
+        ai: common_vendor.o(closePreview),
+        aj: common_vendor.o(handlePreviewChange),
+        ak: common_vendor.p({
           visible: previewVisible.value,
           images: previewImages.value,
           current: previewCurrent.value
         }),
-        am: viewersListVisible.value
+        al: viewersListVisible.value
       }, viewersListVisible.value ? common_vendor.e({
-        an: common_vendor.t(viewersTotal.value),
-        ao: common_vendor.p({
+        am: common_vendor.t(viewersTotal.value),
+        an: common_vendor.p({
           type: "closeempty",
           size: "24",
           color: "#666"
         }),
-        ap: common_vendor.o(closeViewersList),
-        aq: common_vendor.f(viewersList.value, (viewer, index, i0) => {
+        ao: common_vendor.o(closeViewersList),
+        ap: common_vendor.f(viewersList.value, (viewer, index, i0) => {
           return common_vendor.e({
             a: viewer.user_avatarUrl || "/static/images/touxiang.png",
             b: common_vendor.t(viewer.user_nickName || "匿名用户"),
@@ -1101,26 +1097,26 @@ const _sfc_main = {
             r: index
           });
         }),
-        ar: viewersLoading.value
+        aq: viewersLoading.value
       }, viewersLoading.value ? {} : {}, {
-        as: !hasMoreViewers.value && viewersList.value.length > 0
+        ar: !hasMoreViewers.value && viewersList.value.length > 0
       }, !hasMoreViewers.value && viewersList.value.length > 0 ? {} : {}, {
-        at: viewersList.value.length === 0 && !viewersLoading.value
+        as: viewersList.value.length === 0 && !viewersLoading.value
       }, viewersList.value.length === 0 && !viewersLoading.value ? {
-        av: common_vendor.p({
+        at: common_vendor.p({
           type: "eye-slash",
           size: "50",
           color: "#CCCCCC"
         })
       } : {}, {
-        aw: common_vendor.o(() => loadViewers(false)),
-        ax: viewersRefreshing.value,
-        ay: common_vendor.o(handleViewersRefresh),
-        az: common_vendor.o(() => {
+        av: common_vendor.o(() => loadViewers(false)),
+        aw: viewersRefreshing.value,
+        ax: common_vendor.o(handleViewersRefresh),
+        ay: common_vendor.o(() => {
         }),
-        aA: common_vendor.o(closeViewersList)
+        az: common_vendor.o(closeViewersList)
       }) : {}, {
-        aB: common_vendor.gei(_ctx, "")
+        aA: common_vendor.gei(_ctx, "")
       });
     };
   }

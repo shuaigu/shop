@@ -1,12 +1,27 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
+import { useUserInfoStore } from '@/store/user.js'
 
 const pageApi = uniCloud.importObject('customPageKs')
+const userStore = useUserInfoStore()
 
 // 页面数据
 const pageData = ref(null)
 const pageId = ref('')
+const isEditing = ref(false)
+const editForm = ref({
+	avatarUrl: '',
+	title: '',
+	content: '',
+	contact_info: '',
+	qr_code_image: ''
+})
+
+// 判断是否是管理员
+const isAdmin = computed(() => {
+	return userStore.userInfo.role && userStore.userInfo.role[0] === 'admin'
+})
 
 onLoad((options) => {
 	if (options.id) {
@@ -132,6 +147,138 @@ const previewQRCode = () => {
 	})
 }
 
+// 切换编辑模式
+const toggleEdit = () => {
+	if (isEditing.value) {
+		// 退出编辑，恢复原始数据
+		isEditing.value = false
+	} else {
+		// 进入编辑，复制当前数据
+		editForm.value = {
+			avatarUrl: pageData.value.avatar_url || '',
+			title: pageData.value.title || '',
+			content: pageData.value.content || '',
+			contact_info: pageData.value.contact_info || '',
+			qr_code_image: pageData.value.qr_code_image || ''
+		}
+		isEditing.value = true
+	}
+}
+
+// 上传头像
+const uploadAvatar = () => {
+	uni.chooseImage({
+		count: 1,
+		sizeType: ['compressed'],
+		sourceType: ['album', 'camera'],
+		success: (res) => {
+			const tempFilePath = res.tempFilePaths[0]
+			uni.showLoading({ title: '上传中...' })
+			
+			// 上传到云存储
+			uniCloud.uploadFile({
+				filePath: tempFilePath,
+				cloudPath: `custom-page-avatar/${Date.now()}_${Math.random().toString(36).slice(2)}.jpg`,
+				success: (uploadRes) => {
+					uni.hideLoading()
+					editForm.value.avatarUrl = uploadRes.fileID
+					uni.showToast({
+						title: '上传成功',
+						icon: 'success'
+					})
+				},
+				fail: (err) => {
+					uni.hideLoading()
+					console.error('上传失败:', err)
+					uni.showToast({
+						title: '上传失败',
+						icon: 'none'
+					})
+				}
+			})
+		}
+	})
+}
+
+// 上传二维码
+const uploadQRCode = () => {
+	uni.chooseImage({
+		count: 1,
+		sizeType: ['compressed'],
+		sourceType: ['album', 'camera'],
+		success: (res) => {
+			const tempFilePath = res.tempFilePaths[0]
+			uni.showLoading({ title: '上传中...' })
+			
+			// 上传到云存储
+			uniCloud.uploadFile({
+				filePath: tempFilePath,
+				cloudPath: `custom-page-qrcode/${Date.now()}_${Math.random().toString(36).slice(2)}.jpg`,
+				success: (uploadRes) => {
+					uni.hideLoading()
+					editForm.value.qr_code_image = uploadRes.fileID
+					uni.showToast({
+						title: '上传成功',
+						icon: 'success'
+					})
+				},
+				fail: (err) => {
+					uni.hideLoading()
+					console.error('上传失败:', err)
+					uni.showToast({
+						title: '上传失败',
+						icon: 'none'
+					})
+				}
+			})
+		}
+	})
+}
+
+// 保存编辑
+const saveEdit = async () => {
+	try {
+		uni.showLoading({ title: '保存中...' })
+		
+		const updateData = {
+			avatar_url: editForm.value.avatarUrl,
+			title: editForm.value.title,
+			content: editForm.value.content,
+			contact_info: editForm.value.contact_info,
+			qr_code_image: editForm.value.qr_code_image
+		}
+		
+		const res = await pageApi.update(pageId.value, updateData)
+		
+		if (res.code === 0) {
+			// 更新本地数据
+			pageData.value = {
+				...pageData.value,
+				...updateData
+			}
+			isEditing.value = false
+			uni.hideLoading()
+			uni.showToast({
+				title: '保存成功',
+				icon: 'success'
+			})
+		} else {
+			uni.hideLoading()
+			uni.showToast({
+				title: res.msg || '保存失败',
+				icon: 'none'
+			})
+		}
+	} catch (error) {
+		console.error('保存失败:', error)
+		uni.hideLoading()
+		uni.showToast({
+			title: '保存失败',
+			icon: 'none'
+		})
+	}
+}
+
 // 计算样式
 const containerStyle = computed(() => {
 	if (!pageData.value) return {}
@@ -144,33 +291,78 @@ const containerStyle = computed(() => {
 
 <template>
 	<view class="custom-page" v-if="pageData">
-		<!-- 头部：微信图标 + 标题 -->
-		<view class="page-header">
-			<view class="wechat-icon">
-				<image src="https://img.icons8.com/color/96/wechat.png" mode="aspectFit"></image>
+		<!-- 顶部操作栏（仅管理员可见） -->
+		<view class="top-actions" v-if="isAdmin">
+			<view class="back-btn" @click="uni.navigateBack()">
+				<uni-icons type="back" size="20" color="#333"></uni-icons>
+				<text>返回</text>
 			</view>
-			<view class="page-title">{{ pageData.title }}</view>
+			<view class="edit-btn" @click="toggleEdit">
+				<uni-icons :type="isEditing ? 'close' : 'compose'" size="20" :color="isEditing ? '#f56c6c' : '#07C160'"></uni-icons>
+				<text :style="{color: isEditing ? '#f56c6c' : '#07C160'}">{{ isEditing ? '取消' : '编辑' }}</text>
+			</view>
+		</view>
+		
+		<!-- 头部：头像 + 标题（横排显示） -->
+		<view class="page-header" :style="{paddingTop: isAdmin ? '40rpx' : '80rpx'}">
+			<view class="avatar-section">
+				<view class="avatar-wrapper" @click="isAdmin && isEditing ? uploadAvatar() : null">
+					<image 
+						:src="isEditing ? (editForm.avatarUrl || '/static/default-avatar.png') : (pageData.avatar_url || '/static/default-avatar.png')" 
+						mode="aspectFill"
+						class="avatar-image"
+					></image>
+					<view class="avatar-edit" v-if="isAdmin && isEditing">
+						<uni-icons type="camera-filled" size="16" color="#fff"></uni-icons>
+					</view>
+				</view>
+			</view>
+			<view class="title-section">
+				<input 
+					v-if="isAdmin && isEditing" 
+					v-model="editForm.title" 
+					class="title-input" 
+					placeholder="请输入标题"
+				/>
+				<view v-else class="page-title">{{ pageData.title }}</view>
+			</view>
 		</view>
 		
 		<!-- 主体内容卡片 -->
 		<view class="content-card">
 			<!-- 二维码容器 -->
-			<view class="qr-container" v-if="pageData.qr_code_image">
-				<view class="qr-box">
+			<view class="qr-container" v-if="isEditing ? editForm.qr_code_image : pageData.qr_code_image">
+				<view class="qr-box" @click="isAdmin && isEditing ? uploadQRCode() : previewQRCode()">
 					<image 
-						:src="pageData.qr_code_image" 
+						:src="isEditing ? editForm.qr_code_image : pageData.qr_code_image" 
 						mode="aspectFit" 
 						class="qr-image"
-						@click="previewQRCode"
 					/>
+					<view class="qr-edit" v-if="isAdmin && isEditing">
+						<uni-icons type="camera-filled" size="20" color="#fff"></uni-icons>
+						<text>点击更换</text>
+					</view>
 				</view>
-				<view class="qr-text">扫描二维码添加好友</view>
-				<view class="qr-subtitle">打开微信扫一扫，即可添加我为好友</view>
+				
+				<!-- 保存二维码按钮 -->
+				<view class="save-qr-btn" @click="saveQRCode">
+					<uni-icons type="download-filled" size="22" color="#fff"></uni-icons>
+					<text>保存二维码</text>
+				</view>
 			</view>
 			
 			<!-- 内容说明 -->
-			<view class="page-content" v-if="pageData.content">
-				{{ pageData.content }}
+			<view class="page-content">
+				<textarea 
+					v-if="isAdmin && isEditing" 
+					v-model="editForm.content" 
+					class="content-textarea" 
+					placeholder="请输入内容说明"
+					auto-height
+				></textarea>
+				<view v-else-if="pageData.content">
+					{{ pageData.content }}
+				</view>
 			</view>
 			
 			<!-- 服务特点 -->
@@ -200,19 +392,31 @@ const containerStyle = computed(() => {
 		</view>
 		
 		<!-- 底部保存按钮 -->
-		<view class="bottom-actions" v-if="pageData.qr_code_image">
-			<view class="save-btn" @click="saveQRCode">
-				<uni-icons type="download-filled" size="22" color="#fff"></uni-icons>
-				<text>保存二维码</text>
-			</view>
-			<view class="save-tip">保存二维码后，可在相册中查看并分享给朋友</view>
+		<view class="bottom-actions" v-if="false">
+			<!-- 已移动到二维码下方 -->
 		</view>
 		
-		<!-- 联系方式（如果有） -->
-		<view class="contact-info" v-if="pageData.contact_info" @click="copyContact">
+		<!-- 联系方式 -->
+		<view class="contact-info" v-if="(isAdmin && isEditing) || pageData.contact_info">
 			<uni-icons type="contact" size="18" color="#999"></uni-icons>
-			<text>联系方式: {{ pageData.contact_info }}</text>
-			<text class="copy-hint">（点击复制）</text>
+			<input 
+				v-if="isAdmin && isEditing" 
+				v-model="editForm.contact_info" 
+				class="contact-input" 
+				placeholder="请输入联系方式"
+			/>
+			<template v-else>
+				<text @click="copyContact">联系方式: {{ pageData.contact_info }}</text>
+				<text class="copy-hint" @click="copyContact">（点击复制）</text>
+			</template>
+		</view>
+		
+		<!-- 保存按钮（仅管理员编辑时显示） -->
+		<view class="save-section" v-if="isAdmin && isEditing">
+			<view class="save-edit-btn" @click="saveEdit">
+				<uni-icons type="checkmarkempty" size="22" color="#fff"></uni-icons>
+				<text>保存修改</text>
+			</view>
 		</view>
 		
 		<!-- 浏览次数 -->
@@ -234,35 +438,126 @@ const containerStyle = computed(() => {
 
 .custom-page {
 	min-height: 100vh;
-	background: linear-gradient(180deg, #f5f7fa 0%, #ffffff 40%);
+	background: linear-gradient(180deg, 
+		rgba(7, 193, 96, 0.15) 0%, 
+		rgba(6, 174, 86, 0.08) 20%,
+		rgba(255, 255, 255, 0.95) 40%,
+		#ffffff 60%
+	);
+	backdrop-filter: blur(10px);
+	-webkit-backdrop-filter: blur(10px);
 	padding-bottom: 60rpx;
+	position: relative;
 	
-	// 头部：微信图标 + 标题
+	// 添加背景装饰
+	&::before {
+		content: '';
+		position: absolute;
+		top: 0;
+		left: 0;
+		right: 0;
+		height: 500rpx;
+		background: radial-gradient(circle at 30% 20%, 
+			rgba(7, 193, 96, 0.1) 0%, 
+			transparent 50%
+		),
+		radial-gradient(circle at 70% 40%, 
+			rgba(6, 174, 86, 0.08) 0%, 
+			transparent 50%
+		);
+		filter: blur(40px);
+		pointer-events: none;
+		z-index: 0;
+	}
+	
+	// 确保内容在背景之上
+	> * {
+		position: relative;
+		z-index: 1;
+	}
+	
+	// 顶部操作栏
+	.top-actions {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		padding: 20rpx 30rpx;
+		background: #fff;
+		border-bottom: 1rpx solid #f0f0f0;
+		
+		.back-btn,
+		.edit-btn {
+			display: flex;
+			align-items: center;
+			gap: 8rpx;
+			padding: 10rpx 20rpx;
+			font-size: 28rpx;
+			color: #333;
+			
+			&:active {
+				opacity: 0.7;
+			}
+		}
+	}
+	
+	// 头部：头像 + 标题（横排显示）
 	.page-header {
 		display: flex;
-		flex-direction: column;
 		align-items: center;
-		padding: 60rpx 40rpx 40rpx;
+		padding: 40rpx 30rpx;
+		background: #fff;
+		gap: 30rpx;
 		
-		.wechat-icon {
-			width: 120rpx;
-			height: 120rpx;
-			border-radius: 24rpx;
-			overflow: hidden;
-			margin-bottom: 24rpx;
-			box-shadow: 0 8rpx 24rpx rgba(7, 193, 96, 0.15);
+		.avatar-section {
+			flex-shrink: 0;
 			
-			image {
-				width: 100%;
-				height: 100%;
+			.avatar-wrapper {
+				position: relative;
+				width: 120rpx;
+				height: 120rpx;
+				border-radius: 50%;
+				overflow: hidden;
+				box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.1);
+				
+				.avatar-image {
+					width: 100%;
+					height: 100%;
+				}
+				
+				.avatar-edit {
+					position: absolute;
+					bottom: 0;
+					left: 0;
+					right: 0;
+					height: 40rpx;
+					background: rgba(0, 0, 0, 0.5);
+					display: flex;
+					align-items: center;
+					justify-content: center;
+				}
 			}
 		}
 		
-		.page-title {
-			font-size: 44rpx;
-			font-weight: 600;
-			color: #1a1a1a;
-			letter-spacing: 1rpx;
+		.title-section {
+			flex: 1;
+			
+			.page-title {
+				font-size: 36rpx;
+				font-weight: 600;
+				color: #1a1a1a;
+				line-height: 1.5;
+			}
+			
+			.title-input {
+				width: 100%;
+				font-size: 36rpx;
+				font-weight: 600;
+				color: #1a1a1a;
+				padding: 10rpx 20rpx;
+				border: 2rpx solid #07C160;
+				border-radius: 8rpx;
+				background: #f0fff4;
+			}
 		}
 	}
 	
@@ -295,6 +590,23 @@ const containerStyle = computed(() => {
 					width: 100%;
 					height: 100%;
 				}
+				
+				.qr-edit {
+					position: absolute;
+					top: 0;
+					left: 0;
+					right: 0;
+					bottom: 0;
+					background: rgba(0, 0, 0, 0.5);
+					display: flex;
+					flex-direction: column;
+					align-items: center;
+					justify-content: center;
+					gap: 10rpx;
+					color: #fff;
+					font-size: 24rpx;
+					border-radius: 24rpx;
+				}
 			}
 			
 			.qr-text {
@@ -303,6 +615,7 @@ const containerStyle = computed(() => {
 				color: #1a1a1a;
 				margin-bottom: 16rpx;
 				text-align: center;
+				display: none; // 隐藏
 			}
 			
 			.qr-subtitle {
@@ -310,6 +623,30 @@ const containerStyle = computed(() => {
 				color: #8c8c8c;
 				text-align: center;
 				line-height: 1.6;
+				display: none; // 隐藏
+			}
+			
+			// 保存二维码按钮（移到二维码下方）
+			.save-qr-btn {
+				width: 100%;
+				max-width: 500rpx;
+				height: 88rpx;
+				margin-top: 40rpx;
+				background: linear-gradient(135deg, #07C160 0%, #06AE56 100%);
+				border-radius: 44rpx;
+				display: flex;
+				align-items: center;
+				justify-content: center;
+				gap: 12rpx;
+				color: #ffffff;
+				font-size: 32rpx;
+				font-weight: 600;
+				box-shadow: 0 8rpx 24rpx rgba(7, 193, 96, 0.3);
+				
+				&:active {
+					opacity: 0.9;
+					transform: scale(0.98);
+				}
 			}
 		}
 		
@@ -322,6 +659,19 @@ const containerStyle = computed(() => {
 			text-align: center;
 			white-space: pre-wrap;
 			border-bottom: 1px solid #f0f0f0;
+			
+			.content-textarea {
+				width: 100%;
+				min-height: 150rpx;
+				padding: 20rpx;
+				font-size: 28rpx;
+				color: #333;
+				line-height: 1.8;
+				border: 2rpx solid #07C160;
+				border-radius: 8rpx;
+				background: #f0fff4;
+				box-sizing: border-box;
+			}
 		}
 		
 		// 服务特点
@@ -426,13 +776,49 @@ const containerStyle = computed(() => {
 		font-size: 26rpx;
 		color: #666;
 		
+		.contact-input {
+			flex: 1;
+			padding: 10rpx 20rpx;
+			font-size: 26rpx;
+			color: #333;
+			border: 2rpx solid #07C160;
+			border-radius: 8rpx;
+			background: #fff;
+		}
+		
 		.copy-hint {
 			color: #999;
 			font-size: 24rpx;
+			cursor: pointer;
 		}
 		
 		&:active {
 			opacity: 0.7;
+		}
+	}
+	
+	// 保存按钮区域
+	.save-section {
+		padding: 30rpx 40rpx;
+		
+		.save-edit-btn {
+			width: 100%;
+			height: 96rpx;
+			background: linear-gradient(135deg, #07C160 0%, #06AE56 100%);
+			border-radius: 48rpx;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			gap: 12rpx;
+			color: #ffffff;
+			font-size: 32rpx;
+			font-weight: 600;
+			box-shadow: 0 8rpx 24rpx rgba(7, 193, 96, 0.3);
+			
+			&:active {
+				opacity: 0.9;
+				transform: scale(0.98);
+			}
 		}
 	}
 	
@@ -455,7 +841,14 @@ const containerStyle = computed(() => {
 	align-items: center;
 	justify-content: center;
 	gap: 20rpx;
-	background: linear-gradient(180deg, #f5f7fa 0%, #ffffff 40%);
+	background: linear-gradient(180deg, 
+		rgba(7, 193, 96, 0.15) 0%, 
+		rgba(6, 174, 86, 0.08) 20%,
+		rgba(255, 255, 255, 0.95) 40%,
+		#ffffff 60%
+	);
+	backdrop-filter: blur(10px);
+	-webkit-backdrop-filter: blur(10px);
 	
 	text {
 		font-size: 28rpx;

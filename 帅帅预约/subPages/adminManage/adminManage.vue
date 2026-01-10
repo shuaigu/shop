@@ -484,17 +484,7 @@
 					</view>
 				</view>
 				
-				<view class="settings-section">
-					<view class="section-title">备忘录首页设置</view>
-					<view class="setting-item">
-						<text class="setting-label">开启备忘录首页显示</text>
-						<switch :checked="memoHomeDisplay.isEnabled" @change="handleMemoHomeDisplayChange" color="#007AFF" />
-					</view>
-					<view class="setting-tip">
-						<text class="tip-text">开启后，所有用户访问首页时将直接显示备忘录页面</text>
-					</view>
-				</view>
-				
+
 				<view class="settings-section">
 					<view class="section-title">幸运用户配置</view>
 					<view class="setting-item">
@@ -599,10 +589,6 @@
 			}
 			
 			&:nth-child(3) {
-				border-left-color: #5856D6; /* 备忘录首页设置 - 紫色 */
-			}
-			
-			&:nth-child(4) {
 				border-left-color: #FF2D55; /* 幸运用户配置 - 红色 */
 			}
 			

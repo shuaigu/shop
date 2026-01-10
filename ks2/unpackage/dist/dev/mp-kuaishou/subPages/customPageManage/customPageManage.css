@@ -376,31 +376,11 @@ image.data-v-1ac37899 {
   bottom: 250rpx;
   right: 40rpx;
   background: #ffffff;
-  border-radius: 20rpx;
+  border-radius: 40rpx;
   box-shadow: 0 4rpx 20rpx rgba(0, 0, 0, 0.15);
-  padding: 24rpx;
-  width: 440rpx;
+  padding: 12rpx 16rpx;
   z-index: 999;
-}
-.global-switch-panel .switch-content.data-v-1ac37899 {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 12rpx;
-}
-.global-switch-panel .switch-content .switch-left.data-v-1ac37899 {
   display: flex;
   align-items: center;
-  gap: 12rpx;
-}
-.global-switch-panel .switch-content .switch-left .switch-label.data-v-1ac37899 {
-  font-size: 28rpx;
-  font-weight: 500;
-  color: #333;
-}
-.global-switch-panel .switch-tip.data-v-1ac37899 {
-  font-size: 24rpx;
-  color: #999;
-  line-height: 1.5;
-  padding-left: 32rpx;
+  justify-content: center;
 }

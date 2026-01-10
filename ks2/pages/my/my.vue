@@ -5,7 +5,7 @@
 	const userStore = useUserInfoStore( )
 	
 	// 自定义页面入口显示控制
-	const showCustomPageEntry = ref(true)  // 默认显示
+	const showCustomPageEntry = ref(false)  // 默认关闭
 	
 	// 我的页面显示控制
 	const showMyPage = ref(true)  // 默认显示
@@ -55,11 +55,11 @@
 			if (res && res.data) {
 				showCustomPageEntry.value = res.data.isVisible !== false
 			} else {
-				showCustomPageEntry.value = true  // 默认显示
+				showCustomPageEntry.value = false  // 默认关闭
 			}
 		} catch (err) {
 			console.error('获取自定义页面入口配置失败:', err)
-			showCustomPageEntry.value = true  // 出错时默认显示
+			showCustomPageEntry.value = false  // 出错时默认关闭
 		}
 	}
 	

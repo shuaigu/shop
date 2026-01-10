@@ -34,6 +34,11 @@
       "description": "二维码图片URL",
       "title": "二维码图片"
     },
+    "avatar_url": {
+      "bsonType": "string",
+      "description": "头像图片URL",
+      "title": "头像图片"
+    },
     "background_color": {
       "bsonType": "string",
       "description": "页面背景颜色",

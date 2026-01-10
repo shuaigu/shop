@@ -6,7 +6,6 @@
 	import { onReachBottom } from '@dcloudio/uni-app'
 	// 导入推荐组件
 	import tuijian from '@/components/tuijian/tuijian.vue'
-	// 幸运用户横幅组件已移除
 	// 导入自定义图片预览组件
 	import Tuouanyulan from '@/components/tuouanyulan/tuouanyulan.vue'
 	// 导入点赞组件
@@ -1427,7 +1426,6 @@
 							:userAvatar="userStore.userInfo.avatarUrl"
 							:userNickname="userStore.userInfo.nickName"
 							@likeChange="handleLikeChange"
-							@luckyUser="handleLuckyUser"
 						/>
 					</view>
 					
@@ -1436,8 +1434,6 @@
 					</view>
 				</view>
 			</view>
-			
-			<!-- 幸运用户横幅已移除 -->
 		</view>
 
 		<!-- 添加自定义图片预览组件 -->

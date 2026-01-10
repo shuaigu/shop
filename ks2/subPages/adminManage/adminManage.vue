@@ -66,19 +66,6 @@
 	// 配置API
 	const configApi = uniCloud.importObject('config', { customUI: true });
 
-	// 幸运用户配置
-	const luckyUserConfig = ref({
-		lucky_ranks: [1, 8, 18],
-		rewards: '幸运用户专属奖励',
-		is_enabled: true
-	});
-
-	// 新增幸运用户排名输入
-	const newLuckyRank = ref('');
-
-	// 点赞API
-	const likeApi = uniCloud.importObject('likeRecord', { customUI: true });
-
 	// 获取导航信息
 	const getNavInfo = async () => {
 		try {
@@ -151,25 +138,25 @@
 			if (res && res.data) {
 				customPageEntryDisplay.value = res.data;
 			} else {
-				// 默认显示（方便用户使用）
-				customPageEntryDisplay.value = { isVisible: true };
+				// 默认关闭
+				customPageEntryDisplay.value = { isVisible: false };
 				
 				// 创建默认配置
 				try {
 					await configApi.updateConfig({
 						key: 'customPageEntry',
 						data: {
-							isVisible: true
+							isVisible: false
 						}
 					});
-					console.log('已创建默认自定义页面入口配置：显示');
+					console.log('已创建默认自定义页面入口配置：关闭');
 				} catch (createErr) {
 					console.error('创建默认自定义页面入口配置失败:', createErr);
 				}
 			}
 		} catch (err) {
 			console.error('获取自定义页面入口显示状态失败:', err);
-			customPageEntryDisplay.value = { isVisible: true };
+			customPageEntryDisplay.value = { isVisible: false };
 		}
 	};
 	
@@ -202,23 +189,7 @@
 		}
 	};
 	
-	// 获取幸运用户配置
-	const getLuckyUserConfig = async () => {
-		try {
-			uni.showLoading({ title: '加载中...' });
-			const res = await likeApi.getLuckyConfig();
-			if (res.code === 0 && res.data) {
-				luckyUserConfig.value = res.data;
-			} else {
-				uni.showToast({ title: '获取幸运用户配置失败', icon: 'none' });
-			}
-		} catch (err) {
-			console.error('获取幸运用户配置异常:', err);
-			uni.showToast({ title: '获取幸运用户配置失败', icon: 'none' });
-		} finally {
-			uni.hideLoading();
-		}
-	};
+
 	
 	// 处理导航显示状态变化
 	const handleNavVisibilityChange = async (e) => {
@@ -249,9 +220,13 @@
 					icon: 'success' 
 				});
 			} else {
+				// 更新失败，恢复原来的状态
+				navInfo.value.isVisible = !isVisible;
 				uni.showToast({ title: res.message || '更新失败', icon: 'none' });
 			}
 		} catch (err) {
+			// 出错时恢复原来的状态
+			navInfo.value.isVisible = !e.detail.value;
 			console.error('更新导航设置失败:', err);
 			uni.showToast({ title: '更新失败，请重试', icon: 'none' });
 		} finally {
@@ -286,9 +261,13 @@
 					icon: 'success' 
 				});
 			} else {
+				// 更新失败，恢复原来的状态
+				commentDisplay.value.isVisible = !isVisible;
 				uni.showToast({ title: res?.message || '更新失败', icon: 'none' });
 			}
 		} catch (err) {
+			// 出错时恢复原来的状态
+			commentDisplay.value.isVisible = !e.detail.value;
 			console.error('更新评论区设置失败:', err);
 			uni.showToast({ title: '更新失败，请重试', icon: 'none' });
 		} finally {
@@ -317,9 +296,13 @@
 					icon: 'success' 
 				});
 			} else {
+				// 更新失败，恢复原来的状态
+				memoHomeDisplay.value.isEnabled = !isEnabled;
 				uni.showToast({ title: res?.message || '更新失败', icon: 'none' });
 			}
 		} catch (err) {
+			// 出错时恢复原来的状态
+			memoHomeDisplay.value.isEnabled = !e.detail.value;
 			console.error('更新备忘录首页显示设置失败:', err);
 			uni.showToast({ title: '更新失败，请重试', icon: 'none' });
 		} finally {
@@ -354,9 +337,13 @@
 					icon: 'success' 
 				});
 			} else {
+				// 更新失败，恢复原来的状态
+				customPageEntryDisplay.value.isVisible = !isVisible;
 				uni.showToast({ title: res?.message || '更新失败', icon: 'none' });
 			}
 		} catch (err) {
+			// 出错时恢复原来的状态
+			customPageEntryDisplay.value.isVisible = !e.detail.value;
 			console.error('更新自定义页面入口设置失败:', err);
 			uni.showToast({ title: '更新失败，请重试', icon: 'none' });
 		} finally {
@@ -391,9 +378,13 @@
 					icon: 'success' 
 				});
 			} else {
+				// 更新失败，恢复原来的状态
+				myPageDisplay.value.isVisible = !isVisible;
 				uni.showToast({ title: res?.message || '更新失败', icon: 'none' });
 			}
 		} catch (err) {
+			// 出错时恢复原来的状态
+			myPageDisplay.value.isVisible = !e.detail.value;
 			console.error('更新我的页面设置失败:', err);
 			uni.showToast({ title: '更新失败，请重试', icon: 'none' });
 		} finally {
@@ -401,62 +392,9 @@
 		}
 	};
 	
-	// 处理幸运用户功能启用状态变化
-	const handleLuckyUserEnabledChange = async (e) => {
-		try {
-			uni.showLoading({ title: '更新中...' });
-			const isEnabled = e.detail.value;
-			
-			// 调用云函数更新
-			const res = await likeApi.updateLuckyConfig({
-				is_enabled: isEnabled
-			});
-			
-			if (res.code === 0) {
-				luckyUserConfig.value.is_enabled = isEnabled;
-				uni.showToast({ 
-					title: isEnabled ? '幸运用户功能已启用' : '幸运用户功能已禁用', 
-					icon: 'success' 
-				});
-			} else {
-				uni.showToast({ title: res.message || '更新失败', icon: 'none' });
-			}
-		} catch (err) {
-			console.error('更新幸运用户设置失败:', err);
-			uni.showToast({ title: '更新失败，请重试', icon: 'none' });
-		} finally {
-			uni.hideLoading();
-		}
-	};
-	
-	// 添加幸运用户排名
-	const addLuckyRank = () => {
-		// 验证输入
-		const rank = parseInt(newLuckyRank.value);
-		if (isNaN(rank) || rank <= 0) {
-			return uni.showToast({ title: '请输入有效的排名数字', icon: 'none' });
-		}
-		
-		// 检查是否已存在
-		if (luckyUserConfig.value.lucky_ranks.includes(rank)) {
-			return uni.showToast({ title: '该排名已存在', icon: 'none' });
-		}
-		
-		// 添加排名
-		luckyUserConfig.value.lucky_ranks.push(rank);
-		// 排序
-		luckyUserConfig.value.lucky_ranks.sort((a, b) => a - b);
-		// 清空输入
-		newLuckyRank.value = '';
-		
-		// 显示成功提示
-		uni.showToast({ title: `已添加第${rank}位`, icon: 'success' });
-	};
 
-	// 删除幸运用户排名
-	const removeLuckyRank = (rank) => {
-		luckyUserConfig.value.lucky_ranks = luckyUserConfig.value.lucky_ranks.filter(r => r !== rank);
-	};
+	
+
 
 	// 保存导航设置
 	const saveNavSettings = async () => {
@@ -502,39 +440,7 @@
 		}
 	};
 	
-	// 保存幸运用户配置
-	const saveLuckyUserConfig = async () => {
-		try {
-			// 验证输入
-			if (!luckyUserConfig.value.lucky_ranks || luckyUserConfig.value.lucky_ranks.length === 0) {
-				return uni.showToast({ title: '请至少添加一个幸运用户排名', icon: 'none' });
-			}
-			
-			if (!luckyUserConfig.value.rewards || !luckyUserConfig.value.rewards.trim()) {
-				return uni.showToast({ title: '请输入奖励描述', icon: 'none' });
-			}
-			
-			uni.showLoading({ title: '保存中...' });
-			
-			// 调用云函数更新
-			const res = await likeApi.updateLuckyConfig({
-				lucky_ranks: luckyUserConfig.value.lucky_ranks,
-				rewards: luckyUserConfig.value.rewards,
-				is_enabled: luckyUserConfig.value.is_enabled
-			});
-			
-			if (res.code === 0) {
-				uni.showToast({ title: '保存成功', icon: 'success' });
-			} else {
-				uni.showToast({ title: res.message || '保存失败', icon: 'none' });
-			}
-		} catch (err) {
-			console.error('保存幸运用户配置失败:', err);
-			uni.showToast({ title: '保存失败，请重试', icon: 'none' });
-		} finally {
-			uni.hideLoading();
-		}
-	};
+
 	
 	// 后期想做新的功能，直接添加就好
 	const data = ref( [ '信息页面', '分类管理', '文章管理', '用户反馈', '公司信息', '自定义页面管理', '文章权限' ] )
@@ -589,7 +495,6 @@
 		await Promise.all([
 			getNavInfo(),
 			getCommentDisplayStatus(),
-			getLuckyUserConfig(),
 			getMemoHomeDisplayStatus(),
 			getCustomPageEntryStatus(),
 			getMyPageDisplayStatus()
@@ -634,78 +539,9 @@
 					</view>
 				</view>
 				
-				<view class="settings-section">
-					<view class="section-title">备忘录首页设置</view>
-					<view class="setting-item">
-						<text class="setting-label">开启备忘录首页显示</text>
-						<switch :checked="memoHomeDisplay.isEnabled" @change="handleMemoHomeDisplayChange" color="#007AFF" />
-					</view>
-					<view class="setting-tip">
-						<text class="tip-text">开启后，所有用户访问首页时将直接显示备忘录页面</text>
-					</view>
-				</view>
+
 				
-				<view class="settings-section">
-					<view class="section-title">自定义页面设置</view>
-					<view class="setting-item">
-						<text class="setting-label">显示“更多服务”入口</text>
-						<switch :checked="customPageEntryDisplay.isVisible" @change="handleCustomPageEntryChange" color="#007AFF" />
-					</view>
-					<view class="setting-tip">
-						<text class="tip-text">开启后，“我的”页面将显示“更多服务”入口，用户可以访问自定义页面列表</text>
-					</view>
-				</view>
 				
-				<view class="settings-section">
-					<view class="section-title">我的页面设置</view>
-					<view class="setting-item">
-						<text class="setting-label">开启“我的”页面</text>
-						<switch :checked="myPageDisplay.isVisible" @change="handleMyPageDisplayChange" color="#007AFF" />
-					</view>
-					<view class="setting-tip">
-						<text class="tip-text">关闭后，用户无法访问“我的”页面，仅显示系统维护提示</text>
-					</view>
-				</view>
-				
-				<view class="settings-section">
-					<view class="section-title">幸运用户配置</view>
-					<view class="setting-item">
-						<text class="setting-label">启用幸运用户功能</text>
-						<switch :checked="luckyUserConfig.is_enabled" @change="handleLuckyUserEnabledChange" color="#007AFF" />
-					</view>
-					
-					<view class="setting-item">
-						<text class="setting-label">奖励描述</text>
-						<input class="setting-input" v-model="luckyUserConfig.rewards" placeholder="请输入奖励描述" />
-					</view>
-					
-					<view class="setting-item">
-						<text class="setting-label">幸运用户排名</text>
-						<view class="lucky-ranks-container">
-							<view class="lucky-rank-tag" v-for="rank in luckyUserConfig.lucky_ranks" :key="rank">
-								<text>第{{ rank }}位</text>
-								<text class="rank-delete" @click="removeLuckyRank(rank)">×</text>
-							</view>
-						</view>
-					</view>
-					
-					<view class="setting-item">
-						<text class="setting-label">添加排名</text>
-						<view class="add-rank-container">
-							<input 
-								class="rank-input" 
-								v-model="newLuckyRank" 
-								type="number" 
-								placeholder="输入排名数字" 
-								@confirm="addLuckyRank"
-								:maxlength="5"
-							/>
-							<button class="add-rank-btn" @click="addLuckyRank">添加</button>
-						</view>
-					</view>
-					
-					<button class="save-btn" @click="saveLuckyUserConfig">保存幸运用户配置</button>
-				</view>
 				
 				<view class="section">
 					<view class="header">
@@ -768,22 +604,6 @@
 			
 			&:nth-child(2) {
 				border-left-color: #FF9500; /* 评论区设置 - 橙色 */
-			}
-			
-			&:nth-child(3) {
-				border-left-color: #5856D6; /* 备忘录首页设置 - 紫色 */
-			}
-			
-			&:nth-child(4) {
-				border-left-color: #5AC8FA; /* 自定义页面设置 - 青色 */
-			}
-							
-			&:nth-child(5) {
-				border-left-color: #34C759; /* 我的页面设置 - 绿色 */
-			}
-							
-			&:nth-child(6) {
-				border-left-color: #FF2D55; /* 幸运用户配置 - 红色 */
 			}
 			
 			.section-title {

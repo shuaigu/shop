@@ -13,7 +13,7 @@ const _sfc_main = {
   __name: "my",
   setup(__props) {
     const userStore = store_user.useUserInfoStore();
-    const showCustomPageEntry = common_vendor.ref(true);
+    const showCustomPageEntry = common_vendor.ref(false);
     const showMyPage = common_vendor.ref(true);
     const configApi = common_vendor.tr.importObject("config", { customUI: true });
     const maskedMobile = common_vendor.computed(() => {
@@ -48,11 +48,11 @@ const _sfc_main = {
         if (res && res.data) {
           showCustomPageEntry.value = res.data.isVisible !== false;
         } else {
-          showCustomPageEntry.value = true;
+          showCustomPageEntry.value = false;
         }
       } catch (err) {
         console.error("获取自定义页面入口配置失败:", err);
-        showCustomPageEntry.value = true;
+        showCustomPageEntry.value = false;
       }
     };
     const getMyPageDisplayStatus = async () => {

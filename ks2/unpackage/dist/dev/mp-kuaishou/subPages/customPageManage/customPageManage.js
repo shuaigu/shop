@@ -19,7 +19,7 @@ const _sfc_main = {
     const configApi = common_vendor.tr.importObject("config", { customUI: true });
     const pageList = common_vendor.ref([]);
     const activeTab = common_vendor.ref("all");
-    const globalSwitch = common_vendor.ref(true);
+    const globalSwitch = common_vendor.ref(false);
     const popupRef = common_vendor.ref(null);
     const openPopup = () => {
       if (popupRef.value) {
@@ -55,17 +55,17 @@ const _sfc_main = {
         if (res && res.data) {
           globalSwitch.value = res.data.isVisible !== false;
         } else {
-          globalSwitch.value = true;
+          globalSwitch.value = false;
         }
       } catch (err) {
         console.error("获取总开关状态失败:", err);
-        globalSwitch.value = true;
+        globalSwitch.value = false;
       }
     };
-    const toggleGlobalSwitch = async () => {
+    const toggleGlobalSwitch = async (e) => {
       try {
         common_vendor.index.showLoading({ title: "更新中..." });
-        const newValue = !globalSwitch.value;
+        const newValue = e.detail.value;
         const res = await configApi.updateConfig({
           key: "customPageEntry",
           data: {
@@ -83,6 +83,7 @@ const _sfc_main = {
             icon: "success"
           });
         } else {
+          globalSwitch.value = !newValue;
           common_vendor.index.hideLoading();
           common_vendor.index.showToast({
             title: "更新失败",
@@ -90,6 +91,8 @@ const _sfc_main = {
           });
         }
       } catch (error) {
+        const oldValue = e.detail.value;
+        globalSwitch.value = !oldValue;
         common_vendor.index.hideLoading();
         console.error("切换总开关失败:", error);
         common_vendor.index.showToast({
@@ -576,15 +579,10 @@ const _sfc_main = {
         Y: common_vendor.p({
           type: "bottom"
         }),
-        Z: common_vendor.p({
-          type: "eye",
-          size: "20",
-          color: globalSwitch.value ? "#4CD964" : "#999"
-        }),
-        aa: globalSwitch.value,
-        ab: common_vendor.o(toggleGlobalSwitch),
-        ac: common_vendor.o(handleAddPage),
-        ad: common_vendor.p({
+        Z: globalSwitch.value,
+        aa: common_vendor.o(toggleGlobalSwitch),
+        ab: common_vendor.o(handleAddPage),
+        ac: common_vendor.p({
           icon: "plus",
           size: 100,
           position: {

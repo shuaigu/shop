@@ -10,7 +10,7 @@ const pageList = ref([])
 const activeTab = ref('all') // 当前激活的标签：all-全部，visible-已显示，hidden-已隐藏
 
 // 总开关状态
-const globalSwitch = ref(true)
+const globalSwitch = ref(false)
 
 // 弹窗ref
 const popupRef = ref(null)
@@ -56,20 +56,20 @@ const getGlobalSwitchStatus = async () => {
 		if (res && res.data) {
 			globalSwitch.value = res.data.isVisible !== false
 		} else {
-			globalSwitch.value = true
+			globalSwitch.value = false
 		}
 	} catch (err) {
 		console.error('获取总开关状态失败:', err)
-		globalSwitch.value = true
+		globalSwitch.value = false
 	}
 }
 
 // 切换总开关
-const toggleGlobalSwitch = async () => {
+const toggleGlobalSwitch = async (e) => {
 	try {
 		uni.showLoading({ title: '更新中...' })
 		
-		const newValue = !globalSwitch.value
+		const newValue = e.detail.value
 		const res = await configApi.updateConfig({
 			key: 'customPageEntry',
 			data: {
@@ -91,6 +91,8 @@ const toggleGlobalSwitch = async () => {
 				icon: 'success'
 			})
 		} else {
+			// 更新失败,恢复原来的状态
+			globalSwitch.value = !newValue
 			uni.hideLoading()
 			uni.showToast({
 				title: '更新失败',
@@ -98,6 +100,9 @@ const toggleGlobalSwitch = async () => {
 			})
 		}
 	} catch (error) {
+		// 出错时恢复原来的状态
+		const oldValue = e.detail.value
+		globalSwitch.value = !oldValue
 		uni.hideLoading()
 		console.error('切换总开关失败:', error)
 		uni.showToast({
@@ -737,16 +742,7 @@ const previewPage = (id) => {
 	
 	<!-- 总开关 -->
 	<view class="global-switch-panel">
-		<view class="switch-content">
-			<view class="switch-left">
-				<uni-icons type="eye" size="20" :color="globalSwitch ? '#4CD964' : '#999'"></uni-icons>
-				<text class="switch-label">显示“更多服务”入口</text>
-			</view>
-			<switch :checked="globalSwitch" @change="toggleGlobalSwitch" color="#4CD964" />
-		</view>
-		<view class="switch-tip">
-			<text>开启后，用户可以在“我的”页面看到入口</text>
-		</view>
+		<switch :checked="globalSwitch" @change="toggleGlobalSwitch" color="#4CD964" />
 	</view>
 	
 	<!-- 悬浮按钮 -->
@@ -1183,36 +1179,12 @@ const previewPage = (id) => {
 	bottom: 250rpx;
 	right: 40rpx;
 	background: #ffffff;
-	border-radius: 20rpx;
+	border-radius: 40rpx;
 	box-shadow: 0 4rpx 20rpx rgba(0, 0, 0, 0.15);
-	padding: 24rpx;
-	width: 440rpx;
+	padding: 12rpx 16rpx;
 	z-index: 999;
-	
-	.switch-content {
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-		margin-bottom: 12rpx;
-		
-		.switch-left {
-			display: flex;
-			align-items: center;
-			gap: 12rpx;
-			
-			.switch-label {
-				font-size: 28rpx;
-				font-weight: 500;
-				color: #333;
-			}
-		}
-	}
-	
-	.switch-tip {
-		font-size: 24rpx;
-		color: #999;
-		line-height: 1.5;
-		padding-left: 32rpx;
-	}
+	display: flex;
+	align-items: center;
+	justify-content: center;
 }
 </style>
