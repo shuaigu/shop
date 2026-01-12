@@ -480,7 +480,7 @@
 		<!-- 标题 -->
 		<view class="title">
 			<view class="logo">
-				<image src="/static/images/logo.png" mode="aspectFit"></image>
+				<image src="/static/images/loading.png" mode="aspectFit"></image>
 			</view>
 			<!-- 提示词 -->
 			<view class="wenben">

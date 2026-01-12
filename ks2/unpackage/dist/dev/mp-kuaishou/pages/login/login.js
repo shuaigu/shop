@@ -315,7 +315,7 @@ const _sfc_main = {
     };
     return (_ctx, _cache) => {
       return common_vendor.e({
-        a: common_assets._imports_0,
+        a: common_assets._imports_0$1,
         b: common_vendor.o(($event) => aloneChecked.value = $event),
         c: common_vendor.p({
           activeColor: "#46b0fe",
