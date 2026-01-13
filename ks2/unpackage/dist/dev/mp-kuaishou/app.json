@@ -1,6 +1,7 @@
 {
   "pages": [
     "pages/memo/memo",
+    "pages/memo/myCollections",
     "pages/index/index",
     "pages/my/my",
     "pages/login/login",

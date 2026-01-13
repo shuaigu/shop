@@ -29,8 +29,20 @@ const _sfc_main = {
       isVisible: true
       // 默认显示
     });
+    const memoList = common_vendor.ref([]);
+    const showMemoDialog = common_vendor.ref(false);
+    const memoForm = common_vendor.ref({
+      id: "",
+      title: "",
+      content: "",
+      image_url: "",
+      sort_order: 0,
+      is_enabled: true
+    });
+    const isEditMemo = common_vendor.ref(false);
     const daohangApi = common_vendor.tr.importObject("daohang", { customUI: true });
     const configApi = common_vendor.tr.importObject("config", { customUI: true });
+    const memoApi = common_vendor.tr.importObject("memoList", { customUI: true });
     const getNavInfo = async () => {
       try {
         common_vendor.index.showLoading({ title: "加载中..." });
@@ -132,6 +144,133 @@ const _sfc_main = {
         console.error("获取我的页面显示状态失败:", err);
         myPageDisplay.value = { isVisible: true };
       }
+    };
+    const getMemoList = async () => {
+      try {
+        const res = await memoApi.getAllDefaultMemos();
+        if (res && res.code === 0) {
+          memoList.value = res.data || [];
+        } else {
+          memoList.value = [];
+        }
+      } catch (err) {
+        console.error("获取备忘录列表失败:", err);
+        memoList.value = [];
+      }
+    };
+    const openAddMemoDialog = () => {
+      isEditMemo.value = false;
+      memoForm.value = {
+        id: "",
+        title: "",
+        content: "",
+        image_url: "",
+        sort_order: 0,
+        is_enabled: true
+      };
+      showMemoDialog.value = true;
+    };
+    const openEditMemoDialog = (memo) => {
+      isEditMemo.value = true;
+      memoForm.value = {
+        id: memo._id,
+        title: memo.title || "",
+        content: memo.content,
+        image_url: memo.image_url || "",
+        sort_order: memo.sort_order || 0,
+        is_enabled: memo.is_enabled
+      };
+      showMemoDialog.value = true;
+    };
+    const saveMemo = async () => {
+      try {
+        if (!memoForm.value.title.trim() && !memoForm.value.content.trim()) {
+          return common_vendor.index.showToast({ title: "请输入标题或内容", icon: "none" });
+        }
+        common_vendor.index.showLoading({ title: "保存中..." });
+        let res;
+        if (isEditMemo.value) {
+          res = await memoApi.updateDefaultMemo({
+            id: memoForm.value.id,
+            data: {
+              title: memoForm.value.title,
+              content: memoForm.value.content,
+              image_url: memoForm.value.image_url,
+              sort_order: parseInt(memoForm.value.sort_order) || 0,
+              is_enabled: memoForm.value.is_enabled
+            }
+          });
+        } else {
+          res = await memoApi.addDefaultMemo({
+            title: memoForm.value.title,
+            content: memoForm.value.content,
+            image_url: memoForm.value.image_url,
+            sort_order: parseInt(memoForm.value.sort_order) || 0
+          });
+        }
+        if (res && res.code === 0) {
+          common_vendor.index.showToast({ title: "保存成功", icon: "success" });
+          showMemoDialog.value = false;
+          await getMemoList();
+        } else {
+          common_vendor.index.showToast({ title: (res == null ? void 0 : res.message) || "保存失败", icon: "none" });
+        }
+      } catch (err) {
+        console.error("保存备忘录失败:", err);
+        common_vendor.index.showToast({ title: "保存失败，请重试", icon: "none" });
+      } finally {
+        common_vendor.index.hideLoading();
+      }
+    };
+    const deleteMemo = async (id) => {
+      common_vendor.index.showModal({
+        title: "确认删除",
+        content: "确定要删除这条备忘录吗？",
+        success: async (res) => {
+          if (res.confirm) {
+            try {
+              common_vendor.index.showLoading({ title: "删除中..." });
+              const result = await memoApi.deleteDefaultMemo(id);
+              if (result && result.code === 0) {
+                common_vendor.index.showToast({ title: "删除成功", icon: "success" });
+                await getMemoList();
+              } else {
+                common_vendor.index.showToast({ title: (result == null ? void 0 : result.message) || "删除失败", icon: "none" });
+              }
+            } catch (err) {
+              console.error("删除备忘录失败:", err);
+              common_vendor.index.showToast({ title: "删除失败，请重试", icon: "none" });
+            } finally {
+              common_vendor.index.hideLoading();
+            }
+          }
+        }
+      });
+    };
+    const toggleMemoEnabled = async (memo) => {
+      try {
+        common_vendor.index.showLoading({ title: "更新中..." });
+        const res = await memoApi.updateDefaultMemo({
+          id: memo._id,
+          data: {
+            is_enabled: !memo.is_enabled
+          }
+        });
+        if (res && res.code === 0) {
+          common_vendor.index.showToast({ title: "更新成功", icon: "success" });
+          await getMemoList();
+        } else {
+          common_vendor.index.showToast({ title: (res == null ? void 0 : res.message) || "更新失败", icon: "none" });
+        }
+      } catch (err) {
+        console.error("更新备忘录状态失败:", err);
+        common_vendor.index.showToast({ title: "更新失败，请重试", icon: "none" });
+      } finally {
+        common_vendor.index.hideLoading();
+      }
+    };
+    const handleMemoContentInput = (e) => {
+      memoForm.value.content = e.detail.value;
     };
     const handleNavVisibilityChange = async (e) => {
       try {
@@ -281,16 +420,18 @@ const _sfc_main = {
         getCommentDisplayStatus(),
         getMemoHomeDisplayStatus(),
         getCustomPageEntryStatus(),
-        getMyPageDisplayStatus()
+        getMyPageDisplayStatus(),
+        getMemoList()
       ]);
       common_vendor.index.$emit("updateCommentVisibility", {
         isVisible: commentDisplay.value.isVisible
       });
       console.log("初始化完成，评论区显示状态:", commentDisplay.value.isVisible);
       console.log("初始化完成，备忘录首页显示状态:", memoHomeDisplay.value.isEnabled);
+      console.log("初始化完成，备忘录列表:", memoList.value.length);
     });
     return (_ctx, _cache) => {
-      return {
+      return common_vendor.e({
         a: navInfo.value.title,
         b: common_vendor.o(($event) => navInfo.value.title = $event.detail.value),
         c: navInfo.value.url,
@@ -300,7 +441,27 @@ const _sfc_main = {
         g: common_vendor.o(saveNavSettings),
         h: commentDisplay.value.isVisible,
         i: common_vendor.o(handleCommentVisibilityChange),
-        j: common_vendor.f(data.value, (item, k0, i0) => {
+        j: memoList.value.length === 0
+      }, memoList.value.length === 0 ? {} : {
+        k: common_vendor.f(memoList.value, (memo, index, i0) => {
+          return common_vendor.e({
+            a: common_vendor.t(index + 1),
+            b: common_vendor.t(memo.title || "(无标题)"),
+            c: memo.is_enabled,
+            d: common_vendor.o(($event) => toggleMemoEnabled(memo)),
+            e: common_vendor.t(memo.content),
+            f: memo.image_url
+          }, memo.image_url ? {
+            g: common_vendor.t(memo.image_url)
+          } : {}, {
+            h: common_vendor.o(($event) => openEditMemoDialog(memo)),
+            i: common_vendor.o(($event) => deleteMemo(memo._id)),
+            j: memo._id
+          });
+        })
+      }, {
+        l: common_vendor.o(openAddMemoDialog),
+        m: common_vendor.f(data.value, (item, k0, i0) => {
           return {
             a: common_vendor.t(item),
             b: "b5b6feed-0-" + i0,
@@ -308,14 +469,37 @@ const _sfc_main = {
             d: common_vendor.o(($event) => handleItem(item))
           };
         }),
-        k: common_vendor.p({
+        n: common_vendor.p({
           color: "#cccccc",
           ["custom-prefix"]: "iconfont",
           type: "icon-arrow-drop-right-line",
           size: "30"
         }),
-        l: common_vendor.gei(_ctx, "")
-      };
+        o: showMemoDialog.value
+      }, showMemoDialog.value ? {
+        p: common_vendor.t(isEditMemo.value ? "编辑备忘录" : "添加备忘录"),
+        q: common_vendor.o(($event) => showMemoDialog.value = false),
+        r: memoForm.value.title,
+        s: common_vendor.o(($event) => memoForm.value.title = $event.detail.value),
+        t: common_vendor.o([($event) => memoForm.value.content = $event.detail.value, handleMemoContentInput]),
+        v: common_vendor.o(() => {
+        }),
+        w: memoForm.value.content,
+        x: common_vendor.t(memoForm.value.content ? memoForm.value.content.length : 0),
+        y: memoForm.value.image_url,
+        z: common_vendor.o(($event) => memoForm.value.image_url = $event.detail.value),
+        A: memoForm.value.sort_order,
+        B: common_vendor.o(($event) => memoForm.value.sort_order = $event.detail.value),
+        C: memoForm.value.is_enabled,
+        D: common_vendor.o(($event) => memoForm.value.is_enabled = $event.detail.value),
+        E: common_vendor.o(($event) => showMemoDialog.value = false),
+        F: common_vendor.o(saveMemo),
+        G: common_vendor.o(() => {
+        }),
+        H: common_vendor.o(($event) => showMemoDialog.value = false)
+      } : {}, {
+        I: common_vendor.gei(_ctx, "")
+      });
     };
   }
 };

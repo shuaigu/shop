@@ -2,78 +2,7 @@
     "description": "项目私有配置文件。用于配置小程序项目私有配置。详见文档：https://open.kuaishou.com/docs/develop/developerTools/Localization-project.html",
     "condition": {
         "miniprogram": {
-            "list": [
-                {
-                    "configId": "94166419-fa0c-4255-bf3d-da1f3ef2585a",
-                    "scene": "011001",
-                    "name": "/pages/article/articleDetail",
-                    "path": "/pages/article/articleDetail",
-                    "params": "article_id=6958c234337a9f7ead09f20e&__id__=1",
-                    "mockUpdate": false,
-                    "partialCompile": {
-                        "enabled": false,
-                        "pages": [
-                            "/pages/article/articleDetail"
-                        ]
-                    }
-                },
-                {
-                    "configId": "e8d9ad7d-59b1-4e2a-affe-815a5e86a723",
-                    "scene": "011001",
-                    "name": "/pages/index/index",
-                    "path": "/pages/index/index",
-                    "params": "",
-                    "mockUpdate": false,
-                    "partialCompile": {
-                        "enabled": false,
-                        "pages": [
-                            "/pages/index/index"
-                        ]
-                    }
-                },
-                {
-                    "configId": "e67c6d91-bf77-4cc5-9105-313be587816f",
-                    "scene": "011001",
-                    "name": "/pages/index/index",
-                    "path": "/pages/index/index",
-                    "params": "",
-                    "mockUpdate": false,
-                    "partialCompile": {
-                        "enabled": false,
-                        "pages": [
-                            "/pages/index/index"
-                        ]
-                    }
-                },
-                {
-                    "configId": "bde9cff2-dd13-4435-a6bb-4568dd4efc99",
-                    "scene": "011001",
-                    "name": "/subPages/customPageManage/customPageMa",
-                    "path": "/subPages/customPageManage/customPageManage",
-                    "params": "__id__=2",
-                    "mockUpdate": false,
-                    "partialCompile": {
-                        "enabled": false,
-                        "pages": [
-                            "/subPages/customPageManage/customPageManage"
-                        ]
-                    }
-                },
-                {
-                    "configId": "53a57201-5cdc-4b4c-8320-12662ab723c9",
-                    "scene": "011001",
-                    "name": "/pages/article/articleDetail",
-                    "path": "/pages/article/articleDetail",
-                    "params": "article_id=695a1a3b6e5d2d32f82b9949&__id__=2",
-                    "mockUpdate": false,
-                    "partialCompile": {
-                        "enabled": false,
-                        "pages": [
-                            "/pages/article/articleDetail"
-                        ]
-                    }
-                }
-            ],
+            "list": [],
             "active": ""
         }
     }

@@ -1,0 +1,60 @@
+{
+  "bsonType": "object",
+  "required": [],
+  "permission": {
+    "read": true,
+    "create": false,
+    "update": false,
+    "delete": false
+  },
+  "properties": {
+    "_id": {
+      "description": "ID，系统自动生成"
+    },
+    "title": {
+      "bsonType": "string",
+      "title": "标题",
+      "description": "备忘录标题",
+      "trim": "both"
+    },
+    "content": {
+      "bsonType": "string",
+      "title": "内容",
+      "description": "备忘录内容",
+      "trim": "both"
+    },
+    "image_url": {
+      "bsonType": "string",
+      "title": "配图URL",
+      "description": "备忘录配图地址"
+    },
+    "sort_order": {
+      "bsonType": "int",
+      "title": "排序",
+      "description": "数字越小越靠前，默认0",
+      "default": 0
+    },
+    "is_enabled": {
+      "bsonType": "bool",
+      "title": "是否启用",
+      "description": "是否显示该备忘录",
+      "default": true
+    },
+    "create_time": {
+      "bsonType": "timestamp",
+      "title": "创建时间",
+      "description": "创建时间",
+      "forceDefaultValue": {
+        "$env": "now"
+      }
+    },
+    "update_time": {
+      "bsonType": "timestamp",
+      "title": "更新时间",
+      "description": "更新时间",
+      "forceDefaultValue": {
+        "$env": "now"
+      }
+    }
+  }
+}

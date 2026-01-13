@@ -19,6 +19,16 @@
 			}
 		},
 		{
+			"path" : "pages/memo/myCollections",
+			"style" : 
+			{
+				"navigationBarTitleText" : "我的收藏",
+				"navigationBarBackgroundColor": "#399bfe",
+				"navigationBarTextStyle": "white",
+				"enablePullDownRefresh": true
+			}
+		},
+		{
 			"path": "pages/index/index",
 			"style": {
 				"navigationBarTitleText": "酒旅圈圈",

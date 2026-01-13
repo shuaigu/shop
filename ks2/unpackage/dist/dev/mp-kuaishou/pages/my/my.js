@@ -96,6 +96,13 @@ const _sfc_main = {
         });
       }
     };
+    const collectionManage = () => {
+      if (isAdmin.value) {
+        common_vendor.index.navigateTo({
+          url: "/pages/memo/myCollections"
+        });
+      }
+    };
     const loginOut = () => {
       common_vendor.index.showModal({
         title: "提示",
@@ -169,8 +176,7 @@ const _sfc_main = {
       }, common_vendor.unref(userStore).userInfo.role[0] == "admin" ? {
         s: common_vendor.p({
           color: "#999999",
-          ["custom-prefix"]: "iconfont",
-          type: "icon-houtaiguanli",
+          type: "heart",
           size: "22"
         }),
         t: common_vendor.p({
@@ -179,14 +185,14 @@ const _sfc_main = {
           type: "icon-arrow-drop-right-line",
           size: "30"
         }),
-        v: common_vendor.o(adminManage)
+        v: common_vendor.o(collectionManage)
       } : {}, {
-        w: common_vendor.unref(userStore).userInfo.isLogin
-      }, common_vendor.unref(userStore).userInfo.isLogin ? {
+        w: common_vendor.unref(userStore).userInfo.role[0] == "admin"
+      }, common_vendor.unref(userStore).userInfo.role[0] == "admin" ? {
         x: common_vendor.p({
           color: "#999999",
           ["custom-prefix"]: "iconfont",
-          type: "icon-tuichudenglu",
+          type: "icon-houtaiguanli",
           size: "22"
         }),
         y: common_vendor.p({
@@ -195,7 +201,23 @@ const _sfc_main = {
           type: "icon-arrow-drop-right-line",
           size: "30"
         }),
-        z: common_vendor.o(loginOut)
+        z: common_vendor.o(adminManage)
+      } : {}, {
+        A: common_vendor.unref(userStore).userInfo.isLogin
+      }, common_vendor.unref(userStore).userInfo.isLogin ? {
+        B: common_vendor.p({
+          color: "#999999",
+          ["custom-prefix"]: "iconfont",
+          type: "icon-tuichudenglu",
+          size: "22"
+        }),
+        C: common_vendor.p({
+          color: "#cccccc",
+          ["custom-prefix"]: "iconfont",
+          type: "icon-arrow-drop-right-line",
+          size: "30"
+        }),
+        D: common_vendor.o(loginOut)
       } : {}));
     };
   }

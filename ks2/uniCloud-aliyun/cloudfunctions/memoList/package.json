@@ -1,0 +1,8 @@
+{
+  "name": "memoList",
+  "version": "1.0.0",
+  "description": "备忘录管理云对象",
+  "main": "index.obj.js",
+  "author": "",
+  "license": "ISC"
+}

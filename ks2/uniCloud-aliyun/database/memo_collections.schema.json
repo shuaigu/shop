@@ -1,0 +1,46 @@
+{
+  "bsonType": "object",
+  "required": ["user_id", "memo_id"],
+  "permission": {
+    "read": "doc.user_id == auth.uid",
+    "create": "auth.uid != null",
+    "update": false,
+    "delete": "doc.user_id == auth.uid"
+  },
+  "properties": {
+    "_id": {
+      "description": "ID，系统自动生成"
+    },
+    "user_id": {
+      "bsonType": "string",
+      "title": "用户ID",
+      "description": "收藏用户ID",
+      "forceDefaultValue": {
+        "$env": "uid"
+      }
+    },
+    "memo_id": {
+      "bsonType": "string",
+      "title": "备忘录ID",
+      "description": "收藏的备忘录ID"
+    },
+    "share_user_id": {
+      "bsonType": "string",
+      "title": "分享用户ID",
+      "description": "分享该内容的用户ID，用于归类收集"
+    },
+    "share_user_nickname": {
+      "bsonType": "string",
+      "title": "分享用户昵称",
+      "description": "分享用户的昵称，便于展示"
+    },
+    "collection_time": {
+      "bsonType": "timestamp",
+      "title": "收藏时间",
+      "description": "用户收藏时间",
+      "forceDefaultValue": {
+        "$env": "now"
+      }
+    }
+  }
+}

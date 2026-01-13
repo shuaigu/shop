@@ -1,7 +1,9 @@
 "use strict";
 const common_vendor = require("../../common/vendor.js");
+const store_user = require("../../store/user.js");
 const _sfc_main = {
   data() {
+    store_user.useUserInfoStore();
     return {
       // 标签页
       tabs: [
@@ -15,6 +17,13 @@ const _sfc_main = {
       priorities: ["低", "中", "高"],
       // 备忘录列表
       memos: [],
+      // 默认备忘录列表
+      defaultMemos: [],
+      // 收藏状态映射（memo_id -> boolean）
+      collectedMap: {},
+      // 分享用户信息
+      shareUserId: "",
+      shareUserNickname: "",
       // 弹窗控制
       showAddDialog: false,
       isEdit: false,
@@ -53,11 +62,183 @@ const _sfc_main = {
       }
     }
   },
-  onLoad() {
+  onLoad(options) {
     console.log("=== 页面加载 onLoad ===");
+    if (options && options.shareUserId) {
+      this.shareUserId = options.shareUserId;
+      this.shareUserNickname = options.shareUserNickname || "";
+      console.log("获取到分享用户:", this.shareUserId, this.shareUserNickname);
+      try {
+        common_vendor.index.setStorageSync("memo_share_user", {
+          id: this.shareUserId,
+          nickname: this.shareUserNickname
+        });
+      } catch (e) {
+        console.error("保存分享用户信息失败:", e);
+      }
+    } else {
+      try {
+        const shareUserInfo = common_vendor.index.getStorageSync("memo_share_user");
+        if (shareUserInfo) {
+          this.shareUserId = shareUserInfo.id || "";
+          this.shareUserNickname = shareUserInfo.nickname || "";
+          console.log("从本地获取分享用户:", this.shareUserId, this.shareUserNickname);
+        }
+      } catch (e) {
+        console.error("获取本地分享用户信息失败:", e);
+      }
+    }
     this.loadMemos();
+    this.loadDefaultMemos();
   },
   methods: {
+    // 加载默认备忘录
+    async loadDefaultMemos() {
+      console.log("=== 开始加载默认备忘录 ===");
+      try {
+        const memoApi = common_vendor.tr.importObject("memoList", { customUI: true });
+        const res = await memoApi.getDefaultMemos();
+        if (res && res.code === 0) {
+          this.defaultMemos = res.data || [];
+          console.log("加载默认备忘录成功:", this.defaultMemos.length, "条");
+          await this.loadCollectionStatus();
+        } else {
+          console.log("加载默认备忘录失败:", res == null ? void 0 : res.message);
+          this.defaultMemos = [];
+        }
+      } catch (e) {
+        console.error("加载默认备忘录失败:", e);
+        this.defaultMemos = [];
+      }
+    },
+    // 加载收藏状态
+    async loadCollectionStatus() {
+      console.log("=== 加载收藏状态 ===");
+      try {
+        const userStore = store_user.useUserInfoStore();
+        const userId = userStore.userInfo.uid;
+        if (!userId) {
+          console.log("用户未登录，跳过加载收藏状态");
+          return;
+        }
+        const memoApi = common_vendor.tr.importObject("memoList", { customUI: true });
+        for (const memo of this.defaultMemos) {
+          try {
+            const res = await memoApi.checkCollected(memo._id, userId);
+            if (res && res.code === 0) {
+              this.collectedMap[memo._id] = res.data.collected;
+            }
+          } catch (e) {
+            console.error("检查收藏状态失败:", e);
+          }
+        }
+        console.log("收藏状态加载完成:", this.collectedMap);
+      } catch (e) {
+        console.error("加载收藏状态失败:", e);
+      }
+    },
+    // 收藏备忘录
+    async collectMemo(memo) {
+      console.log("=== 收藏备忘录 ===");
+      console.log("memo 对象:", JSON.stringify(memo));
+      console.log("memo._id:", memo._id);
+      console.log("当前收藏状态:", this.collectedMap[memo._id]);
+      if (!memo || !memo._id) {
+        console.error("备忘录对象无效，缺少_id");
+        common_vendor.index.showToast({
+          title: "备忘录信息错误",
+          icon: "none",
+          duration: 2e3
+        });
+        return;
+      }
+      const userStore = store_user.useUserInfoStore();
+      const isLogin = userStore.userInfo.isLogin;
+      const userId = userStore.userInfo.uid;
+      if (!isLogin || !userId) {
+        console.log("用户未登录，唤起登录");
+        common_vendor.index.showModal({
+          title: "提示",
+          content: "收藏功能需要登录，是否前往登录？",
+          success: (res) => {
+            if (res.confirm) {
+              const currentPath = "/pages/memo/memo";
+              common_vendor.index.redirectTo({
+                url: "/pages/login/login?redirect=" + encodeURIComponent(currentPath),
+                fail: (err) => {
+                  console.error("跳转登录页失败:", err);
+                  common_vendor.index.reLaunch({
+                    url: "/pages/login/login?redirect=" + encodeURIComponent(currentPath)
+                  });
+                }
+              });
+            }
+          }
+        });
+        return;
+      }
+      try {
+        const memoApi = common_vendor.tr.importObject("memoList", { customUI: true });
+        if (this.collectedMap[memo._id]) {
+          console.log("执行取消收藏操作...");
+          const res = await memoApi.uncollectMemo(memo._id, userId);
+          console.log("取消收藏结果:", res);
+          if (res && res.code === 0) {
+            this.collectedMap[memo._id] = false;
+            this.$forceUpdate();
+            common_vendor.index.showToast({
+              title: "已取消收藏",
+              icon: "success",
+              duration: 1500
+            });
+          } else {
+            common_vendor.index.showToast({
+              title: (res == null ? void 0 : res.message) || "取消收藏失败",
+              icon: "none"
+            });
+          }
+        } else {
+          console.log("执行收藏操作...");
+          console.log("收藏参数:", {
+            memo_id: memo._id,
+            user_id: userId,
+            share_user_id: this.shareUserId,
+            share_user_nickname: this.shareUserNickname
+          });
+          const res = await memoApi.collectMemo({
+            memo_id: memo._id,
+            user_id: userId,
+            share_user_id: this.shareUserId,
+            share_user_nickname: this.shareUserNickname
+          });
+          console.log("收藏结果:", res);
+          if (res && res.code === 0) {
+            this.collectedMap[memo._id] = true;
+            this.$forceUpdate();
+            common_vendor.index.showToast({
+              title: "收藏成功",
+              icon: "success",
+              duration: 1500
+            });
+          } else {
+            common_vendor.index.showToast({
+              title: (res == null ? void 0 : res.message) || "收藏失败",
+              icon: "none",
+              duration: 2e3
+            });
+          }
+        }
+      } catch (e) {
+        console.error("收藏操作失败:", e);
+        console.error("错误堆栈:", e.stack);
+        const errorMsg = e.message || e.errMsg || "操作失败，请重试";
+        common_vendor.index.showToast({
+          title: errorMsg,
+          icon: "none",
+          duration: 2e3
+        });
+      }
+    },
     // 加载备忘录
     loadMemos() {
       console.log("=== 开始加载备忘录 ===");
@@ -300,11 +481,31 @@ function _sfc_render(_ctx, _cache, $props, $setup, $data, $options) {
         d: common_vendor.o(($event) => $options.switchTab(tab.value))
       };
     }),
-    b: $options.filteredMemos.length === 0
+    b: $data.defaultMemos.length > 0
+  }, $data.defaultMemos.length > 0 ? {
+    c: common_vendor.f($data.defaultMemos, (memo, k0, i0) => {
+      return common_vendor.e({
+        a: memo.image_url
+      }, memo.image_url ? {
+        b: memo.image_url
+      } : {}, {
+        c: memo.title
+      }, memo.title ? {
+        d: common_vendor.t(memo.title)
+      } : {}, {
+        e: common_vendor.t(memo.content),
+        f: common_vendor.t($data.collectedMap[memo._id] ? "♥" : "♡"),
+        g: $data.collectedMap[memo._id] ? 1 : "",
+        h: common_vendor.o(($event) => $options.collectMemo(memo)),
+        i: memo._id
+      });
+    })
+  } : {}, {
+    d: $options.filteredMemos.length === 0
   }, $options.filteredMemos.length === 0 ? {
-    c: common_vendor.t($options.emptyText)
+    e: common_vendor.t($options.emptyText)
   } : {
-    d: common_vendor.f($options.filteredMemos, (memo, index, i0) => {
+    f: common_vendor.f($options.filteredMemos, (memo, index, i0) => {
       return common_vendor.e({
         a: memo.is_completed
       }, memo.is_completed ? {} : {}, {
@@ -327,17 +528,17 @@ function _sfc_render(_ctx, _cache, $props, $setup, $data, $options) {
       });
     })
   }, {
-    e: common_vendor.o((...args) => $options.openAddDialog && $options.openAddDialog(...args)),
-    f: $data.showAddDialog
+    g: common_vendor.o((...args) => $options.openAddDialog && $options.openAddDialog(...args)),
+    h: $data.showAddDialog
   }, $data.showAddDialog ? {
-    g: common_vendor.t($data.isEdit ? "编辑备忘录" : "新建备忘录"),
-    h: common_vendor.o((...args) => $options.closeDialog && $options.closeDialog(...args)),
-    i: common_vendor.o((...args) => $options.handleContentInput && $options.handleContentInput(...args)),
-    j: common_vendor.o((...args) => $options.handleContentFocus && $options.handleContentFocus(...args)),
-    k: common_vendor.o((...args) => $options.handleContentBlur && $options.handleContentBlur(...args)),
-    l: common_vendor.o((...args) => $options.handleContentConfirm && $options.handleContentConfirm(...args)),
-    m: common_vendor.t($data.formData.content.length),
-    n: common_vendor.f($data.categories, (cat, k0, i0) => {
+    i: common_vendor.t($data.isEdit ? "编辑备忘录" : "新建备忘录"),
+    j: common_vendor.o((...args) => $options.closeDialog && $options.closeDialog(...args)),
+    k: common_vendor.o((...args) => $options.handleContentInput && $options.handleContentInput(...args)),
+    l: common_vendor.o((...args) => $options.handleContentFocus && $options.handleContentFocus(...args)),
+    m: common_vendor.o((...args) => $options.handleContentBlur && $options.handleContentBlur(...args)),
+    n: common_vendor.o((...args) => $options.handleContentConfirm && $options.handleContentConfirm(...args)),
+    o: common_vendor.t($data.formData.content.length),
+    p: common_vendor.f($data.categories, (cat, k0, i0) => {
       return {
         a: common_vendor.t(cat),
         b: cat,
@@ -345,7 +546,7 @@ function _sfc_render(_ctx, _cache, $props, $setup, $data, $options) {
         d: common_vendor.o(($event) => $options.selectCategory(cat))
       };
     }),
-    o: common_vendor.f($data.priorities, (pri, k0, i0) => {
+    q: common_vendor.f($data.priorities, (pri, k0, i0) => {
       return {
         a: common_vendor.t(pri),
         b: pri,
@@ -356,13 +557,13 @@ function _sfc_render(_ctx, _cache, $props, $setup, $data, $options) {
         e: common_vendor.o(($event) => $options.selectPriority(pri))
       };
     }),
-    p: common_vendor.o((...args) => $options.closeDialog && $options.closeDialog(...args)),
-    q: common_vendor.o((...args) => $options.saveMemo && $options.saveMemo(...args)),
-    r: common_vendor.o(() => {
+    r: common_vendor.o((...args) => $options.closeDialog && $options.closeDialog(...args)),
+    s: common_vendor.o((...args) => $options.saveMemo && $options.saveMemo(...args)),
+    t: common_vendor.o(() => {
     }),
-    s: common_vendor.o((...args) => $options.handleMaskClick && $options.handleMaskClick(...args))
+    v: common_vendor.o((...args) => $options.handleMaskClick && $options.handleMaskClick(...args))
   } : {}, {
-    t: common_vendor.gei(_ctx, "")
+    w: common_vendor.gei(_ctx, "")
   });
 }
 const MiniProgramPage = /* @__PURE__ */ common_vendor._export_sfc(_sfc_main, [["render", _sfc_render], ["__scopeId", "data-v-c0e26b37"]]);

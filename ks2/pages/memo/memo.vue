@@ -12,6 +12,46 @@
 				{{ tab.label }}
 			</view>
 		</view>
+		
+		<!-- 默认备忘录列表 -->
+		<view v-if="defaultMemos.length > 0" class="default-memo-section">
+			<view class="section-header">
+				<text class="section-title">推荐备忘</text>
+			</view>
+			<view class="default-memo-list">
+				<view 
+					v-for="memo in defaultMemos" 
+					:key="memo._id"
+					class="default-memo-item"
+				>
+					<!-- 左侧图片 -->
+					<view class="memo-image-container">
+						<image 
+							v-if="memo.image_url" 
+							:src="memo.image_url" 
+							class="memo-image"
+							mode="aspectFill"
+						/>
+						<view v-else class="memo-image-placeholder">
+							<text class="placeholder-icon">📝</text>
+						</view>
+					</view>
+					
+					<!-- 中间文字内容 -->
+					<view class="memo-text-container">
+						<text v-if="memo.title" class="memo-item-title">{{ memo.title }}</text>
+						<text class="memo-item-content">{{ memo.content }}</text>
+					</view>
+					
+					<!-- 右侧收藏按钮 -->
+					<view class="memo-collect-btn" @click="collectMemo(memo)">
+						<text class="collect-icon" :class="{ collected: collectedMap[memo._id] }">
+							{{ collectedMap[memo._id] ? '♥' : '♡' }}
+						</text>
+					</view>
+				</view>
+			</view>
+		</view>
 
 		<!-- 备忘录列表 -->
 		<scroll-view class="memo-list" scroll-y>
@@ -159,8 +199,11 @@
 </template>
 
 <script>
+import { useUserInfoStore } from '@/store/user.js'
+
 export default {
 	data() {
+		const userStore = useUserInfoStore()
 		return {
 			// 标签页
 			tabs: [
@@ -176,6 +219,16 @@ export default {
 			
 			// 备忘录列表
 			memos: [],
+			
+			// 默认备忘录列表
+			defaultMemos: [],
+			
+			// 收藏状态映射（memo_id -> boolean）
+			collectedMap: {},
+			
+			// 分享用户信息
+			shareUserId: '',
+			shareUserNickname: '',
 			
 			// 弹窗控制
 			showAddDialog: false,
@@ -220,12 +273,216 @@ export default {
 		}
 	},
 	
-	onLoad() {
+	onLoad(options) {
 		console.log('=== 页面加载 onLoad ===');
+		
+		// 获取分享用户信息
+		if (options && options.shareUserId) {
+			this.shareUserId = options.shareUserId;
+			this.shareUserNickname = options.shareUserNickname || '';
+			console.log('获取到分享用户:', this.shareUserId, this.shareUserNickname);
+			
+			// 保存到本地存储
+			try {
+				uni.setStorageSync('memo_share_user', {
+					id: this.shareUserId,
+					nickname: this.shareUserNickname
+				});
+			} catch (e) {
+				console.error('保存分享用户信息失败:', e);
+			}
+		} else {
+			// 尝试从本地存储获取
+			try {
+				const shareUserInfo = uni.getStorageSync('memo_share_user');
+				if (shareUserInfo) {
+					this.shareUserId = shareUserInfo.id || '';
+					this.shareUserNickname = shareUserInfo.nickname || '';
+					console.log('从本地获取分享用户:', this.shareUserId, this.shareUserNickname);
+				}
+			} catch (e) {
+				console.error('获取本地分享用户信息失败:', e);
+			}
+		}
+		
 		this.loadMemos();
+		this.loadDefaultMemos();
 	},
 	
 	methods: {
+		// 加载默认备忘录
+		async loadDefaultMemos() {
+			console.log('=== 开始加载默认备忘录 ===');
+			try {
+				const memoApi = uniCloud.importObject('memoList', { customUI: true });
+				const res = await memoApi.getDefaultMemos();
+				if (res && res.code === 0) {
+					this.defaultMemos = res.data || [];
+					console.log('加载默认备忘录成功:', this.defaultMemos.length, '条');
+					
+					// 加载收藏状态
+					await this.loadCollectionStatus();
+				} else {
+					console.log('加载默认备忘录失败:', res?.message);
+					this.defaultMemos = [];
+				}
+			} catch (e) {
+				console.error('加载默认备忘录失败:', e);
+				this.defaultMemos = [];
+			}
+		},
+		
+		// 加载收藏状态
+		async loadCollectionStatus() {
+			console.log('=== 加载收藏状态 ===');
+			try {
+				const userStore = useUserInfoStore();
+				const userId = userStore.userInfo.uid;
+				
+				if (!userId) {
+					console.log('用户未登录，跳过加载收藏状态');
+					return;
+				}
+				
+				const memoApi = uniCloud.importObject('memoList', { customUI: true });
+				
+				// 检查每个默认备忘录的收藏状态
+				for (const memo of this.defaultMemos) {
+					try {
+						const res = await memoApi.checkCollected(memo._id, userId);
+						if (res && res.code === 0) {
+							this.collectedMap[memo._id] = res.data.collected;
+						}
+					} catch (e) {
+						console.error('检查收藏状态失败:', e);
+					}
+				}
+				console.log('收藏状态加载完成:', this.collectedMap);
+			} catch (e) {
+				console.error('加载收藏状态失败:', e);
+			}
+		},
+		
+		// 收藏备忘录
+		async collectMemo(memo) {
+			console.log('=== 收藏备忘录 ===');
+			console.log('memo 对象:', JSON.stringify(memo));
+			console.log('memo._id:', memo._id);
+			console.log('当前收藏状态:', this.collectedMap[memo._id]);
+			
+			if (!memo || !memo._id) {
+				console.error('备忘录对象无效，缺少_id');
+				uni.showToast({
+					title: '备忘录信息错误',
+					icon: 'none',
+					duration: 2000
+				});
+				return;
+			}
+			
+			// 获取用户登录状态
+			const userStore = useUserInfoStore();
+			const isLogin = userStore.userInfo.isLogin;
+			const userId = userStore.userInfo.uid;
+			
+			// 检查登录状态
+			if (!isLogin || !userId) {
+				console.log('用户未登录，唤起登录');
+				uni.showModal({
+					title: '提示',
+					content: '收藏功能需要登录，是否前往登录？',
+					success: (res) => {
+						if (res.confirm) {
+							// 获取当前页面路径
+							const currentPath = '/pages/memo/memo';
+							// 使用 redirectTo 避免页面栈溢出
+							uni.redirectTo({
+								url: '/pages/login/login?redirect=' + encodeURIComponent(currentPath),
+								fail: (err) => {
+									console.error('跳转登录页失败:', err);
+									// 如果 redirectTo 失败,尝试 reLaunch
+									uni.reLaunch({
+										url: '/pages/login/login?redirect=' + encodeURIComponent(currentPath)
+									});
+								}
+							});
+						}
+					}
+				});
+				return;
+			}
+			
+			try {
+				const memoApi = uniCloud.importObject('memoList', { customUI: true });
+				
+				if (this.collectedMap[memo._id]) {
+					// 取消收藏
+					console.log('执行取消收藏操作...');
+					const res = await memoApi.uncollectMemo(memo._id, userId);
+					console.log('取消收藏结果:', res);
+					
+					if (res && res.code === 0) {
+						this.collectedMap[memo._id] = false;
+						this.$forceUpdate();
+						uni.showToast({
+							title: '已取消收藏',
+							icon: 'success',
+							duration: 1500
+						});
+					} else {
+						uni.showToast({
+							title: res?.message || '取消收藏失败',
+							icon: 'none'
+						});
+					}
+				} else {
+					// 收藏
+					console.log('执行收藏操作...');
+					console.log('收藏参数:', {
+						memo_id: memo._id,
+						user_id: userId,
+						share_user_id: this.shareUserId,
+						share_user_nickname: this.shareUserNickname
+					});
+					
+					const res = await memoApi.collectMemo({
+						memo_id: memo._id,
+						user_id: userId,
+						share_user_id: this.shareUserId,
+						share_user_nickname: this.shareUserNickname
+					});
+					
+					console.log('收藏结果:', res);
+					
+					if (res && res.code === 0) {
+						this.collectedMap[memo._id] = true;
+						this.$forceUpdate();
+						uni.showToast({
+							title: '收藏成功',
+							icon: 'success',
+							duration: 1500
+						});
+					} else {
+						uni.showToast({
+							title: res?.message || '收藏失败',
+							icon: 'none',
+							duration: 2000
+						});
+					}
+				}
+			} catch (e) {
+				console.error('收藏操作失败:', e);
+				console.error('错误堆栈:', e.stack);
+				// 显示更详细的错误信息
+				const errorMsg = e.message || e.errMsg || '操作失败，请重试';
+				uni.showToast({
+					title: errorMsg,
+					icon: 'none',
+					duration: 2000
+				});
+			}
+		},
+		
 		// 加载备忘录
 		loadMemos() {
 			console.log('=== 开始加载备忘录 ===');
@@ -529,6 +786,138 @@ export default {
 				height: 4rpx;
 				background: #399bfe;
 				border-radius: 2rpx;
+			}
+		}
+	}
+}
+
+/* 默认备忘录区域 */
+.default-memo-section {
+	background: #fff;
+	margin: 24rpx;
+	border-radius: 16rpx;
+	padding: 24rpx;
+	box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.06);
+	
+	.section-header {
+		margin-bottom: 20rpx;
+		padding-bottom: 16rpx;
+		border-bottom: 2rpx solid #f0f0f0;
+		
+		.section-title {
+			font-size: 32rpx;
+			font-weight: bold;
+			color: #333;
+			position: relative;
+			padding-left: 20rpx;
+			
+			&::before {
+				content: '';
+				position: absolute;
+				left: 0;
+				top: 50%;
+				transform: translateY(-50%);
+				width: 8rpx;
+				height: 28rpx;
+				background: #399bfe;
+				border-radius: 4rpx;
+			}
+		}
+	}
+	
+	.default-memo-list {
+		.default-memo-item {
+			display: flex;
+			align-items: center;
+			gap: 24rpx;
+			padding: 20rpx 0;
+			border-bottom: 1rpx solid #f5f5f5;
+			
+			&:last-child {
+				border-bottom: none;
+			}
+			
+			// 左侧图片
+			.memo-image-container {
+				flex-shrink: 0;
+				width: 120rpx;
+				height: 120rpx;
+				border-radius: 12rpx;
+				overflow: hidden;
+				
+				.memo-image {
+					width: 100%;
+					height: 100%;
+				}
+				
+				.memo-image-placeholder {
+					width: 100%;
+					height: 100%;
+					background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+					display: flex;
+					align-items: center;
+					justify-content: center;
+					
+					.placeholder-icon {
+						font-size: 60rpx;
+					}
+				}
+			}
+			
+			// 中间文字
+			.memo-text-container {
+				flex: 1;
+				display: flex;
+				flex-direction: column;
+				gap: 8rpx;
+				min-width: 0;
+				
+				.memo-item-title {
+					font-size: 30rpx;
+					font-weight: bold;
+					color: #333;
+					overflow: hidden;
+					text-overflow: ellipsis;
+					white-space: nowrap;
+				}
+				
+				.memo-item-content {
+					font-size: 26rpx;
+					color: #666;
+					line-height: 1.6;
+					display: -webkit-box;
+					-webkit-box-orient: vertical;
+					-webkit-line-clamp: 2;
+					overflow: hidden;
+					text-overflow: ellipsis;
+				}
+			}
+			
+			// 右侧收藏按钮
+			.memo-collect-btn {
+				flex-shrink: 0;
+				width: 80rpx;
+				height: 80rpx;
+				display: flex;
+				align-items: center;
+				justify-content: center;
+				background: #f5f5f5;
+				border-radius: 50%;
+				transition: all 0.3s;
+				
+				&:active {
+					transform: scale(0.9);
+				}
+				
+				.collect-icon {
+					font-size: 48rpx;
+					color: #999;
+					transition: all 0.3s;
+					
+					&.collected {
+						color: #ff5a5f;
+					}
+				}
 			}
 		}
 	}

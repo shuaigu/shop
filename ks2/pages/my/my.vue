@@ -118,6 +118,15 @@
 			} )
 		}
 	}
+	
+	// 收藏管理
+	const collectionManage = ( ) => {
+		if ( isAdmin.value ) {
+			uni.navigateTo( {
+				url: "/pages/memo/myCollections"
+			} )
+		}
+	}
 
 	// 点击退出登录
 	const loginOut = ( ) => {
@@ -191,6 +200,15 @@
 				<view class="left">
 					<uni-icons style="padding-top: 2px;" color="#999999" type="star" size="22"></uni-icons>
 					<text class="value">更多服务</text>
+				</view>
+				<uni-icons color="#cccccc" custom-prefix="iconfont" type="icon-arrow-drop-right-line"
+					size="30"></uni-icons>
+			</view>
+			<!-- 收藏管理 -->
+			<view class="collectionManage" @click="collectionManage" v-if="userStore.userInfo.role[0]=='admin'">
+				<view class="left">
+					<uni-icons style="padding-top: 2px;" color="#999999" type="heart" size="22"></uni-icons>
+					<text class="value">收藏管理</text>
 				</view>
 				<uni-icons color="#cccccc" custom-prefix="iconfont" type="icon-arrow-drop-right-line"
 					size="30"></uni-icons>
@@ -328,6 +346,11 @@
 				@include optionalCommon;
 			}
 
+			/*收藏管理*/
+			.collectionManage {
+				@include optionalCommon;
+			}
+			
 			/*后台管理*/
 			.adminManage {
 				@include optionalCommon;
