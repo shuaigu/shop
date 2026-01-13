@@ -16,50 +16,7 @@
 		user_id: String
 	} )
 
-	// 处理页面跳转逻辑
-	const handlePageNavigation = async () => {
-		try {
-			// 获取当前页面栈
-			const pages = getCurrentPages()
-			
-			// 如果是直接进入详情页（页面栈长度为1）
-			if (pages.length === 1) {
-				// 先跳转到首页
-				uni.switchTab({
-					url: '/pages/index/index',
-					success: () => {
-						// 首页加载完成后，再跳转回文章详情页
-						setTimeout(() => {
-							uni.navigateTo({
-								url: `/pages/article/articleDetail?article_id=${props.article_id}`,
-								fail: (err) => {
-									console.error('跳转回文章详情页失败:', err)
-								}
-							})
-						}, 500) // 给首页一些加载时间
-					},
-					fail: (err) => {
-						console.error('跳转到首页失败:', err)
-						// 如果跳转失败，仍然尝试加载首页数据
-						try {
-							const cateApi = uniCloud.importObject('cateKs', { customUI: true })
-							cateApi.get().catch(err => {
-								console.warn('预加载首页数据失败', err)
-							})
-						} catch (err) {
-							console.warn('初始化首页数据失败', err)
-						}
-					}
-				})
-				return true // 返回 true 表示需要跳转
-			}
-
-			return false // 返回 false 表示无需跳转
-		} catch (err) {
-			console.error('页面导航错误：', err)
-			return false
-		}
-	}
+	// 页面跳转逻辑已移除 - 支持直接通过分享链接访问详情页
 	// 添加一个加载状态标记
 	const isLoading = ref( true )
 	const isSubmitting = ref( false )
@@ -123,12 +80,6 @@
 	// 获取文章详情
 	const getArticleDetail = async () => {
 		try {
-			// 先检查是否需要处理页面导航
-			const needRedirect = await handlePageNavigation()
-			if (needRedirect) {
-				return // 如果需要重定向，直接返回
-			}
-
 			// 检查文章ID是否存在
 			if (!props.article_id) {
 				throw new Error('文章ID不能为空')
@@ -1217,6 +1168,55 @@
 			});
 		}
 	});
+</script>
+
+<script>
+// 小程序分享配置 - 使用 Options API
+export default {
+	// 分享给好友
+	onShareAppMessage(options) {
+		// 获取当前页面的实例
+		const pages = getCurrentPages();
+		const currentPage = pages[pages.length - 1];
+		const article_id = currentPage.$page?.options?.article_id || currentPage.options?.article_id;
+		
+		console.log('分享给好友:', {
+			options,
+			article_id
+		});
+		
+		// 返回分享信息
+		return {
+			title: '来看看这条内容',
+			path: `/pages/article/articleDetail?article_id=${article_id}`,
+			imageUrl: '', // 可以在这里设置分享图片
+			success: (res) => {
+				console.log('分享成功', res);
+			},
+			fail: (err) => {
+				console.error('分享失败', err);
+			}
+		};
+	},
+	
+	// 分享到朋友圈（微信小程序）
+	onShareTimeline(options) {
+		const pages = getCurrentPages();
+		const currentPage = pages[pages.length - 1];
+		const article_id = currentPage.$page?.options?.article_id || currentPage.options?.article_id;
+		
+		console.log('分享到朋友圈:', {
+			options,
+			article_id
+		});
+		
+		return {
+			title: '来看看这条内容',
+			query: `article_id=${article_id}`,
+			imageUrl: ''
+		};
+	}
+};
 </script>
 
 <template>

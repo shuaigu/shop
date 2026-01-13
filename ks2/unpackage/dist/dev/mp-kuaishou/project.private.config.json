@@ -58,6 +58,20 @@
                             "/subPages/customPageManage/customPageManage"
                         ]
                     }
+                },
+                {
+                    "configId": "53a57201-5cdc-4b4c-8320-12662ab723c9",
+                    "scene": "011001",
+                    "name": "/pages/article/articleDetail",
+                    "path": "/pages/article/articleDetail",
+                    "params": "article_id=695a1a3b6e5d2d32f82b9949&__id__=2",
+                    "mockUpdate": false,
+                    "partialCompile": {
+                        "enabled": false,
+                        "pages": [
+                            "/pages/article/articleDetail"
+                        ]
+                    }
                 }
             ],
             "active": ""

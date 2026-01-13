@@ -19,7 +19,48 @@ if (!Math) {
 const tuijian = () => "../../components/tuijian/tuijian.js";
 const Tuouanyulan = () => "../../components/tuouanyulan/tuouanyulan.js";
 const Dianzan = () => "../../components/dianzan/dianzan.js";
-const _sfc_main = {
+const __default__ = {
+  // 分享给好友
+  onShareAppMessage(options) {
+    var _a, _b, _c;
+    const pages = getCurrentPages();
+    const currentPage = pages[pages.length - 1];
+    const article_id = ((_b = (_a = currentPage.$page) == null ? void 0 : _a.options) == null ? void 0 : _b.article_id) || ((_c = currentPage.options) == null ? void 0 : _c.article_id);
+    console.log("分享给好友:", {
+      options,
+      article_id
+    });
+    return {
+      title: "来看看这条内容",
+      path: `/pages/article/articleDetail?article_id=${article_id}`,
+      imageUrl: "",
+      // 可以在这里设置分享图片
+      success: (res) => {
+        console.log("分享成功", res);
+      },
+      fail: (err) => {
+        console.error("分享失败", err);
+      }
+    };
+  },
+  // 分享到朋友圈（微信小程序）
+  onShareTimeline(options) {
+    var _a, _b, _c;
+    const pages = getCurrentPages();
+    const currentPage = pages[pages.length - 1];
+    const article_id = ((_b = (_a = currentPage.$page) == null ? void 0 : _a.options) == null ? void 0 : _b.article_id) || ((_c = currentPage.options) == null ? void 0 : _c.article_id);
+    console.log("分享到朋友圈:", {
+      options,
+      article_id
+    });
+    return {
+      title: "来看看这条内容",
+      query: `article_id=${article_id}`,
+      imageUrl: ""
+    };
+  }
+};
+const _sfc_main = /* @__PURE__ */ Object.assign(__default__, {
   __name: "articleDetail",
   props: {
     article_id: String,
@@ -27,42 +68,6 @@ const _sfc_main = {
   },
   setup(__props) {
     const props = __props;
-    const handlePageNavigation = async () => {
-      try {
-        const pages = getCurrentPages();
-        if (pages.length === 1) {
-          common_vendor.index.switchTab({
-            url: "/pages/index/index",
-            success: () => {
-              setTimeout(() => {
-                common_vendor.index.navigateTo({
-                  url: `/pages/article/articleDetail?article_id=${props.article_id}`,
-                  fail: (err) => {
-                    console.error("跳转回文章详情页失败:", err);
-                  }
-                });
-              }, 500);
-            },
-            fail: (err) => {
-              console.error("跳转到首页失败:", err);
-              try {
-                const cateApi = common_vendor.tr.importObject("cateKs", { customUI: true });
-                cateApi.get().catch((err2) => {
-                  console.warn("预加载首页数据失败", err2);
-                });
-              } catch (err2) {
-                console.warn("初始化首页数据失败", err2);
-              }
-            }
-          });
-          return true;
-        }
-        return false;
-      } catch (err) {
-        console.error("页面导航错误：", err);
-        return false;
-      }
-    };
     const isLoading = common_vendor.ref(true);
     const isSubmitting = common_vendor.ref(false);
     const commentContent = common_vendor.ref("");
@@ -99,10 +104,6 @@ const _sfc_main = {
     const getArticleDetail = async () => {
       var _a, _b, _c;
       try {
-        const needRedirect = await handlePageNavigation();
-        if (needRedirect) {
-          return;
-        }
         if (!props.article_id) {
           throw new Error("文章ID不能为空");
         }
@@ -1120,6 +1121,7 @@ const _sfc_main = {
       });
     };
   }
-};
+});
 const MiniProgramPage = /* @__PURE__ */ common_vendor._export_sfc(_sfc_main, [["__scopeId", "data-v-786907d5"]]);
+_sfc_main.__runtimeHooks = 6;
 ks.createPage(MiniProgramPage);

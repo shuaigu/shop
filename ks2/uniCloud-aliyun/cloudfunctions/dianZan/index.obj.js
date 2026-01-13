@@ -109,8 +109,13 @@ module.exports = {
 					// 获取当前用户点赞排名
 					const likeRank = await this.getLikeRank(articleId, userId);
 					
-					// 检查是否为幸运用户
-					const isWinner = await this.checkIfLuckyUser(articleId, likeRank.like_rank);
+					// 检查是否为幸运用户（即使失败也不影响点赞功能）
+					let isWinner = { isWinner: false };
+					try {
+						isWinner = await this.checkIfLuckyUser(articleId, likeRank.like_rank);
+					} catch (luckyErr) {
+						console.warn('检查幸运用户失败，但不影响点赞:', luckyErr);
+					}
 					
 					// 提交事务
 					await transaction.commit();
@@ -120,7 +125,7 @@ module.exports = {
 						isLiked: true,
 						like_count: likeCount,
 						like_rank: likeRank.like_rank,
-						isWinner: isWinner.isWinner,
+						isWinner: isWinner.isWinner || false,
 						rewardMessage: isWinner.rewardMessage
 					};
 				}
@@ -132,8 +137,8 @@ module.exports = {
 		} catch (err) {
 			console.error('点赞操作失败:', err);
 			return {
-				code: 2,
-				message: '操作失败，请稍后再试',
+				code: 1,
+				message: `点赞操作失败: ${err.message || '操作失败，请稍后再试'}`,
 				error: process.env.NODE_ENV === 'development' ? err.message : undefined
 			};
 		}
@@ -292,27 +297,38 @@ module.exports = {
 			let luckyConfig = await this.cache.get(configCacheKey);
 			
 			if (!luckyConfig) {
+				// 检查 lucky_user_config 表是否存在
 				const configCollection = db.collection('lucky_user_config');
 				
 				// 查询文章特定配置
-				const config = await configCollection.where({
-					article_id: articleId
-				}).limit(1).get();
-				
-				// 如果没有配置，则不是幸运用户
-				if (!config.data || config.data.length === 0) {
+				try {
+					const config = await configCollection.where({
+						article_id: articleId
+					}).limit(1).get();
+					
+					// 如果没有配置，则不是幸运用户
+					if (!config.data || config.data.length === 0) {
+						console.log('未找到文章幸运用户配置，跳过幸运用户检查');
+						return {
+							code: 0,
+							isWinner: false
+						};
+					}
+					
+					luckyConfig = config.data[0];
+					
+					// 缓存配置
+					await this.cache.set(configCacheKey, luckyConfig, {
+						expire: 3600 // 缓存1小时
+					});
+				} catch (tableErr) {
+					// 表不存在或其他错误，直接返回不中奖
+					console.log('lucky_user_config 表不存在或查询失败，跳过幸运用户检查:', tableErr.message);
 					return {
 						code: 0,
 						isWinner: false
 					};
 				}
-				
-				luckyConfig = config.data[0];
-				
-				// 缓存配置
-				await this.cache.set(configCacheKey, luckyConfig, {
-					expire: 3600 // 缓存1小时
-				});
 			}
 			
 			// 检查是否启用幸运用户功能
@@ -341,11 +357,10 @@ module.exports = {
 			};
 		} catch (err) {
 			console.error('检查幸运用户失败:', err);
+			// 即使出错也不影响点赞功能，直接返回不中奖
 			return {
-				code: 2,
-				message: '检查幸运用户失败，请稍后再试',
-				isWinner: false,
-				error: process.env.NODE_ENV === 'development' ? err.message : undefined
+				code: 0,
+				isWinner: false
 			};
 		}
 	},
