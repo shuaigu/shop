@@ -94,6 +94,12 @@
 			"style": {
 				"navigationBarTitleText": ""
 			}
+		},
+		{
+			"path": "pages/addMemo/addMemo",
+			"style": {
+				"navigationBarTitleText": "添加推荐备忘录"
+			}
 		}
 	],
 	"subPackages": [ {
@@ -114,6 +120,12 @@
 				"path": "adminManage/adminManage",
 				"style": {
 					"navigationBarTitleText": "后台管理"
+				}
+			},
+			{
+				"path": "memoManage/memoManage",
+				"style": {
+					"navigationBarTitleText": "推荐备忘录管理"
 				}
 			},
 			{

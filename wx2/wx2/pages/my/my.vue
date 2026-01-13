@@ -359,6 +359,13 @@
 			}
 		)
 	})
+	
+	// 跳转到添加推荐备忘录页面
+	const goToAddMemo = () => {
+		uni.navigateTo({
+			url: '/pages/addMemo/addMemo'
+		})
+	}
 
 	// 点击退出登录
 	const loginOut = () => {
@@ -459,10 +466,18 @@
 					<uni-icons color="#cccccc" custom-prefix="iconfont" type="icon-arrow-drop-right-line" size="30"></uni-icons>
 				</view>
 				<!-- 后台管理 -->
-				<view class="menu-item" @click="adminManage" v-if="userStore.userInfo.role[0]=='admin'">
+				<view class="menu-item" @click="adminManage" v-if="userStore.userInfo.role && userStore.userInfo.role.length > 0 && userStore.userInfo.role[0]=='admin'">
 					<view class="left">
 						<uni-icons color="#46b0fe" type="gear" size="22"></uni-icons>
 						<text class="value">后台管理</text>
+					</view>
+					<uni-icons color="#cccccc" custom-prefix="iconfont" type="icon-arrow-drop-right-line" size="30"></uni-icons>
+				</view>
+				<!-- 推荐备忘录 -->
+				<view class="menu-item" @click="goToAddMemo" v-if="userStore.userInfo.role && userStore.userInfo.role.length > 0 && userStore.userInfo.role[0]=='admin'">
+					<view class="left">
+						<uni-icons color="#46b0fe" type="compose" size="22"></uni-icons>
+						<text class="value">推荐备忘录</text>
 					</view>
 					<uni-icons color="#cccccc" custom-prefix="iconfont" type="icon-arrow-drop-right-line" size="30"></uni-icons>
 				</view>
