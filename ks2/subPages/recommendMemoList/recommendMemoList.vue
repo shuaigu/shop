@@ -1,10 +1,13 @@
 <template>
 	<view class="recommend-container">
+		<!-- 顶部占位符 -->
+		<view class="top-placeholder"></view>
 		
 		<!-- 推荐统计信息 -->
 		<view class="stats-bar">
-			<text class="stats-title">推荐</text>
-			<text class="stats-count">共 {{ memoList.length }} 条推荐</text>
+			<view class="stats-content">
+				<text class="stats-count">共 {{ memoList.length }} 条推荐</text>
+			</view>
 		</view>
 		
 		<!-- 推荐备忘录列表 -->
@@ -46,15 +49,16 @@
 							
 							<view class="memo-footer">
 								<text class="memo-time">{{ formatTime(memo.create_time) }}</text>
-								<text class="memo-sort">排序: {{ memo.sort_order }}</text>
 							</view>
 						</view>
 						
 						<!-- 收藏按钮 -->
-						<view class="collect-btn" :class="{ collected: collectedMap[memo._id] }" @click="toggleCollect(memo)">
-							<text class="collect-text">
-								{{ collectedMap[memo._id] ? '已收藏' : '收藏' }}
-							</text>
+						<view class="collect-btn-wrapper">
+							<view class="collect-btn" :class="{ collected: collectedMap[memo._id] }" @click="toggleCollect(memo)">
+								<text class="collect-text">
+									{{ collectedMap[memo._id] ? '已添加' : '添加' }}
+								</text>
+							</view>
 						</view>
 					</view>
 				</view>
@@ -248,7 +252,7 @@ export default {
 						
 				uni.showModal({
 					title: '提示',
-					content: '收藏功能需要登录，是否前往登录？',
+					content: '添加功能需要登录，是否前往登录？',
 					success: (res) => {
 						if (res.confirm) {
 							// 获取当前页面路径
@@ -282,13 +286,13 @@ export default {
 						this.collectedMap[memo._id] = false
 						this.$forceUpdate()
 						uni.showToast({
-							title: '已取消收藏',
+							title: '已取消添加',
 							icon: 'success',
 							duration: 1500
 						})
 					} else {
 						uni.showToast({
-							title: res?.message || '取消收藏失败',
+							title: res?.message || '取消添加失败',
 							icon: 'none'
 						})
 					}
@@ -306,13 +310,13 @@ export default {
 						this.collectedMap[memo._id] = true
 						this.$forceUpdate()
 						uni.showToast({
-							title: '收藏成功',
+							title: '添加成功',
 							icon: 'success',
 							duration: 1500
 						})
 					} else {
 						uni.showToast({
-							title: res?.message || '收藏失败',
+							title: res?.message || '添加失败',
 							icon: 'none'
 						})
 					}
@@ -357,6 +361,12 @@ export default {
 	background: #f5f5f5;
 	display: flex;
 	flex-direction: column;
+}
+
+/* 顶部占位符 */
+.top-placeholder {
+	height: 180rpx;
+	background: #667eea;
 }
 
 /* 顶部导航栏（快手风格） */
@@ -438,18 +448,18 @@ export default {
 	padding: 24rpx 32rpx;
 	display: flex;
 	align-items: center;
-	justify-content: space-between;
+	justify-content: center;
 	border-bottom: 1rpx solid #f0f0f0;
-	margin-top: calc(88rpx + var(--status-bar-height, 0px));
 	
-	.stats-title {
-		font-size: 32rpx;
-		font-weight: 600;
-		color: #333;
+	.stats-content {
+		display: flex;
+		align-items: center;
+		gap: 16rpx;
 	}
+
 	
 	.stats-count {
-		font-size: 24rpx;
+		font-size: 26rpx;
 		color: #999;
 	}
 }
@@ -480,15 +490,16 @@ export default {
 	flex-direction: column;
 	align-items: center;
 	justify-content: center;
-	padding: 120rpx 0;
+	padding: 150rpx 0;
 	
 	.empty-icon {
-		font-size: 120rpx;
-		margin-bottom: 24rpx;
+		font-size: 140rpx;
+		margin-bottom: 32rpx;
+		opacity: 0.6;
 	}
 	
 	.empty-text {
-		font-size: 28rpx;
+		font-size: 30rpx;
 		color: #999;
 	}
 }
@@ -501,21 +512,22 @@ export default {
 
 .memo-card {
 	background: #fff;
-	border-radius: 16rpx;
+	border-radius: 20rpx;
 	margin-bottom: 24rpx;
-	box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.05);
+	box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.06);
 	display: flex;
-	gap: 20rpx;
-	padding: 24rpx;
+	gap: 0;
+	padding: 0;
 	position: relative;
 	overflow: hidden;
+	transition: all 0.3s ease;
 	
 	// 左侧图片
 	.memo-image-container {
 		flex-shrink: 0;
-		width: 200rpx;
-		height: 200rpx;
-		border-radius: 12rpx;
+		width: 360rpx;
+		height: 360rpx;
+		border-radius: 0;
 		overflow: hidden;
 		background: #f5f5f5;
 		
@@ -527,13 +539,14 @@ export default {
 		.memo-image-placeholder {
 			width: 100%;
 			height: 100%;
-			background: linear-gradient(135deg, #FF6B6B 0%, #FFB347 100%);
+			background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
 			display: flex;
 			align-items: center;
 			justify-content: center;
 			
 			.placeholder-icon {
-				font-size: 72rpx;
+				font-size: 80rpx;
+				opacity: 0.9;
 			}
 		}
 	}
@@ -545,7 +558,8 @@ export default {
 		flex-direction: column;
 		justify-content: space-between;
 		min-width: 0;
-		min-height: 200rpx;
+		min-height: 360rpx;
+		padding: 24rpx;
 		
 		// 内容信息
 		.memo-content {
@@ -555,19 +569,19 @@ export default {
 			gap: 8rpx;
 			
 			.memo-title {
-				font-size: 32rpx;
+				font-size: 34rpx;
 				font-weight: 600;
 				color: #333;
 				overflow: hidden;
 				text-overflow: ellipsis;
 				white-space: nowrap;
-				margin-bottom: 4rpx;
+				margin-bottom: 8rpx;
 			}
 			
 			.memo-desc {
-				font-size: 26rpx;
+				font-size: 28rpx;
 				color: #666;
-				line-height: 1.5;
+				line-height: 1.6;
 				display: -webkit-box;
 				-webkit-box-orient: vertical;
 				-webkit-line-clamp: 2;
@@ -578,50 +592,61 @@ export default {
 			.memo-footer {
 				display: flex;
 				align-items: center;
-				gap: 16rpx;
-				margin-top: 8rpx;
+				gap: 20rpx;
+				margin-top: 12rpx;
 				
 				.memo-time {
-					font-size: 22rpx;
+					font-size: 24rpx;
 					color: #999;
 				}
 				
 				.memo-sort {
-					font-size: 22rpx;
+					font-size: 24rpx;
 					color: #999;
 				}
 			}
 		}
 		
+		// 收藏按钮容器
+		.collect-btn-wrapper {
+			display: flex;
+			justify-content: center;
+			align-items: center;
+			width: 100%;
+			margin-top: 8rpx;
+		}
+		
 		// 收藏按钮
 		.collect-btn {
-			align-self: flex-end;
-			padding: 12rpx 28rpx;
-			height: 56rpx;
+			padding: 16rpx 48rpx;
+			height: 64rpx;
 			display: flex;
 			align-items: center;
 			justify-content: center;
-			background: #f7f7f7;
-			border-radius: 28rpx;
-			transition: all 0.2s;
-			border: 1rpx solid #e0e0e0;
+			background: linear-gradient(135deg, #f5f5f5 0%, #e8e8e8 100%);
+			border-radius: 32rpx;
+			transition: all 0.3s ease;
+			border: 2rpx solid transparent;
+			box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.1);
 			
 			&.collected {
-				background: #fff5f5;
-				border-color: #ffcdd2;
+				background: linear-gradient(135deg, #ff6b6b 0%, #ff8787 100%);
+				border-color: transparent;
+				box-shadow: 0 4rpx 12rpx rgba(255, 107, 107, 0.3);
 			}
 			
 			&:active {
-				transform: scale(0.95);
+				transform: scale(0.96);
 			}
 			
 			.collect-text {
-				font-size: 26rpx;
+				font-size: 28rpx;
 				color: #666;
+				font-weight: 500;
 			}
 			
 			&.collected .collect-text {
-				color: #ff5252;
+				color: #fff;
 				font-weight: 600;
 			}
 		}

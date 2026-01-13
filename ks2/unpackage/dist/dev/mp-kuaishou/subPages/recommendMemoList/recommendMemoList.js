@@ -153,7 +153,7 @@ const _sfc_main = {
         this.pendingCollectMemo = memo;
         common_vendor.index.showModal({
           title: "提示",
-          content: "收藏功能需要登录，是否前往登录？",
+          content: "添加功能需要登录，是否前往登录？",
           success: (res) => {
             if (res.confirm) {
               const currentPath = "/subPages/recommendMemoList/recommendMemoList";
@@ -181,13 +181,13 @@ const _sfc_main = {
             this.collectedMap[memo._id] = false;
             this.$forceUpdate();
             common_vendor.index.showToast({
-              title: "已取消收藏",
+              title: "已取消添加",
               icon: "success",
               duration: 1500
             });
           } else {
             common_vendor.index.showToast({
-              title: (res == null ? void 0 : res.message) || "取消收藏失败",
+              title: (res == null ? void 0 : res.message) || "取消添加失败",
               icon: "none"
             });
           }
@@ -203,13 +203,13 @@ const _sfc_main = {
             this.collectedMap[memo._id] = true;
             this.$forceUpdate();
             common_vendor.index.showToast({
-              title: "收藏成功",
+              title: "添加成功",
               icon: "success",
               duration: 1500
             });
           } else {
             common_vendor.index.showToast({
-              title: (res == null ? void 0 : res.message) || "收藏失败",
+              title: (res == null ? void 0 : res.message) || "添加失败",
               icon: "none"
             });
           }
@@ -261,11 +261,10 @@ function _sfc_render(_ctx, _cache, $props, $setup, $data, $options) {
       } : {}, {
         e: common_vendor.t(memo.content),
         f: common_vendor.t($options.formatTime(memo.create_time)),
-        g: common_vendor.t(memo.sort_order),
-        h: common_vendor.t($data.collectedMap[memo._id] ? "已收藏" : "收藏"),
-        i: $data.collectedMap[memo._id] ? 1 : "",
-        j: common_vendor.o(($event) => $options.toggleCollect(memo)),
-        k: memo._id
+        g: common_vendor.t($data.collectedMap[memo._id] ? "已添加" : "添加"),
+        h: $data.collectedMap[memo._id] ? 1 : "",
+        i: common_vendor.o(($event) => $options.toggleCollect(memo)),
+        j: memo._id
       });
     })
   }, {
