@@ -24,6 +24,7 @@ if (!Math) {
   "./subPages/customPageManage/customPageManage.js";
   "./subPages/customPageDisplay/customPageDisplay.js";
   "./subPages/customPageList/customPageList.js";
+  "./subPages/recommendMemoList/recommendMemoList.js";
 }
 const _sfc_main = {
   onLaunch: function() {

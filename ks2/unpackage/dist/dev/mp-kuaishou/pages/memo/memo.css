@@ -46,6 +46,50 @@
   border-radius: 2rpx;
 }
 
+/* 系统推荐入口 */
+.recommend-entry.data-v-c0e26b37 {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  margin: 24rpx 24rpx 0;
+  border-radius: 16rpx;
+  padding: 24rpx 32rpx;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: 0 6rpx 20rpx rgba(102, 126, 234, 0.3);
+  transition: all 0.3s;
+}
+.recommend-entry.data-v-c0e26b37:active {
+  transform: scale(0.98);
+  opacity: 0.9;
+}
+.recommend-entry .entry-left.data-v-c0e26b37 {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+}
+.recommend-entry .entry-left .entry-icon.data-v-c0e26b37 {
+  font-size: 40rpx;
+}
+.recommend-entry .entry-left .entry-text.data-v-c0e26b37 {
+  font-size: 30rpx;
+  color: #fff;
+  font-weight: bold;
+}
+.recommend-entry .entry-right.data-v-c0e26b37 {
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+}
+.recommend-entry .entry-right .entry-hint.data-v-c0e26b37 {
+  font-size: 26rpx;
+  color: rgba(255, 255, 255, 0.9);
+}
+.recommend-entry .entry-right .entry-arrow.data-v-c0e26b37 {
+  font-size: 40rpx;
+  color: #fff;
+  font-weight: bold;
+}
+
 /* 默认备忘录区域 */
 .default-memo-section.data-v-c0e26b37 {
   background: #fff;

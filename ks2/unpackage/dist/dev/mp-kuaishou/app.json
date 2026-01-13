@@ -25,7 +25,8 @@
         "companyInfo/companyInfo",
         "customPageManage/customPageManage",
         "customPageDisplay/customPageDisplay",
-        "customPageList/customPageList"
+        "customPageList/customPageList",
+        "recommendMemoList/recommendMemoList"
       ]
     }
   ],

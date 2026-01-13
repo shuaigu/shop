@@ -8759,6 +8759,13 @@ const subPackages = [
         style: {
           navigationBarTitleText: "更多服务"
         }
+      },
+      {
+        path: "recommendMemoList/recommendMemoList",
+        style: {
+          navigationBarTitleText: "推荐",
+          enablePullDownRefresh: true
+        }
       }
     ]
   }

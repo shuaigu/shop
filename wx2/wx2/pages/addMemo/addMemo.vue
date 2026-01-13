@@ -142,6 +142,8 @@ const checkAdmin = () => {
 // 页面加载时检查权限
 onLoad(() => {
 	checkAdmin()
+	console.log('页面加载完成')
+	console.log('memoList初始值:', memoList.value)
 })
 
 // 上传图片
@@ -283,6 +285,8 @@ const handleSubmit = async () => {
 				create_time: new Date().getTime()
 			}
 			memoList.value.unshift(newMemo)
+			console.log('添加成功,当前列表:', memoList.value)
+			console.log('列表长度:', memoList.value.length)
 			
 			// 清空表单，允许继续添加
 			formData.value = {

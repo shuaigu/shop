@@ -12,46 +12,19 @@
 				{{ tab.label }}
 			</view>
 		</view>
-		
-		<!-- 默认备忘录列表 -->
-		<view v-if="defaultMemos.length > 0" class="default-memo-section">
-			<view class="section-header">
-				<text class="section-title">推荐备忘</text>
+			
+		<!-- 系统推荐入口 -->
+		<view class="recommend-entry" @click="goToRecommendList">
+			<view class="entry-left">
+				<text class="entry-icon">🌟</text>
+				<text class="entry-text">系统推荐备忘</text>
 			</view>
-			<view class="default-memo-list">
-				<view 
-					v-for="memo in defaultMemos" 
-					:key="memo._id"
-					class="default-memo-item"
-				>
-					<!-- 左侧图片 -->
-					<view class="memo-image-container">
-						<image 
-							v-if="memo.image_url" 
-							:src="memo.image_url" 
-							class="memo-image"
-							mode="aspectFill"
-						/>
-						<view v-else class="memo-image-placeholder">
-							<text class="placeholder-icon">📝</text>
-						</view>
-					</view>
-					
-					<!-- 中间文字内容 -->
-					<view class="memo-text-container">
-						<text v-if="memo.title" class="memo-item-title">{{ memo.title }}</text>
-						<text class="memo-item-content">{{ memo.content }}</text>
-					</view>
-					
-					<!-- 右侧收藏按钮 -->
-					<view class="memo-collect-btn" @click="collectMemo(memo)">
-						<text class="collect-icon" :class="{ collected: collectedMap[memo._id] }">
-							{{ collectedMap[memo._id] ? '♥' : '♡' }}
-						</text>
-					</view>
-				</view>
+			<view class="entry-right">
+				<text class="entry-hint">查看全部</text>
+				<text class="entry-arrow">›</text>
 			</view>
 		</view>
+		
 
 		<!-- 备忘录列表 -->
 		<scroll-view class="memo-list" scroll-y>
@@ -742,6 +715,21 @@ export default {
 			} else {
 				return `${date.getMonth() + 1}-${date.getDate()}`;
 			}
+		},
+		
+		// 跳转到系统推荐页面
+		goToRecommendList() {
+			console.log('=== 跳转到系统推荐页面 ===');
+			uni.navigateTo({
+				url: '/subPages/recommendMemoList/recommendMemoList',
+				fail: (err) => {
+					console.error('跳转失败:', err);
+					uni.showToast({
+						title: '跳转失败',
+						icon: 'none'
+					});
+				}
+			});
 		}
 	}
 };
@@ -787,6 +775,57 @@ export default {
 				background: #399bfe;
 				border-radius: 2rpx;
 			}
+		}
+	}
+}
+
+/* 系统推荐入口 */
+.recommend-entry {
+	background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+	margin: 24rpx 24rpx 0;
+	border-radius: 16rpx;
+	padding: 24rpx 32rpx;
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	box-shadow: 0 6rpx 20rpx rgba(102, 126, 234, 0.3);
+	transition: all 0.3s;
+	
+	&:active {
+		transform: scale(0.98);
+		opacity: 0.9;
+	}
+	
+	.entry-left {
+		display: flex;
+		align-items: center;
+		gap: 16rpx;
+		
+		.entry-icon {
+			font-size: 40rpx;
+		}
+		
+		.entry-text {
+			font-size: 30rpx;
+			color: #fff;
+			font-weight: bold;
+		}
+	}
+	
+	.entry-right {
+		display: flex;
+		align-items: center;
+		gap: 8rpx;
+		
+		.entry-hint {
+			font-size: 26rpx;
+			color: rgba(255, 255, 255, 0.9);
+		}
+		
+		.entry-arrow {
+			font-size: 40rpx;
+			color: #fff;
+			font-weight: bold;
 		}
 	}
 }

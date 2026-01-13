@@ -360,10 +360,10 @@
 		)
 	})
 	
-	// 跳转到添加推荐备忘录页面
+	// 跳转到推荐备忘录管理页面
 	const goToAddMemo = () => {
 		uni.navigateTo({
-			url: '/pages/addMemo/addMemo'
+			url: '/subPages/memoManage/memoManage'
 		})
 	}
 

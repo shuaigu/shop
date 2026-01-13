@@ -2,8 +2,23 @@
     "description": "项目私有配置文件。用于配置小程序项目私有配置。详见文档：https://open.kuaishou.com/docs/develop/developerTools/Localization-project.html",
     "condition": {
         "miniprogram": {
-            "list": [],
-            "active": ""
+            "list": [
+                {
+                    "configId": "98424b2b-f0e2-46f1-92c1-bd6025ab24f3",
+                    "scene": "011001",
+                    "name": "/subPages/recommendMemoList/recommendMe",
+                    "path": "/subPages/recommendMemoList/recommendMemoList",
+                    "params": "__id__=1",
+                    "mockUpdate": false,
+                    "partialCompile": {
+                        "enabled": false,
+                        "pages": [
+                            "/subPages/recommendMemoList/recommendMemoList"
+                        ]
+                    }
+                }
+            ],
+            "active": "98424b2b-f0e2-46f1-92c1-bd6025ab24f3"
         }
     }
 }
