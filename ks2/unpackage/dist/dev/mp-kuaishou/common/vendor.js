@@ -8763,7 +8763,7 @@ const subPackages = [
       {
         path: "recommendMemoList/recommendMemoList",
         style: {
-          navigationBarTitleText: "推荐",
+          navigationStyle: "custom",
           enablePullDownRefresh: true
         }
       }

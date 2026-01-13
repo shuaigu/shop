@@ -1,9 +1,10 @@
 <template>
 	<view class="recommend-container">
-		<!-- 顶部操作栏 -->
-		<view class="top-bar">
-			<text class="page-title">推荐</text>
-			<text class="memo-count">共 {{ memoList.length }} 条推荐</text>
+		
+		<!-- 推荐统计信息 -->
+		<view class="stats-bar">
+			<text class="stats-title">推荐</text>
+			<text class="stats-count">共 {{ memoList.length }} 条推荐</text>
 		</view>
 		
 		<!-- 推荐备忘录列表 -->
@@ -32,26 +33,29 @@
 							mode="aspectFill"
 						/>
 						<view v-else class="memo-image-placeholder">
-							<text class="placeholder-icon">📝</text>
+							<text class="placeholder-icon">📦</text>
 						</view>
 					</view>
 					
-					<!-- 中间内容 -->
-					<view class="memo-content">
-						<text v-if="memo.title" class="memo-title">{{ memo.title }}</text>
-						<text class="memo-text">{{ memo.content }}</text>
+					<!-- 右侧内容区 -->
+					<view class="memo-right">
+						<!-- 内容信息 -->
+						<view class="memo-content">
+							<text v-if="memo.title" class="memo-title">{{ memo.title }}</text>
+							<text class="memo-desc">{{ memo.content }}</text>
+							
+							<view class="memo-footer">
+								<text class="memo-time">{{ formatTime(memo.create_time) }}</text>
+								<text class="memo-sort">排序: {{ memo.sort_order }}</text>
+							</view>
+						</view>
 						
-						<view class="memo-footer">
-							<text class="memo-time">{{ formatTime(memo.create_time) }}</text>
-							<text class="memo-sort">排序: {{ memo.sort_order }}</text>
+						<!-- 收藏按钮 -->
+						<view class="collect-btn" :class="{ collected: collectedMap[memo._id] }" @click="toggleCollect(memo)">
+							<text class="collect-text">
+								{{ collectedMap[memo._id] ? '已收藏' : '收藏' }}
+							</text>
 						</view>
-					</view>
-					
-					<!-- 收藏按钮（卡片右侧垂直居中） -->
-					<view class="collect-btn" :class="{ collected: collectedMap[memo._id] }" @click="toggleCollect(memo)">
-						<text class="collect-text">
-							{{ collectedMap[memo._id] ? '已收藏' : '收藏' }}
-						</text>
 					</view>
 				</view>
 			</view>
@@ -70,12 +74,18 @@ export default {
 			loading: true,
 			shareUserId: '',
 			shareUserNickname: '',
-			pendingCollectMemo: null // 待收藏的备忘录
+			pendingCollectMemo: null, // 待收藏的备忘录
+			statusBarHeight: 0, // 状态栏高度
+			navBarHeight: 44 // 导航栏内容高度
 		}
 	},
 	
 	onLoad(options) {
 		console.log('=== 推荐备忘录管理页面加载 ===')
+		
+		// 获取系统信息
+		const systemInfo = uni.getSystemInfoSync()
+		this.statusBarHeight = systemInfo.statusBarHeight || 0
 		
 		// 获取分享用户信息
 		if (options && options.shareUserId) {
@@ -132,6 +142,29 @@ export default {
 	},
 	
 	methods: {
+		// 更多操作
+		handleMore() {
+			uni.showActionSheet({
+				itemList: ['分享', '刷新'],
+				success: (res) => {
+					if (res.tapIndex === 0) {
+						// 触发分享
+						uni.showShareMenu()
+					} else if (res.tapIndex === 1) {
+						// 刷新页面
+						this.loadRecommendMemos()
+					}
+				}
+			})
+		},
+		
+		// 关闭页面
+		handleClose() {
+			uni.navigateBack({
+				delta: 1
+			})
+		},
+		
 		// 加载推荐备忘录列表
 		async loadRecommendMemos() {
 			console.log('=== 加载推荐备忘录列表 ===')
@@ -326,23 +359,97 @@ export default {
 	flex-direction: column;
 }
 
-/* 顶部操作栏 */
-.top-bar {
+/* 顶部导航栏（快手风格） */
+.top-nav {
+	background: linear-gradient(135deg, #4A9FF5 0%, #4A9FF5 100%);
+	position: fixed;
+	top: 0;
+	left: 0;
+	right: 0;
+	z-index: 1000;
+	box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.1);
+	
+	.nav-content {
+		height: 88rpx;
+		padding: 0 24rpx;
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+	}
+	
+	.nav-left {
+		display: flex;
+		align-items: center;
+		
+		.nav-title {
+			font-size: 34rpx;
+			font-weight: 600;
+			color: #fff;
+		}
+	}
+	
+	.nav-right {
+		display: flex;
+		align-items: center;
+		gap: 12rpx;
+		
+		.nav-btn {
+			min-width: 56rpx;
+			height: 56rpx;
+			border-radius: 28rpx;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			padding: 0 16rpx;
+			transition: all 0.3s;
+			
+			&:active {
+				opacity: 0.7;
+				transform: scale(0.95);
+			}
+		}
+		
+		.feedback-btn {
+			background: rgba(255, 255, 255, 0.25);
+			border: 1rpx solid rgba(255, 255, 255, 0.3);
+			
+			.btn-text {
+				font-size: 26rpx;
+				color: #fff;
+			}
+		}
+		
+		.more-btn,
+		.close-btn {
+			background: transparent;
+			
+			.btn-icon {
+				font-size: 32rpx;
+				color: #fff;
+				font-weight: bold;
+			}
+		}
+	}
+}
+
+/* 推荐统计信息 */
+.stats-bar {
 	background: #fff;
-	padding: 32rpx 24rpx;
-	box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.05);
+	padding: 24rpx 32rpx;
 	display: flex;
 	align-items: center;
 	justify-content: space-between;
+	border-bottom: 1rpx solid #f0f0f0;
+	margin-top: calc(88rpx + var(--status-bar-height, 0px));
 	
-	.page-title {
-		font-size: 36rpx;
-		font-weight: bold;
+	.stats-title {
+		font-size: 32rpx;
+		font-weight: 600;
 		color: #333;
 	}
 	
-	.memo-count {
-		font-size: 26rpx;
+	.stats-count {
+		font-size: 24rpx;
 		color: #999;
 	}
 }
@@ -350,7 +457,8 @@ export default {
 /* 备忘录列表 */
 .memo-list {
 	flex: 1;
-	padding: 24rpx;
+	padding: 0;
+	background: #f5f5f5;
 }
 
 /* 加载状态 */
@@ -387,28 +495,29 @@ export default {
 
 /* 备忘录项 */
 .memo-items {
+	padding: 24rpx;
 	padding-bottom: 40rpx;
 }
 
 .memo-card {
 	background: #fff;
 	border-radius: 16rpx;
-	padding: 24rpx;
-	padding-right: 110rpx;
 	margin-bottom: 24rpx;
-	box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.06);
+	box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.05);
 	display: flex;
-	align-items: center;
-	gap: 24rpx;
+	gap: 20rpx;
+	padding: 24rpx;
 	position: relative;
+	overflow: hidden;
 	
 	// 左侧图片
 	.memo-image-container {
 		flex-shrink: 0;
-		width: 33.33%;
+		width: 200rpx;
 		height: 200rpx;
 		border-radius: 12rpx;
 		overflow: hidden;
+		background: #f5f5f5;
 		
 		.memo-image {
 			width: 100%;
@@ -418,95 +527,103 @@ export default {
 		.memo-image-placeholder {
 			width: 100%;
 			height: 100%;
-			background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+			background: linear-gradient(135deg, #FF6B6B 0%, #FFB347 100%);
 			display: flex;
 			align-items: center;
 			justify-content: center;
 			
 			.placeholder-icon {
-				font-size: 60rpx;
-			}
-		}
-	}
-	// 中间内容
-	.memo-content {
-		flex: 1;
-		display: flex;
-		flex-direction: column;
-		gap: 12rpx;
-		min-width: 0;
-		
-		.memo-title {
-			font-size: 30rpx;
-			font-weight: bold;
-			color: #333;
-			overflow: hidden;
-			text-overflow: ellipsis;
-			white-space: nowrap;
-		}
-		
-		.memo-text {
-			font-size: 26rpx;
-			color: #666;
-			line-height: 1.6;
-			display: -webkit-box;
-			-webkit-box-orient: vertical;
-			-webkit-line-clamp: 3;
-			overflow: hidden;
-			text-overflow: ellipsis;
-		}
-		
-		.memo-footer {
-			display: flex;
-			align-items: center;
-			gap: 24rpx;
-			margin-top: 8rpx;
-			
-			.memo-time {
-				font-size: 24rpx;
-				color: #999;
-			}
-			
-			.memo-sort {
-				font-size: 24rpx;
-				color: #999;
+				font-size: 72rpx;
 			}
 		}
 	}
 	
-	// 收藏按钮（卡片右侧垂直居中）
-	.collect-btn {
-		position: absolute;
-		right: 24rpx;
-		top: 50%;
-		transform: translateY(-50%);
-		padding: 10rpx 24rpx;
-		height: 56rpx;
+	// 右侧区域
+	.memo-right {
+		flex: 1;
 		display: flex;
-		align-items: center;
-		justify-content: center;
-		background: #f5f5f5;
-		border-radius: 28rpx;
-		transition: all 0.3s;
-		box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.08);
+		flex-direction: column;
+		justify-content: space-between;
+		min-width: 0;
+		min-height: 200rpx;
 		
-		&.collected {
-			background: #ffe5e6;
+		// 内容信息
+		.memo-content {
+			flex: 1;
+			display: flex;
+			flex-direction: column;
+			gap: 8rpx;
+			
+			.memo-title {
+				font-size: 32rpx;
+				font-weight: 600;
+				color: #333;
+				overflow: hidden;
+				text-overflow: ellipsis;
+				white-space: nowrap;
+				margin-bottom: 4rpx;
+			}
+			
+			.memo-desc {
+				font-size: 26rpx;
+				color: #666;
+				line-height: 1.5;
+				display: -webkit-box;
+				-webkit-box-orient: vertical;
+				-webkit-line-clamp: 2;
+				overflow: hidden;
+				text-overflow: ellipsis;
+			}
+			
+			.memo-footer {
+				display: flex;
+				align-items: center;
+				gap: 16rpx;
+				margin-top: 8rpx;
+				
+				.memo-time {
+					font-size: 22rpx;
+					color: #999;
+				}
+				
+				.memo-sort {
+					font-size: 22rpx;
+					color: #999;
+				}
+			}
 		}
 		
-		&:active {
-			transform: translateY(-50%) scale(0.95);
-		}
-		
-		.collect-text {
-			font-size: 26rpx;
-			color: #666;
-			transition: all 0.3s;
-		}
-		
-		&.collected .collect-text {
-			color: #ff5a5f;
-			font-weight: bold;
+		// 收藏按钮
+		.collect-btn {
+			align-self: flex-end;
+			padding: 12rpx 28rpx;
+			height: 56rpx;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			background: #f7f7f7;
+			border-radius: 28rpx;
+			transition: all 0.2s;
+			border: 1rpx solid #e0e0e0;
+			
+			&.collected {
+				background: #fff5f5;
+				border-color: #ffcdd2;
+			}
+			
+			&:active {
+				transform: scale(0.95);
+			}
+			
+			.collect-text {
+				font-size: 26rpx;
+				color: #666;
+			}
+			
+			&.collected .collect-text {
+				color: #ff5252;
+				font-weight: 600;
+			}
 		}
 	}
 }

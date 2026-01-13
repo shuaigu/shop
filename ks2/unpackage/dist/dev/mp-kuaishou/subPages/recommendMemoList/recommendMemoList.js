@@ -9,12 +9,18 @@ const _sfc_main = {
       loading: true,
       shareUserId: "",
       shareUserNickname: "",
-      pendingCollectMemo: null
+      pendingCollectMemo: null,
       // 待收藏的备忘录
+      statusBarHeight: 0,
+      // 状态栏高度
+      navBarHeight: 44
+      // 导航栏内容高度
     };
   },
   onLoad(options) {
     console.log("=== 推荐备忘录管理页面加载 ===");
+    const systemInfo = common_vendor.index.getSystemInfoSync();
+    this.statusBarHeight = systemInfo.statusBarHeight || 0;
     if (options && options.shareUserId) {
       this.shareUserId = options.shareUserId;
       this.shareUserNickname = options.shareUserNickname || "";
@@ -61,6 +67,25 @@ const _sfc_main = {
     };
   },
   methods: {
+    // 更多操作
+    handleMore() {
+      common_vendor.index.showActionSheet({
+        itemList: ["分享", "刷新"],
+        success: (res) => {
+          if (res.tapIndex === 0) {
+            common_vendor.index.showShareMenu();
+          } else if (res.tapIndex === 1) {
+            this.loadRecommendMemos();
+          }
+        }
+      });
+    },
+    // 关闭页面
+    handleClose() {
+      common_vendor.index.navigateBack({
+        delta: 1
+      });
+    },
     // 加载推荐备忘录列表
     async loadRecommendMemos() {
       console.log("=== 加载推荐备忘录列表 ===");
@@ -249,4 +274,5 @@ function _sfc_render(_ctx, _cache, $props, $setup, $data, $options) {
   });
 }
 const MiniProgramPage = /* @__PURE__ */ common_vendor._export_sfc(_sfc_main, [["render", _sfc_render], ["__scopeId", "data-v-570c4fc2"]]);
+_sfc_main.__runtimeHooks = 2;
 ks.createPage(MiniProgramPage);

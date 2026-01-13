@@ -1,5 +1,5 @@
 {
-  "navigationBarTitleText": "推荐",
+  "navigationStyle": "custom",
   "enablePullDownRefresh": true,
   "usingComponents": {}
 }
