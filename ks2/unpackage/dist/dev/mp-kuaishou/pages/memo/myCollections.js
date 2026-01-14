@@ -6,7 +6,9 @@ const _sfc_main = {
     return {
       collections: [],
       loading: false,
-      noMore: false
+      noMore: false,
+      userRole: ""
+      // 'admin' 或 'sharer'
     };
   },
   computed: {
@@ -66,13 +68,15 @@ const _sfc_main = {
   methods: {
     // 加载添加列表
     async loadCollections() {
-      console.log("=== 管理员加载所有添加列表 ===");
+      console.log("=== 加载添加列表 ===");
       const userStore = store_user.useUserInfoStore();
       const isAdmin = userStore.userInfo.role && userStore.userInfo.role[0] === "admin";
-      if (!isAdmin) {
-        console.log("非管理员用户");
+      const userId = userStore.userInfo.uid;
+      this.userRole = isAdmin ? "admin" : "sharer";
+      if (!userId) {
+        console.log("用户未登录");
         common_vendor.index.showToast({
-          title: "无权限访问",
+          title: "请先登录",
           icon: "none",
           duration: 2e3
         });
@@ -86,8 +90,15 @@ const _sfc_main = {
       this.loading = true;
       try {
         const memoApi = common_vendor.tr.importObject("memoList", { customUI: true });
-        const res = await memoApi.getAllCollections();
-        console.log("所有添加列表结果:", res);
+        let res;
+        if (isAdmin) {
+          console.log("管理员模式：获取所有收藏记录");
+          res = await memoApi.getAllCollections();
+        } else {
+          console.log("分享者模式：获取我分享的用户的收藏记录");
+          res = await memoApi.getSharerCollections(userId);
+        }
+        console.log("添加列表结果:", res);
         if (res && res.code === 0) {
           this.collections = res.data || [];
           this.noMore = true;
@@ -110,7 +121,7 @@ const _sfc_main = {
     },
     // 取消添加
     async cancelCollection(item) {
-      console.log("=== 管理员取消添加 ===", item);
+      console.log("=== 取消添加 ===", item);
       const confirmRes = await new Promise((resolve) => {
         var _a;
         common_vendor.index.showModal({
@@ -204,9 +215,18 @@ const _sfc_main = {
 };
 function _sfc_render(_ctx, _cache, $props, $setup, $data, $options) {
   return common_vendor.e({
-    a: !$data.loading && $data.collections.length === 0
-  }, !$data.loading && $data.collections.length === 0 ? {} : common_vendor.e({
-    b: common_vendor.f($options.groupedCollections, (shareGroup, shareUserId, i0) => {
+    a: $data.userRole
+  }, $data.userRole ? {
+    b: common_vendor.t($data.userRole === "admin" ? "👑" : "🔗"),
+    c: common_vendor.t($data.userRole === "admin" ? "管理员模式：查看所有用户的收藏信息" : "分享者模式：查看通过你分享进入的用户收藏信息"),
+    d: $data.userRole === "admin" ? 1 : "",
+    e: $data.userRole === "sharer" ? 1 : ""
+  } : {}, {
+    f: !$data.loading && $data.collections.length === 0
+  }, !$data.loading && $data.collections.length === 0 ? {
+    g: common_vendor.t($data.userRole === "admin" ? "还没有用户添加备忘录~" : "还没有用户通过你的分享添加备忘录~")
+  } : common_vendor.e({
+    h: common_vendor.f($options.groupedCollections, (shareGroup, shareUserId, i0) => {
       return {
         a: common_vendor.t(shareGroup.userInfo.nickName),
         b: common_vendor.t(Object.keys(shareGroup.collectors).length),
@@ -248,9 +268,9 @@ function _sfc_render(_ctx, _cache, $props, $setup, $data, $options) {
         d: shareUserId
       };
     }),
-    c: $data.loading
+    i: $data.loading
   }, $data.loading ? {} : {}), {
-    d: common_vendor.gei(_ctx, "")
+    j: common_vendor.gei(_ctx, "")
   });
 }
 const MiniProgramPage = /* @__PURE__ */ common_vendor._export_sfc(_sfc_main, [["render", _sfc_render], ["__scopeId", "data-v-b16fd458"]]);

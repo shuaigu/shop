@@ -14,6 +14,36 @@
   flex-direction: column;
 }
 
+/* 角色提示条样式 */
+.role-tip.data-v-b16fd458 {
+  padding: 24rpx 32rpx;
+  margin: 24rpx;
+  border-radius: 16rpx;
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+  box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.08);
+  transition: all 0.3s ease;
+}
+.role-tip.admin-role.data-v-b16fd458 {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+.role-tip.sharer-role.data-v-b16fd458 {
+  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+}
+.role-tip .role-icon.data-v-b16fd458 {
+  font-size: 40rpx;
+  filter: drop-shadow(0 2rpx 4rpx rgba(0, 0, 0, 0.2));
+}
+.role-tip .role-text.data-v-b16fd458 {
+  flex: 1;
+  font-size: 28rpx;
+  color: #fff;
+  font-weight: 600;
+  line-height: 1.5;
+  text-shadow: 0 2rpx 4rpx rgba(0, 0, 0, 0.15);
+}
+
 /* 用户分组样式 */
 .user-group.data-v-b16fd458 {
   margin-bottom: 32rpx;

@@ -1,10 +1,18 @@
 <template>
 	<view class="collections-container">
+		<!-- 角色提示条 -->
+		<view v-if="userRole" class="role-tip" :class="{ 'admin-role': userRole === 'admin', 'sharer-role': userRole === 'sharer' }">
+			<text class="role-icon">{{ userRole === 'admin' ? '👑' : '🔗' }}</text>
+			<text class="role-text">
+				{{ userRole === 'admin' ? '管理员模式：查看所有用户的收藏信息' : '分享者模式：查看通过你分享进入的用户收藏信息' }}
+			</text>
+		</view>
+		
 		<!-- 空状态 -->
 		<view v-if="!loading && collections.length === 0" class="empty-state">
 			<text class="empty-icon">📌</text>
 			<text class="empty-text">暂无添加记录</text>
-			<text class="empty-hint">还没有用户添加备忘录~</text>
+			<text class="empty-hint">{{ userRole === 'admin' ? '还没有用户添加备忘录~' : '还没有用户通过你的分享添加备忘录~' }}</text>
 		</view>
 
 		<!-- 按用户分类展示 -->
@@ -136,7 +144,8 @@ export default {
 		return {
 			collections: [],
 			loading: false,
-			noMore: false
+			noMore: false,
+			userRole: '' // 'admin' 或 'sharer'
 		}
 	},
 	
@@ -205,20 +214,23 @@ export default {
 	methods: {
 		// 加载添加列表
 		async loadCollections() {
-			console.log('=== 管理员加载所有添加列表 ===');
+			console.log('=== 加载添加列表 ===');
 			
 			// 获取用户角色
 			const userStore = useUserInfoStore()
 			const isAdmin = userStore.userInfo.role && userStore.userInfo.role[0] === 'admin'
+			const userId = userStore.userInfo.uid
 			
-			if (!isAdmin) {
-				console.log('非管理员用户')
+			// 设置用户角色
+			this.userRole = isAdmin ? 'admin' : 'sharer'
+			
+			if (!userId) {
+				console.log('用户未登录')
 				uni.showToast({
-					title: '无权限访问',
+					title: '请先登录',
 					icon: 'none',
 					duration: 2000
 				})
-				// 跳转到首页
 				setTimeout(() => {
 					uni.switchTab({
 						url: '/pages/memo/memo'
@@ -231,9 +243,19 @@ export default {
 			
 			try {
 				const memoApi = uniCloud.importObject('memoList', { customUI: true })
-				const res = await memoApi.getAllCollections()
+				let res
 				
-				console.log('所有添加列表结果:', res);
+				if (isAdmin) {
+					// 管理员：获取所有用户的收藏记录
+					console.log('管理员模式：获取所有收藏记录');
+					res = await memoApi.getAllCollections()
+				} else {
+					// 分享者：仅获取通过其分享进入的用户的收藏记录
+					console.log('分享者模式：获取我分享的用户的收藏记录');
+					res = await memoApi.getSharerCollections(userId)
+				}
+				
+				console.log('添加列表结果:', res);
 				
 				if (res && res.code === 0) {
 					this.collections = res.data || []
@@ -258,7 +280,7 @@ export default {
 		
 		// 取消添加
 		async cancelCollection(item) {
-			console.log('=== 管理员取消添加 ===', item);
+			console.log('=== 取消添加 ===', item);
 			
 			// 二次确认
 			const confirmRes = await new Promise((resolve) => {
@@ -375,6 +397,40 @@ export default {
 	background: #f5f5f5;
 	display: flex;
 	flex-direction: column;
+}
+
+/* 角色提示条样式 */
+.role-tip {
+	padding: 24rpx 32rpx;
+	margin: 24rpx;
+	border-radius: 16rpx;
+	display: flex;
+	align-items: center;
+	gap: 16rpx;
+	box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.08);
+	transition: all 0.3s ease;
+	
+	&.admin-role {
+		background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+	}
+	
+	&.sharer-role {
+		background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+	}
+	
+	.role-icon {
+		font-size: 40rpx;
+		filter: drop-shadow(0 2rpx 4rpx rgba(0, 0, 0, 0.2));
+	}
+	
+	.role-text {
+		flex: 1;
+		font-size: 28rpx;
+		color: #fff;
+		font-weight: 600;
+		line-height: 1.5;
+		text-shadow: 0 2rpx 4rpx rgba(0, 0, 0, 0.15);
+	}
 }
 
 /* 用户分组样式 */

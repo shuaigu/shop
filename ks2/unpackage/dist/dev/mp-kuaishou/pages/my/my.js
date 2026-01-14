@@ -81,6 +81,9 @@ const _sfc_main = {
         getCustomPageEntryStatus(),
         getMyPageDisplayStatus()
       ]);
+      if (userStore.userInfo.isLogin) {
+        await checkSharerStatus();
+      }
       common_vendor.index.$on("updateCustomPageEntry", handleCustomPageEntryUpdate);
       common_vendor.index.$on("updateMyPageDisplay", handleMyPageDisplayUpdate);
     });
@@ -89,6 +92,26 @@ const _sfc_main = {
       common_vendor.index.$off("updateMyPageDisplay", handleMyPageDisplayUpdate);
     });
     const isAdmin = common_vendor.computed(() => userStore.userInfo.role[0] === "admin");
+    const isSharer = common_vendor.ref(false);
+    const checkSharerStatus = async () => {
+      try {
+        const userId = userStore.userInfo.uid;
+        if (!userId || isAdmin.value) {
+          isSharer.value = false;
+          return;
+        }
+        const memoApi = common_vendor.tr.importObject("memoList", { customUI: true });
+        const res = await memoApi.getSharerCollections(userId);
+        if (res && res.code === 0 && res.data && res.data.length > 0) {
+          isSharer.value = true;
+        } else {
+          isSharer.value = false;
+        }
+      } catch (err) {
+        console.error("检查分享者状态失败:", err);
+        isSharer.value = false;
+      }
+    };
     const adminManage = () => {
       if (isAdmin) {
         common_vendor.index.navigateTo({
@@ -97,7 +120,7 @@ const _sfc_main = {
       }
     };
     const collectionManage = () => {
-      if (isAdmin.value) {
+      if (isAdmin.value || isSharer.value) {
         common_vendor.index.navigateTo({
           url: "/pages/memo/myCollections"
         });
@@ -172,8 +195,8 @@ const _sfc_main = {
         }),
         q: common_vendor.o(moreServices)
       } : {}, {
-        r: common_vendor.unref(userStore).userInfo.role[0] == "admin"
-      }, common_vendor.unref(userStore).userInfo.role[0] == "admin" ? {
+        r: common_vendor.unref(userStore).userInfo.role[0] == "admin" || isSharer.value
+      }, common_vendor.unref(userStore).userInfo.role[0] == "admin" || isSharer.value ? {
         s: common_vendor.p({
           color: "#999999",
           type: "heart",

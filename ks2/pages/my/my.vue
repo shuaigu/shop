@@ -97,6 +97,11 @@
 			getMyPageDisplayStatus()
 		])
 		
+		// 检查分享者状态
+		if (userStore.userInfo.isLogin) {
+			await checkSharerStatus()
+		}
+		
 		// 监听全局事件
 		uni.$on('updateCustomPageEntry', handleCustomPageEntryUpdate)
 		uni.$on('updateMyPageDisplay', handleMyPageDisplayUpdate)
@@ -110,6 +115,32 @@
 
 	// 角色判断
 	const isAdmin = computed( ( ) => userStore.userInfo.role[ 0 ] === 'admin' )
+	// 判断是否为分享者（至少分享过一个用户）
+	const isSharer = ref(false)
+	
+	// 检查用户是否为分享者
+	const checkSharerStatus = async () => {
+		try {
+			const userId = userStore.userInfo.uid
+			if (!userId || isAdmin.value) {
+				// 管理员不需要检查分享者状态
+				isSharer.value = false
+				return
+			}
+			
+			const memoApi = uniCloud.importObject('memoList', { customUI: true })
+			const res = await memoApi.getSharerCollections(userId)
+			
+			if (res && res.code === 0 && res.data && res.data.length > 0) {
+				isSharer.value = true
+			} else {
+				isSharer.value = false
+			}
+		} catch (err) {
+			console.error('检查分享者状态失败:', err)
+			isSharer.value = false
+		}
+	}
 	// 后台管理
 	const adminManage = ( ) => {
 		if ( isAdmin ) {
@@ -121,7 +152,8 @@
 	
 	// 收藏管理
 	const collectionManage = ( ) => {
-		if ( isAdmin.value ) {
+		// 管理员或分享者都可以访问
+		if ( isAdmin.value || isSharer.value ) {
 			uni.navigateTo( {
 				url: "/pages/memo/myCollections"
 			} )
@@ -205,7 +237,7 @@
 					size="30"></uni-icons>
 			</view>
 			<!-- 收藏管理 -->
-			<view class="collectionManage" @click="collectionManage" v-if="userStore.userInfo.role[0]=='admin'">
+			<view class="collectionManage" @click="collectionManage" v-if="userStore.userInfo.role[0]=='admin' || isSharer">
 				<view class="left">
 					<uni-icons style="padding-top: 2px;" color="#999999" type="heart" size="22"></uni-icons>
 					<text class="value">收藏管理</text>

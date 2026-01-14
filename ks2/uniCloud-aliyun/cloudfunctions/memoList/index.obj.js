@@ -507,5 +507,99 @@ module.exports = {
 				message: '检查失败: ' + err.message
 			};
 		}
+	},
+	
+	/**
+	 * 分享者获取通过其分享进入的用户的收藏记录
+	 * @param {string} sharer_id - 分享者用户ID
+	 * @returns {object} 返回该分享者分享的用户的收藏列表
+	 */
+	async getSharerCollections(sharer_id) {
+		try {
+			if (!sharer_id) {
+				return {
+					code: 1,
+					message: '参数错误：缺少分享者ID'
+				};
+			}
+			
+			const db = uniCloud.database();
+			const dbCmd = db.command;
+			
+			// 查询所有通过该分享者进入的用户的收藏记录
+			const result = await db.collection('memo_collections')
+				.where({
+					share_user_id: sharer_id
+				})
+				.field({
+					user_id: true,
+					memo_id: true,
+					share_user_id: true,
+					share_user_nickname: true,
+					collection_time: true
+				})
+				.orderBy('collection_time', 'desc')
+				.get();
+			
+			if (!result.data || result.data.length === 0) {
+				return {
+					code: 0,
+					message: '获取成功',
+					data: []
+				};
+			}
+			
+			// 获取所有相关的备忘录信息
+			const memoIds = [...new Set(result.data.map(item => item.memo_id))];
+			const memoResult = await db.collection('memo_items')
+				.where({
+					_id: dbCmd.in(memoIds)
+				})
+				.get();
+			
+			// 获取所有相关的用户信息
+			const userIds = [...new Set(result.data.map(item => item.user_id))];
+			const userResult = await db.collection('user')
+				.where({
+					_id: dbCmd.in(userIds)
+				})
+				.field({
+					_id: true,
+					nickName: true,
+					avatarUrl: true,
+					mobile: true
+				})
+				.get();
+			
+			// 创建映射表
+			const memoMap = {};
+			memoResult.data.forEach(memo => {
+				memoMap[memo._id] = memo;
+			});
+			
+			const userMap = {};
+			userResult.data.forEach(user => {
+				userMap[user._id] = user;
+			});
+			
+			// 合并数据
+			const collections = result.data.map(item => ({
+				...item,
+				memo_info: memoMap[item.memo_id] || null,
+				user_info: userMap[item.user_id] || null
+			}));
+			
+			return {
+				code: 0,
+				message: '获取成功',
+				data: collections
+			};
+		} catch (err) {
+			console.error('获取分享者收藏列表失败:', err);
+			return {
+				code: 1,
+				message: '获取失败: ' + err.message
+			};
+		}
 	}
 }
