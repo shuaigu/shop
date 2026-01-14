@@ -48,8 +48,21 @@
 								mode="aspectFill"
 							/>
 							<view class="collector-info">
-								<text class="collector-name">{{ collectorGroup.collectorInfo.nickName }}</text>
-								<text class="collector-count">添加了 {{ collectorGroup.items.length }} 条</text>
+								<view class="collector-name-row">
+									<text class="collector-name">{{ collectorGroup.collectorInfo.nickName }}</text>
+								</view>
+								<!-- 添加数量和手机号在同一行 -->
+								<view class="collector-count-row">
+									<text class="collector-count">添加了 {{ collectorGroup.items.length }} 条</text>
+									<!-- 手机号显示和拨打功能 -->
+									<text 
+										v-if="collectorGroup.collectorInfo.phone" 
+										class="collector-phone-inline"
+										@click.stop="makePhoneCall(collectorGroup.collectorInfo.phone)"
+									>
+										{{ collectorGroup.collectorInfo.phone }}
+									</text>
+								</view>
 							</view>
 						</view>
 						
@@ -151,12 +164,14 @@ export default {
 				const collectorId = item.user_id || 'unknown'
 				const collectorNickname = item.user_info?.nickName || '未知用户'
 				const collectorAvatar = item.user_info?.avatarUrl || ''
+				const collectorPhone = item.user_info?.mobile || '' // 使用mobile字段获取手机号
 				
 				if (!grouped[shareUserId].collectors[collectorId]) {
 					grouped[shareUserId].collectors[collectorId] = {
 						collectorInfo: {
 							nickName: collectorNickname,
-							avatarUrl: collectorAvatar
+							avatarUrl: collectorAvatar,
+							phone: collectorPhone // 保存手机号
 						},
 						items: [] // 三级：具体条目
 					}
@@ -326,6 +341,28 @@ export default {
 			}
 			// 更早
 			return `${date.getMonth() + 1}-${date.getDate()} ${date.getHours()}:${String(date.getMinutes()).padStart(2, '0')}`
+		},
+		
+		// 拨打电话
+		makePhoneCall(phoneNumber) {
+			if (!phoneNumber) {
+				uni.showToast({
+					title: '手机号不可用',
+					icon: 'none'
+				})
+				return
+			}
+			
+			uni.makePhoneCall({
+				phoneNumber: phoneNumber,
+				fail: (err) => {
+					console.error('拨打电话失败:', err)
+					uni.showToast({
+						title: '拨打失败',
+						icon: 'none'
+					})
+				}
+			})
 		}
 	}
 }
@@ -443,6 +480,12 @@ export default {
 			flex-direction: column;
 			gap: 4rpx;
 			
+			.collector-name-row {
+				display: flex;
+				align-items: center;
+				gap: 8rpx;
+			}
+			
 			.collector-name {
 				font-size: 28rpx;
 				color: #1976d2;
@@ -452,6 +495,28 @@ export default {
 			.collector-count {
 				font-size: 22rpx;
 				color: #666;
+				flex-shrink: 0;
+			}
+			
+			/* 添加数量和手机号同一行 */
+			.collector-count-row {
+				display: flex;
+				align-items: center;
+				gap: 12rpx;
+				flex-wrap: wrap;
+			}
+			
+			/* 内联手机号样式 */
+			.collector-phone-inline {
+				font-size: 22rpx;
+				color: #1976d2;
+				font-weight: 600;
+				cursor: pointer;
+				flex-shrink: 0;
+				
+				&:active {
+					opacity: 0.6;
+				}
 			}
 		}
 	}

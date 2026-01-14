@@ -14,7 +14,7 @@ const _sfc_main = {
     groupedCollections() {
       const grouped = {};
       this.collections.forEach((item) => {
-        var _a, _b;
+        var _a, _b, _c;
         const shareUserId = item.share_user_id || "direct_add";
         const shareUserNickname = item.share_user_nickname || "直接添加";
         if (!grouped[shareUserId]) {
@@ -31,11 +31,14 @@ const _sfc_main = {
         const collectorId = item.user_id || "unknown";
         const collectorNickname = ((_a = item.user_info) == null ? void 0 : _a.nickName) || "未知用户";
         const collectorAvatar = ((_b = item.user_info) == null ? void 0 : _b.avatarUrl) || "";
+        const collectorPhone = ((_c = item.user_info) == null ? void 0 : _c.mobile) || "";
         if (!grouped[shareUserId].collectors[collectorId]) {
           grouped[shareUserId].collectors[collectorId] = {
             collectorInfo: {
               nickName: collectorNickname,
-              avatarUrl: collectorAvatar
+              avatarUrl: collectorAvatar,
+              phone: collectorPhone
+              // 保存手机号
             },
             items: []
             // 三级：具体条目
@@ -176,6 +179,26 @@ const _sfc_main = {
         return "昨天 " + date.getHours() + ":" + String(date.getMinutes()).padStart(2, "0");
       }
       return `${date.getMonth() + 1}-${date.getDate()} ${date.getHours()}:${String(date.getMinutes()).padStart(2, "0")}`;
+    },
+    // 拨打电话
+    makePhoneCall(phoneNumber) {
+      if (!phoneNumber) {
+        common_vendor.index.showToast({
+          title: "手机号不可用",
+          icon: "none"
+        });
+        return;
+      }
+      common_vendor.index.makePhoneCall({
+        phoneNumber,
+        fail: (err) => {
+          console.error("拨打电话失败:", err);
+          common_vendor.index.showToast({
+            title: "拨打失败",
+            icon: "none"
+          });
+        }
+      });
     }
   }
 };
@@ -195,7 +218,12 @@ function _sfc_render(_ctx, _cache, $props, $setup, $data, $options) {
           } : {}, {
             c: common_vendor.t(collectorGroup.collectorInfo.nickName),
             d: common_vendor.t(collectorGroup.items.length),
-            e: common_vendor.f(collectorGroup.items, (item, k2, i2) => {
+            e: collectorGroup.collectorInfo.phone
+          }, collectorGroup.collectorInfo.phone ? {
+            f: common_vendor.t(collectorGroup.collectorInfo.phone),
+            g: common_vendor.o(($event) => $options.makePhoneCall(collectorGroup.collectorInfo.phone))
+          } : {}, {
+            h: common_vendor.f(collectorGroup.items, (item, k2, i2) => {
               return common_vendor.e({
                 a: item.memo_info && item.memo_info.image_url
               }, item.memo_info && item.memo_info.image_url ? {
@@ -214,7 +242,7 @@ function _sfc_render(_ctx, _cache, $props, $setup, $data, $options) {
                 i: item._id
               });
             }),
-            f: collectorId
+            i: collectorId
           });
         }),
         d: shareUserId

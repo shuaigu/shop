@@ -105,6 +105,13 @@
   display: flex;
   flex-direction: column;
   gap: 4rpx;
+  /* 添加数量和手机号同一行 */
+  /* 内联手机号样式 */
+}
+.collector-group .collector-header .collector-info .collector-name-row.data-v-b16fd458 {
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
 }
 .collector-group .collector-header .collector-info .collector-name.data-v-b16fd458 {
   font-size: 28rpx;
@@ -114,6 +121,23 @@
 .collector-group .collector-header .collector-info .collector-count.data-v-b16fd458 {
   font-size: 22rpx;
   color: #666;
+  flex-shrink: 0;
+}
+.collector-group .collector-header .collector-info .collector-count-row.data-v-b16fd458 {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+  flex-wrap: wrap;
+}
+.collector-group .collector-header .collector-info .collector-phone-inline.data-v-b16fd458 {
+  font-size: 22rpx;
+  color: #1976d2;
+  font-weight: 600;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.collector-group .collector-header .collector-info .collector-phone-inline.data-v-b16fd458:active {
+  opacity: 0.6;
 }
 
 /* 分组内的卡片样式 */
