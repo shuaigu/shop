@@ -177,33 +177,34 @@
 									备忘录内容已不可用
 								</text>
 								
-								<!-- 底部信息 -->
-								<view class="item-footer">
-									<!-- 添加者信息 -->
-									<view class="collector-info-inline">
-										<image 
-											v-if="item.user_info && item.user_info.avatarUrl" 
-											:src="item.user_info.avatarUrl" 
-											class="collector-avatar-small"
-											mode="aspectFill"
-										/>
-										<text class="collector-text">
-											{{ item.user_info ? item.user_info.nickName : '未知' }} 添加
+								<!-- 底部信息行 -->
+								<view class="item-footer-with-action">
+									<!-- 左侧:添加者信息和时间 -->
+									<view class="footer-left">
+										<!-- 添加者信息 -->
+										<view class="collector-info-inline">
+											<image 
+												v-if="item.user_info && item.user_info.avatarUrl" 
+												:src="item.user_info.avatarUrl" 
+												class="collector-avatar-small"
+												mode="aspectFill"
+											/>
+											<text class="collector-text">
+												{{ item.user_info ? item.user_info.nickName : '未知' }} 添加
+											</text>
+										</view>
+										
+										<!-- 添加时间 -->
+										<text class="collection-time">
+											{{ formatTime(item.collection_time) }}
 										</text>
 									</view>
 									
-									<!-- 添加时间 -->
-									<text class="collection-time">
-										{{ formatTime(item.collection_time) }}
-									</text>
+									<!-- 右侧:操作按钮 -->
+									<view class="action-btn cancel-btn" @click="cancelCollection(item)">
+										<text>取消添加</text>
+									</view>
 								</view>
-							</view>
-						</view>
-						
-						<!-- 操作按钮 -->
-						<view class="item-actions">
-							<view class="action-btn cancel-btn" @click="cancelCollection(item)">
-								<text>取消添加</text>
 							</view>
 						</view>
 					</view>
@@ -564,7 +565,7 @@ export default {
 
 /* 分组内的卡片样式 */
 .collection-item-card {
-	padding: 24rpx 0;
+	padding: 16rpx 0;
 	border-bottom: 1rpx solid #f0f0f0;
 	
 	&:last-child {
@@ -573,8 +574,133 @@ export default {
 	
 	.card-content {
 		display: flex;
-		gap: 24rpx;
-		margin-bottom: 16rpx;
+		gap: 16rpx;
+		
+		.item-image-container {
+			flex-shrink: 0;
+			width: 100rpx;
+			height: 100rpx;
+			border-radius: 12rpx;
+			overflow: hidden;
+			
+			.item-image {
+				width: 100%;
+				height: 100%;
+			}
+			
+			.item-image-placeholder {
+				width: 100%;
+				height: 100%;
+				background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+				display: flex;
+				align-items: center;
+				justify-content: center;
+				
+				.placeholder-icon {
+					font-size: 50rpx;
+				}
+			}
+		}
+		
+		.item-info {
+			flex: 1;
+			display: flex;
+			flex-direction: column;
+			min-width: 0;
+			
+			.item-title {
+				font-size: 28rpx;
+				font-weight: bold;
+				color: #333;
+				margin-bottom: 4rpx;
+				overflow: hidden;
+				text-overflow: ellipsis;
+				white-space: nowrap;
+				line-height: 1.3;
+			}
+			
+			.item-content-text {
+				font-size: 24rpx;
+				color: #666;
+				line-height: 1.4;
+				margin-bottom: 6rpx;
+				display: -webkit-box;
+				-webkit-box-orient: vertical;
+				-webkit-line-clamp: 2;
+				overflow: hidden;
+				text-overflow: ellipsis;
+				flex: 1;
+				
+				&.unavailable {
+					color: #999;
+					font-style: italic;
+				}
+			}
+			
+			// 底部信息行（左右布局）
+			.item-footer-with-action {
+				display: flex;
+				align-items: center;
+				justify-content: space-between;
+				gap: 12rpx;
+				margin-top: 4rpx;
+				
+				.footer-left {
+					display: flex;
+					align-items: center;
+					gap: 12rpx;
+					flex: 1;
+					min-width: 0;
+					
+					.collector-info-inline {
+						display: flex;
+						align-items: center;
+						gap: 4rpx;
+						flex-shrink: 0;
+						
+						.collector-avatar-small {
+							width: 24rpx;
+							height: 24rpx;
+							border-radius: 50%;
+							border: 1rpx solid #eee;
+							flex-shrink: 0;
+						}
+						
+						.collector-text {
+							font-size: 20rpx;
+							color: #1976d2;
+							font-weight: 500;
+							white-space: nowrap;
+							line-height: 1;
+						}
+					}
+					
+					.collection-time {
+						font-size: 20rpx;
+						color: #999;
+						flex-shrink: 0;
+						white-space: nowrap;
+					}
+				}
+				
+				.action-btn {
+					padding: 8rpx 24rpx;
+					border-radius: 8rpx;
+					font-size: 22rpx;
+					flex-shrink: 0;
+					
+					&.cancel-btn {
+						background: #fff;
+						color: #ff5a5f;
+						border: 1rpx solid #ff5a5f;
+						
+						&:active {
+							background: #fff5f5;
+						}
+					}
+				}
+			}
+		}
 	}
 }
 
@@ -633,13 +759,13 @@ export default {
 	
 	.item-content {
 		display: flex;
-		padding: 24rpx;
-		gap: 24rpx;
+		padding: 16rpx 24rpx;
+		gap: 16rpx;
 		
 		.item-image-container {
 			flex-shrink: 0;
-			width: 120rpx;
-			height: 120rpx;
+			width: 100rpx;
+			height: 100rpx;
 			border-radius: 12rpx;
 			overflow: hidden;
 			
@@ -657,7 +783,7 @@ export default {
 				justify-content: center;
 				
 				.placeholder-icon {
-					font-size: 60rpx;
+					font-size: 50rpx;
 				}
 			}
 		}
@@ -698,20 +824,21 @@ export default {
 			}
 			
 			.item-title {
-				font-size: 30rpx;
+				font-size: 28rpx;
 				font-weight: bold;
 				color: #333;
-				margin-bottom: 8rpx;
+				margin-bottom: 4rpx;
 				overflow: hidden;
 				text-overflow: ellipsis;
 				white-space: nowrap;
+				line-height: 1.3;
 			}
 			
 			.item-content-text {
-				font-size: 26rpx;
+				font-size: 24rpx;
 				color: #666;
-				line-height: 1.5;
-				margin-bottom: 12rpx;
+				line-height: 1.4;
+				margin-bottom: 6rpx;
 				display: -webkit-box;
 				-webkit-box-orient: vertical;
 				-webkit-line-clamp: 2;
@@ -729,7 +856,8 @@ export default {
 				display: flex;
 				align-items: center;
 				justify-content: space-between;
-				gap: 16rpx;
+				gap: 8rpx;
+				margin-top: 4rpx;
 				
 				.share-chain {
 					flex: 1;
@@ -739,16 +867,16 @@ export default {
 				.share-info {
 					display: flex;
 					align-items: center;
-					gap: 8rpx;
+					gap: 4rpx;
 					flex: 1;
 					min-width: 0;
 					
 					.share-icon {
-						font-size: 24rpx;
+						font-size: 20rpx;
 					}
 					
 					.share-text {
-						font-size: 22rpx;
+						font-size: 20rpx;
 						color: #ff6b6b;
 						font-weight: 500;
 						overflow: hidden;
@@ -758,7 +886,7 @@ export default {
 				}
 				
 				.collection-time {
-					font-size: 22rpx;
+					font-size: 20rpx;
 					color: #999;
 					flex-shrink: 0;
 				}
@@ -767,13 +895,13 @@ export default {
 				.collector-info-inline {
 					display: flex;
 					align-items: center;
-					gap: 6rpx;
+					gap: 4rpx;
 					flex: 1;
 					min-width: 0;
 					
 					.collector-avatar-small {
-						width: 28rpx;
-						height: 28rpx;
+						width: 24rpx;
+						height: 24rpx;
 						border-radius: 50%;
 						border: 1rpx solid #eee;
 						flex-shrink: 0;
@@ -786,21 +914,21 @@ export default {
 						overflow: hidden;
 						text-overflow: ellipsis;
 						white-space: nowrap;
-						line-height: 1.2;
+						line-height: 1;
 					}
 				}
 			}
 		}
 	}
 	.item-actions {
-		padding: 0 24rpx 24rpx;
+		padding: 0 24rpx 16rpx;
 		display: flex;
 		justify-content: flex-end;
 		
 		.action-btn {
-			padding: 12rpx 32rpx;
+			padding: 10rpx 28rpx;
 			border-radius: 8rpx;
-			font-size: 24rpx;
+			font-size: 22rpx;
 			
 			&.cancel-btn {
 				background: #fff;
