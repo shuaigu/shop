@@ -10,10 +10,11 @@ const _sfc_main = {
     };
   },
   computed: {
-    // 按分享者分组的数据
+    // 按分享者分组的数据（三级结构：分享者 → 添加者 → 条目）
     groupedCollections() {
       const grouped = {};
       this.collections.forEach((item) => {
+        var _a, _b;
         const shareUserId = item.share_user_id || "direct_add";
         const shareUserNickname = item.share_user_nickname || "直接添加";
         if (!grouped[shareUserId]) {
@@ -23,10 +24,24 @@ const _sfc_main = {
               avatarUrl: ""
               // 分享者暂无头像信息
             },
-            items: []
+            collectors: {}
+            // 二级分组：添加者
           };
         }
-        grouped[shareUserId].items.push(item);
+        const collectorId = item.user_id || "unknown";
+        const collectorNickname = ((_a = item.user_info) == null ? void 0 : _a.nickName) || "未知用户";
+        const collectorAvatar = ((_b = item.user_info) == null ? void 0 : _b.avatarUrl) || "";
+        if (!grouped[shareUserId].collectors[collectorId]) {
+          grouped[shareUserId].collectors[collectorId] = {
+            collectorInfo: {
+              nickName: collectorNickname,
+              avatarUrl: collectorAvatar
+            },
+            items: []
+            // 三级：具体条目
+          };
+        }
+        grouped[shareUserId].collectors[collectorId].items.push(item);
       });
       return grouped;
     }
@@ -168,35 +183,41 @@ function _sfc_render(_ctx, _cache, $props, $setup, $data, $options) {
   return common_vendor.e({
     a: !$data.loading && $data.collections.length === 0
   }, !$data.loading && $data.collections.length === 0 ? {} : common_vendor.e({
-    b: common_vendor.f($options.groupedCollections, (userGroup, userId, i0) => {
+    b: common_vendor.f($options.groupedCollections, (shareGroup, shareUserId, i0) => {
       return {
-        a: common_vendor.t(userGroup.userInfo.nickName),
-        b: common_vendor.t(userGroup.items.length),
-        c: common_vendor.f(userGroup.items, (item, k1, i1) => {
+        a: common_vendor.t(shareGroup.userInfo.nickName),
+        b: common_vendor.t(Object.keys(shareGroup.collectors).length),
+        c: common_vendor.f(shareGroup.collectors, (collectorGroup, collectorId, i1) => {
           return common_vendor.e({
-            a: item.memo_info && item.memo_info.image_url
-          }, item.memo_info && item.memo_info.image_url ? {
-            b: item.memo_info.image_url
+            a: collectorGroup.collectorInfo.avatarUrl
+          }, collectorGroup.collectorInfo.avatarUrl ? {
+            b: collectorGroup.collectorInfo.avatarUrl
           } : {}, {
-            c: item.memo_info && item.memo_info.title
-          }, item.memo_info && item.memo_info.title ? {
-            d: common_vendor.t(item.memo_info.title)
-          } : {}, {
-            e: item.memo_info
-          }, item.memo_info ? {
-            f: common_vendor.t(item.memo_info.content)
-          } : {}, {
-            g: item.user_info && item.user_info.avatarUrl
-          }, item.user_info && item.user_info.avatarUrl ? {
-            h: item.user_info.avatarUrl
-          } : {}, {
-            i: common_vendor.t(item.user_info ? item.user_info.nickName : "未知"),
-            j: common_vendor.t($options.formatTime(item.collection_time)),
-            k: common_vendor.o(($event) => $options.cancelCollection(item)),
-            l: item._id
+            c: common_vendor.t(collectorGroup.collectorInfo.nickName),
+            d: common_vendor.t(collectorGroup.items.length),
+            e: common_vendor.f(collectorGroup.items, (item, k2, i2) => {
+              return common_vendor.e({
+                a: item.memo_info && item.memo_info.image_url
+              }, item.memo_info && item.memo_info.image_url ? {
+                b: item.memo_info.image_url
+              } : {}, {
+                c: item.memo_info && item.memo_info.title
+              }, item.memo_info && item.memo_info.title ? {
+                d: common_vendor.t(item.memo_info.title)
+              } : {}, {
+                e: item.memo_info
+              }, item.memo_info ? {
+                f: common_vendor.t(item.memo_info.content)
+              } : {}, {
+                g: common_vendor.t($options.formatTime(item.collection_time)),
+                h: common_vendor.o(($event) => $options.cancelCollection(item)),
+                i: item._id
+              });
+            }),
+            f: collectorId
           });
         }),
-        d: userId
+        d: shareUserId
       };
     }),
     c: $data.loading

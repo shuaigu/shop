@@ -77,6 +77,45 @@
   overflow: hidden;
 }
 
+/* 添加者分组样式 */
+.collector-group.data-v-b16fd458 {
+  margin-bottom: 24rpx;
+}
+.collector-group.data-v-b16fd458:last-child {
+  margin-bottom: 0;
+}
+.collector-group .collector-header.data-v-b16fd458 {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+  padding: 16rpx 0;
+  background: linear-gradient(to right, #f5f7fa 0%, #ffffff 100%);
+  border-radius: 8rpx;
+  margin-bottom: 12rpx;
+}
+.collector-group .collector-header .collector-avatar.data-v-b16fd458 {
+  width: 48rpx;
+  height: 48rpx;
+  border-radius: 50%;
+  border: 2rpx solid #e0e0e0;
+  flex-shrink: 0;
+}
+.collector-group .collector-header .collector-info.data-v-b16fd458 {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4rpx;
+}
+.collector-group .collector-header .collector-info .collector-name.data-v-b16fd458 {
+  font-size: 28rpx;
+  color: #1976d2;
+  font-weight: 600;
+}
+.collector-group .collector-header .collector-info .collector-count.data-v-b16fd458 {
+  font-size: 22rpx;
+  color: #666;
+}
+
 /* 分组内的卡片样式 */
 .collection-item-card.data-v-b16fd458 {
   padding: 16rpx 0;
@@ -150,34 +189,7 @@
   gap: 12rpx;
   margin-top: 4rpx;
 }
-.collection-item-card .card-content .item-info .item-footer-with-action .footer-left.data-v-b16fd458 {
-  display: flex;
-  align-items: center;
-  gap: 12rpx;
-  flex: 1;
-  min-width: 0;
-}
-.collection-item-card .card-content .item-info .item-footer-with-action .footer-left .collector-info-inline.data-v-b16fd458 {
-  display: flex;
-  align-items: center;
-  gap: 4rpx;
-  flex-shrink: 0;
-}
-.collection-item-card .card-content .item-info .item-footer-with-action .footer-left .collector-info-inline .collector-avatar-small.data-v-b16fd458 {
-  width: 24rpx;
-  height: 24rpx;
-  border-radius: 50%;
-  border: 1rpx solid #eee;
-  flex-shrink: 0;
-}
-.collection-item-card .card-content .item-info .item-footer-with-action .footer-left .collector-info-inline .collector-text.data-v-b16fd458 {
-  font-size: 20rpx;
-  color: #1976d2;
-  font-weight: 500;
-  white-space: nowrap;
-  line-height: 1;
-}
-.collection-item-card .card-content .item-info .item-footer-with-action .footer-left .collection-time.data-v-b16fd458 {
+.collection-item-card .card-content .item-info .item-footer-with-action .collection-time.data-v-b16fd458 {
   font-size: 20rpx;
   color: #999;
   flex-shrink: 0;

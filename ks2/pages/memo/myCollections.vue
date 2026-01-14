@@ -13,10 +13,10 @@
 			class="collections-list" 
 			scroll-y
 		>
-			<!-- 遍历每个用户分组 -->
+			<!-- 一级：遍历每个分享者分组 -->
 			<view 
-				v-for="(userGroup, userId) in groupedCollections" 
-				:key="userId"
+				v-for="(shareGroup, shareUserId) in groupedCollections" 
+				:key="shareUserId"
 				class="user-group"
 			>
 				<!-- 分享者分组头部 -->
@@ -26,20 +26,40 @@
 							<text class="share-icon">🔗</text>
 						</view>
 						<view class="user-text-info">
-							<text class="user-name">{{ userGroup.userInfo.nickName }}</text>
-							<text class="collection-count">分享了 {{ userGroup.items.length }} 条信息</text>
+							<text class="user-name">{{ shareGroup.userInfo.nickName }}</text>
+							<text class="collection-count">分享了 {{ Object.keys(shareGroup.collectors).length }} 位用户的添加</text>
 						</view>
 					</view>
 				</view>
 				
-				<!-- 该用户的所有添加项 -->
+				<!-- 二级：该分享者下的所有添加者 -->
 				<view class="user-collection-items">
 					<view 
-						v-for="item in userGroup.items" 
-						:key="item._id"
-						class="collection-item-card"
+						v-for="(collectorGroup, collectorId) in shareGroup.collectors" 
+						:key="collectorId"
+						class="collector-group"
 					>
-						<view class="card-content">
+						<!-- 添加者头部 -->
+						<view class="collector-header">
+							<image 
+								v-if="collectorGroup.collectorInfo.avatarUrl" 
+								:src="collectorGroup.collectorInfo.avatarUrl" 
+								class="collector-avatar"
+								mode="aspectFill"
+							/>
+							<view class="collector-info">
+								<text class="collector-name">{{ collectorGroup.collectorInfo.nickName }}</text>
+								<text class="collector-count">添加了 {{ collectorGroup.items.length }} 条</text>
+							</view>
+						</view>
+						
+						<!-- 三级：该添加者的具体条目 -->
+						<view 
+							v-for="item in collectorGroup.items" 
+							:key="item._id"
+							class="collection-item-card"
+						>
+							<view class="card-content">
 							<!-- 左侧图片 -->
 							<view class="item-image-container">
 								<image 
@@ -70,30 +90,15 @@
 								
 								<!-- 底部信息行 -->
 								<view class="item-footer-with-action">
-									<!-- 左侧:添加者信息和时间 -->
-									<view class="footer-left">
-										<!-- 添加者信息 -->
-										<view class="collector-info-inline">
-											<image 
-												v-if="item.user_info && item.user_info.avatarUrl" 
-												:src="item.user_info.avatarUrl" 
-												class="collector-avatar-small"
-												mode="aspectFill"
-											/>
-											<text class="collector-text">
-												{{ item.user_info ? item.user_info.nickName : '未知' }} 添加
-											</text>
-										</view>
-										
-										<!-- 添加时间 -->
-										<text class="collection-time">
-											{{ formatTime(item.collection_time) }}
-										</text>
-									</view>
-									
-									<!-- 右侧:操作按钮 -->
+									<!-- 左侧：添加时间 -->
+									<text class="collection-time">
+										{{ formatTime(item.collection_time) }}
+									</text>
+																			
+									<!-- 右侧：操作按钮 -->
 									<view class="action-btn cancel-btn" @click="cancelCollection(item)">
 										<text>取消添加</text>
+										</view>
 									</view>
 								</view>
 							</view>
@@ -123,12 +128,12 @@ export default {
 	},
 	
 	computed: {
-		// 按分享者分组的数据
+		// 按分享者分组的数据（三级结构：分享者 → 添加者 → 条目）
 		groupedCollections() {
 			const grouped = {}
 			
 			this.collections.forEach(item => {
-				// 使用分享者信息作为分组依据
+				// 一级分组：使用分享者信息作为分组依据
 				const shareUserId = item.share_user_id || 'direct_add'
 				const shareUserNickname = item.share_user_nickname || '直接添加'
 				
@@ -138,11 +143,26 @@ export default {
 							nickName: shareUserNickname,
 							avatarUrl: '' // 分享者暂无头像信息
 						},
-						items: []
+						collectors: {} // 二级分组：添加者
 					}
 				}
 				
-				grouped[shareUserId].items.push(item)
+				// 二级分组：按添加者分组
+				const collectorId = item.user_id || 'unknown'
+				const collectorNickname = item.user_info?.nickName || '未知用户'
+				const collectorAvatar = item.user_info?.avatarUrl || ''
+				
+				if (!grouped[shareUserId].collectors[collectorId]) {
+					grouped[shareUserId].collectors[collectorId] = {
+						collectorInfo: {
+							nickName: collectorNickname,
+							avatarUrl: collectorAvatar
+						},
+						items: [] // 三级：具体条目
+					}
+				}
+				
+				grouped[shareUserId].collectors[collectorId].items.push(item)
 			})
 			
 			return grouped
@@ -392,6 +412,51 @@ export default {
 	}
 }
 
+/* 添加者分组样式 */
+.collector-group {
+	margin-bottom: 24rpx;
+	
+	&:last-child {
+		margin-bottom: 0;
+	}
+	
+	.collector-header {
+		display: flex;
+		align-items: center;
+		gap: 16rpx;
+		padding: 16rpx 0;
+		background: linear-gradient(to right, #f5f7fa 0%, #ffffff 100%);
+		border-radius: 8rpx;
+		margin-bottom: 12rpx;
+		
+		.collector-avatar {
+			width: 48rpx;
+			height: 48rpx;
+			border-radius: 50%;
+			border: 2rpx solid #e0e0e0;
+			flex-shrink: 0;
+		}
+		
+		.collector-info {
+			flex: 1;
+			display: flex;
+			flex-direction: column;
+			gap: 4rpx;
+			
+			.collector-name {
+				font-size: 28rpx;
+				color: #1976d2;
+				font-weight: 600;
+			}
+			
+			.collector-count {
+				font-size: 22rpx;
+				color: #666;
+			}
+		}
+	}
+}
+
 /* 分组内的卡片样式 */
 .collection-item-card {
 	padding: 16rpx 0;
@@ -466,7 +531,7 @@ export default {
 				}
 			}
 			
-			// 底部信息行（左右布局）
+			// 底部信息行（简化版）
 			.item-footer-with-action {
 				display: flex;
 				align-items: center;
@@ -474,42 +539,11 @@ export default {
 				gap: 12rpx;
 				margin-top: 4rpx;
 				
-				.footer-left {
-					display: flex;
-					align-items: center;
-					gap: 12rpx;
-					flex: 1;
-					min-width: 0;
-					
-					.collector-info-inline {
-						display: flex;
-						align-items: center;
-						gap: 4rpx;
-						flex-shrink: 0;
-						
-						.collector-avatar-small {
-							width: 24rpx;
-							height: 24rpx;
-							border-radius: 50%;
-							border: 1rpx solid #eee;
-							flex-shrink: 0;
-						}
-						
-						.collector-text {
-							font-size: 20rpx;
-							color: #1976d2;
-							font-weight: 500;
-							white-space: nowrap;
-							line-height: 1;
-						}
-					}
-					
-					.collection-time {
-						font-size: 20rpx;
-						color: #999;
-						flex-shrink: 0;
-						white-space: nowrap;
-					}
+				.collection-time {
+					font-size: 20rpx;
+					color: #999;
+					flex-shrink: 0;
+					white-space: nowrap;
 				}
 				
 				.action-btn {
