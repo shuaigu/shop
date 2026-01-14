@@ -29,6 +29,8 @@ const _sfc_main = {
       isEdit: false,
       // 输入框焦点控制
       contentFocus: false,
+      // 下拉刷新状态
+      refresherTriggered: false,
       // 表单数据
       formData: {
         id: "",
@@ -495,6 +497,34 @@ const _sfc_main = {
           });
         }
       });
+    },
+    // 下拉刷新
+    async onRefresh() {
+      console.log("=== 开始下拉刷新 ===");
+      this.refresherTriggered = true;
+      try {
+        await Promise.all([
+          this.loadDefaultMemos(),
+          Promise.resolve(this.loadMemos())
+        ]);
+        common_vendor.index.showToast({
+          title: "刷新成功",
+          icon: "success",
+          duration: 1500
+        });
+      } catch (e) {
+        console.error("刷新失败:", e);
+        common_vendor.index.showToast({
+          title: "刷新失败",
+          icon: "none",
+          duration: 1500
+        });
+      } finally {
+        setTimeout(() => {
+          this.refresherTriggered = false;
+          console.log("=== 下拉刷新完成 ===");
+        }, 500);
+      }
     }
   }
 };
@@ -557,17 +587,19 @@ function _sfc_render(_ctx, _cache, $props, $setup, $data, $options) {
       });
     })
   }, {
-    h: common_vendor.o((...args) => $options.openAddDialog && $options.openAddDialog(...args)),
-    i: $data.showAddDialog
+    h: $data.refresherTriggered,
+    i: common_vendor.o((...args) => $options.onRefresh && $options.onRefresh(...args)),
+    j: common_vendor.o((...args) => $options.openAddDialog && $options.openAddDialog(...args)),
+    k: $data.showAddDialog
   }, $data.showAddDialog ? {
-    j: common_vendor.t($data.isEdit ? "编辑备忘录" : "新建备忘录"),
-    k: common_vendor.o((...args) => $options.closeDialog && $options.closeDialog(...args)),
-    l: common_vendor.o((...args) => $options.handleContentInput && $options.handleContentInput(...args)),
-    m: common_vendor.o((...args) => $options.handleContentFocus && $options.handleContentFocus(...args)),
-    n: common_vendor.o((...args) => $options.handleContentBlur && $options.handleContentBlur(...args)),
-    o: common_vendor.o((...args) => $options.handleContentConfirm && $options.handleContentConfirm(...args)),
-    p: common_vendor.t($data.formData.content.length),
-    q: common_vendor.f($data.categories, (cat, k0, i0) => {
+    l: common_vendor.t($data.isEdit ? "编辑备忘录" : "新建备忘录"),
+    m: common_vendor.o((...args) => $options.closeDialog && $options.closeDialog(...args)),
+    n: common_vendor.o((...args) => $options.handleContentInput && $options.handleContentInput(...args)),
+    o: common_vendor.o((...args) => $options.handleContentFocus && $options.handleContentFocus(...args)),
+    p: common_vendor.o((...args) => $options.handleContentBlur && $options.handleContentBlur(...args)),
+    q: common_vendor.o((...args) => $options.handleContentConfirm && $options.handleContentConfirm(...args)),
+    r: common_vendor.t($data.formData.content.length),
+    s: common_vendor.f($data.categories, (cat, k0, i0) => {
       return {
         a: common_vendor.t(cat),
         b: cat,
@@ -575,7 +607,7 @@ function _sfc_render(_ctx, _cache, $props, $setup, $data, $options) {
         d: common_vendor.o(($event) => $options.selectCategory(cat))
       };
     }),
-    r: common_vendor.f($data.priorities, (pri, k0, i0) => {
+    t: common_vendor.f($data.priorities, (pri, k0, i0) => {
       return {
         a: common_vendor.t(pri),
         b: pri,
@@ -586,13 +618,13 @@ function _sfc_render(_ctx, _cache, $props, $setup, $data, $options) {
         e: common_vendor.o(($event) => $options.selectPriority(pri))
       };
     }),
-    s: common_vendor.o((...args) => $options.closeDialog && $options.closeDialog(...args)),
-    t: common_vendor.o((...args) => $options.saveMemo && $options.saveMemo(...args)),
-    v: common_vendor.o(() => {
+    v: common_vendor.o((...args) => $options.closeDialog && $options.closeDialog(...args)),
+    w: common_vendor.o((...args) => $options.saveMemo && $options.saveMemo(...args)),
+    x: common_vendor.o(() => {
     }),
-    w: common_vendor.o((...args) => $options.handleMaskClick && $options.handleMaskClick(...args))
+    y: common_vendor.o((...args) => $options.handleMaskClick && $options.handleMaskClick(...args))
   } : {}, {
-    x: common_vendor.gei(_ctx, "")
+    z: common_vendor.gei(_ctx, "")
   });
 }
 const MiniProgramPage = /* @__PURE__ */ common_vendor._export_sfc(_sfc_main, [["render", _sfc_render], ["__scopeId", "data-v-c0e26b37"]]);
