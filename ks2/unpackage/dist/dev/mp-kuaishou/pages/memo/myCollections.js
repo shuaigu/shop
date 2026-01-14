@@ -21,9 +21,9 @@ const _sfc_main = {
     });
   },
   methods: {
-    // 加载收藏列表
+    // 加载添加列表
     async loadCollections() {
-      console.log("=== 管理员加载所有收藏列表 ===");
+      console.log("=== 管理员加载所有添加列表 ===");
       const userStore = store_user.useUserInfoStore();
       const isAdmin = userStore.userInfo.role && userStore.userInfo.role[0] === "admin";
       if (!isAdmin) {
@@ -44,19 +44,19 @@ const _sfc_main = {
       try {
         const memoApi = common_vendor.tr.importObject("memoList", { customUI: true });
         const res = await memoApi.getAllCollections();
-        console.log("所有收藏列表结果:", res);
+        console.log("所有添加列表结果:", res);
         if (res && res.code === 0) {
           this.collections = res.data || [];
           this.noMore = true;
-          console.log("加载成功，共", this.collections.length, "条收藏记录");
+          console.log("加载成功，共", this.collections.length, "条添加记录");
         } else {
           common_vendor.index.showToast({
-            title: (res == null ? void 0 : res.message) || "获取收藏列表失败",
+            title: (res == null ? void 0 : res.message) || "获取添加列表失败",
             icon: "none"
           });
         }
       } catch (e) {
-        console.error("加载收藏列表失败:", e);
+        console.error("加载添加列表失败:", e);
         common_vendor.index.showToast({
           title: "加载失败，请重试",
           icon: "none"
@@ -65,14 +65,14 @@ const _sfc_main = {
         this.loading = false;
       }
     },
-    // 取消收藏
+    // 取消添加
     async cancelCollection(item) {
-      console.log("=== 管理员取消收藏 ===", item);
+      console.log("=== 管理员取消添加 ===", item);
       const confirmRes = await new Promise((resolve) => {
         var _a;
         common_vendor.index.showModal({
           title: "提示",
-          content: `确定要删除用户"${((_a = item.user_info) == null ? void 0 : _a.nickName) || "未知用户"}"的收藏吗？`,
+          content: `确定要删除用户“${((_a = item.user_info) == null ? void 0 : _a.nickName) || "未知用户"}”的添加吗？`,
           success: (res) => resolve(res.confirm)
         });
       });
@@ -87,7 +87,7 @@ const _sfc_main = {
             this.collections.splice(index, 1);
           }
           common_vendor.index.showToast({
-            title: "已删除收藏记录",
+            title: "已删除添加记录",
             icon: "success",
             duration: 1500
           });
@@ -98,7 +98,7 @@ const _sfc_main = {
           });
         }
       } catch (e) {
-        console.error("删除收藏失败:", e);
+        console.error("删除添加失败:", e);
         common_vendor.index.showToast({
           title: "操作失败，请重试",
           icon: "none"

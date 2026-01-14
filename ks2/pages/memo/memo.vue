@@ -12,19 +12,57 @@
 				{{ tab.label }}
 			</view>
 		</view>
-			
-		<!-- 系统推荐入口 -->
-		<view class="recommend-entry" @click="goToRecommendList">
-			<view class="entry-left">
-				<text class="entry-icon">🌟</text>
-				<text class="entry-text">系统推荐备忘</text>
+		
+		<!-- 推荐备忘录区域 -->
+		<view v-if="defaultMemos.length > 0" class="default-memo-section">
+			<view class="section-header">
+				<text class="section-title">推荐备忘</text>
+				<text class="section-count">共 {{ defaultMemos.length }} 条</text>
 			</view>
-			<view class="entry-right">
-				<text class="entry-hint">查看全部</text>
-				<text class="entry-arrow">›</text>
+			
+			<view class="default-memo-list">
+				<view 
+					v-for="(memo, index) in defaultMemos" 
+					:key="memo._id"
+					class="memo-card-large"
+				>
+					<!-- 左侧图片 -->
+					<view class="memo-image-container-large">
+						<image 
+							v-if="memo.image_url" 
+							:src="memo.image_url" 
+							class="memo-image-large"
+							mode="aspectFill"
+						/>
+						<view v-else class="memo-image-placeholder-large">
+							<text class="placeholder-icon-large">📦</text>
+						</view>
+					</view>
+					
+					<!-- 右侧区域 -->
+					<view class="memo-right">
+						<!-- 内容信息 -->
+						<view class="memo-content-area">
+							<text v-if="memo.title" class="memo-title-large">{{ memo.title }}</text>
+							<text class="memo-desc-large">{{ memo.content || '待输入' }}</text>
+							
+							<view class="memo-footer">
+								<text class="memo-time">{{ formatTime(memo.create_time) }}</text>
+							</view>
+						</view>
+						
+						<!-- 添加按钮容器 -->
+						<view class="collect-btn-wrapper">
+							<view class="collect-btn" :class="{ collected: collectedMap[memo._id] }" @click="collectMemo(memo)">
+								<text class="collect-text">
+									{{ collectedMap[memo._id] ? '已添加' : '添加' }}
+								</text>
+							</view>
+						</view>
+					</view>
+				</view>
 			</view>
 		</view>
-		
 
 		<!-- 备忘录列表 -->
 		<scroll-view class="memo-list" scroll-y>
@@ -196,7 +234,7 @@ export default {
 			// 默认备忘录列表
 			defaultMemos: [],
 			
-			// 收藏状态映射（memo_id -> boolean）
+			// 添加状态映射（memo_id -> boolean）
 			collectedMap: {},
 			
 			// 分享用户信息
@@ -282,6 +320,20 @@ export default {
 		this.loadDefaultMemos();
 	},
 	
+	// 分享配置
+	onShareAppMessage(options) {
+		console.log('=== 触发分享 ===');
+		const userStore = useUserInfoStore();
+		const userId = userStore.userInfo.uid || '';
+		const userNickname = userStore.userInfo.nickName || '用户';
+		
+		return {
+			title: `${userNickname}分享了备忘录`,
+			path: `/pages/memo/memo?shareUserId=${userId}&shareUserNickname=${encodeURIComponent(userNickname)}`,
+			imageUrl: '' // 可选：自定义分享图片
+		};
+	},
+	
 	methods: {
 		// 加载默认备忘录
 		async loadDefaultMemos() {
@@ -293,7 +345,7 @@ export default {
 					this.defaultMemos = res.data || [];
 					console.log('加载默认备忘录成功:', this.defaultMemos.length, '条');
 					
-					// 加载收藏状态
+					// 加载添加状态
 					await this.loadCollectionStatus();
 				} else {
 					console.log('加载默认备忘录失败:', res?.message);
@@ -305,21 +357,21 @@ export default {
 			}
 		},
 		
-		// 加载收藏状态
+		// 加载添加状态
 		async loadCollectionStatus() {
-			console.log('=== 加载收藏状态 ===');
+			console.log('=== 加载添加状态 ===');
 			try {
 				const userStore = useUserInfoStore();
 				const userId = userStore.userInfo.uid;
 				
 				if (!userId) {
-					console.log('用户未登录，跳过加载收藏状态');
+					console.log('用户未登录，跳过加载添加状态');
 					return;
 				}
 				
 				const memoApi = uniCloud.importObject('memoList', { customUI: true });
 				
-				// 检查每个默认备忘录的收藏状态
+				// 检查每个默认备忘录的添加状态
 				for (const memo of this.defaultMemos) {
 					try {
 						const res = await memoApi.checkCollected(memo._id, userId);
@@ -327,21 +379,21 @@ export default {
 							this.collectedMap[memo._id] = res.data.collected;
 						}
 					} catch (e) {
-						console.error('检查收藏状态失败:', e);
+						console.error('检查添加状态失败:', e);
 					}
 				}
-				console.log('收藏状态加载完成:', this.collectedMap);
+				console.log('添加状态加载完成:', this.collectedMap);
 			} catch (e) {
-				console.error('加载收藏状态失败:', e);
+				console.error('加载添加状态失败:', e);
 			}
 		},
 		
-		// 收藏备忘录
+		// 添加备忘录
 		async collectMemo(memo) {
-			console.log('=== 收藏备忘录 ===');
+			console.log('=== 添加备忘录 ===');
 			console.log('memo 对象:', JSON.stringify(memo));
 			console.log('memo._id:', memo._id);
-			console.log('当前收藏状态:', this.collectedMap[memo._id]);
+			console.log('当前添加状态:', this.collectedMap[memo._id]);
 			
 			if (!memo || !memo._id) {
 				console.error('备忘录对象无效，缺少_id');
@@ -363,7 +415,7 @@ export default {
 				console.log('用户未登录，唤起登录');
 				uni.showModal({
 					title: '提示',
-					content: '收藏功能需要登录，是否前往登录？',
+					content: '添加功能需要登录，是否前往登录？',
 					success: (res) => {
 						if (res.confirm) {
 							// 获取当前页面路径
@@ -389,29 +441,29 @@ export default {
 				const memoApi = uniCloud.importObject('memoList', { customUI: true });
 				
 				if (this.collectedMap[memo._id]) {
-					// 取消收藏
-					console.log('执行取消收藏操作...');
+					// 取消添加
+					console.log('执行取消添加操作...');
 					const res = await memoApi.uncollectMemo(memo._id, userId);
-					console.log('取消收藏结果:', res);
+					console.log('取消添加结果:', res);
 					
 					if (res && res.code === 0) {
 						this.collectedMap[memo._id] = false;
 						this.$forceUpdate();
 						uni.showToast({
-							title: '已取消收藏',
+							title: '已取消添加',
 							icon: 'success',
 							duration: 1500
 						});
 					} else {
 						uni.showToast({
-							title: res?.message || '取消收藏失败',
+							title: res?.message || '取消添加失败',
 							icon: 'none'
 						});
 					}
 				} else {
-					// 收藏
-					console.log('执行收藏操作...');
-					console.log('收藏参数:', {
+					// 添加
+					console.log('执行添加操作...');
+					console.log('添加参数:', {
 						memo_id: memo._id,
 						user_id: userId,
 						share_user_id: this.shareUserId,
@@ -425,26 +477,26 @@ export default {
 						share_user_nickname: this.shareUserNickname
 					});
 					
-					console.log('收藏结果:', res);
+					console.log('添加结果:', res);
 					
 					if (res && res.code === 0) {
 						this.collectedMap[memo._id] = true;
 						this.$forceUpdate();
 						uni.showToast({
-							title: '收藏成功',
+							title: '添加成功',
 							icon: 'success',
 							duration: 1500
 						});
 					} else {
 						uni.showToast({
-							title: res?.message || '收藏失败',
+							title: res?.message || '添加失败',
 							icon: 'none',
 							duration: 2000
 						});
 					}
 				}
 			} catch (e) {
-				console.error('收藏操作失败:', e);
+				console.error('添加操作失败:', e);
 				console.error('错误堆栈:', e.stack);
 				// 显示更详细的错误信息
 				const errorMsg = e.message || e.errMsg || '操作失败，请重试';
@@ -832,7 +884,7 @@ export default {
 
 /* 默认备忘录区域 */
 .default-memo-section {
-	background: #fff;
+	// background: #fff;
 	margin: 24rpx;
 	border-radius: 16rpx;
 	padding: 24rpx;
@@ -842,6 +894,9 @@ export default {
 		margin-bottom: 20rpx;
 		padding-bottom: 16rpx;
 		border-bottom: 2rpx solid #f0f0f0;
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
 		
 		.section-title {
 			font-size: 32rpx;
@@ -862,99 +917,147 @@ export default {
 				border-radius: 4rpx;
 			}
 		}
+		
+		.section-count {
+			font-size: 26rpx;
+			color: #999;
+		}
 	}
 	
 	.default-memo-list {
-		.default-memo-item {
+		.memo-card-large {
+			background: #fff;
+			border-radius: 20rpx;
+			margin-bottom: 24rpx;
+			box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.06);
 			display: flex;
-			align-items: center;
-			gap: 24rpx;
-			padding: 20rpx 0;
-			border-bottom: 1rpx solid #f5f5f5;
-			
-			&:last-child {
-				border-bottom: none;
-			}
+			gap: 0;
+			padding: 0;
+			position: relative;
+			overflow: hidden;
+			transition: all 0.3s ease;
 			
 			// 左侧图片
-			.memo-image-container {
+			.memo-image-container-large {
 				flex-shrink: 0;
-				width: 120rpx;
-				height: 120rpx;
-				border-radius: 12rpx;
+				width: 360rpx;
+				height: 360rpx;
+				border-radius: 0;
 				overflow: hidden;
+				background: #f5f5f5;
 				
-				.memo-image {
+				.memo-image-large {
 					width: 100%;
 					height: 100%;
 				}
 				
-				.memo-image-placeholder {
+				.memo-image-placeholder-large {
 					width: 100%;
 					height: 100%;
-					background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+					background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
 					display: flex;
 					align-items: center;
 					justify-content: center;
 					
-					.placeholder-icon {
-						font-size: 60rpx;
+					.placeholder-icon-large {
+						font-size: 80rpx;
+						opacity: 0.9;
 					}
 				}
 			}
 			
-			// 中间文字
-			.memo-text-container {
+			// 右侧区域
+			.memo-right {
 				flex: 1;
 				display: flex;
 				flex-direction: column;
-				gap: 8rpx;
+				justify-content: space-between;
 				min-width: 0;
+				min-height: 360rpx;
+				padding: 24rpx;
 				
-				.memo-item-title {
-					font-size: 30rpx;
-					font-weight: bold;
-					color: #333;
-					overflow: hidden;
-					text-overflow: ellipsis;
-					white-space: nowrap;
+				// 内容信息
+				.memo-content-area {
+					flex: 1;
+					display: flex;
+					flex-direction: column;
+					gap: 8rpx;
+					
+					.memo-title-large {
+						font-size: 34rpx;
+						font-weight: 600;
+						color: #333;
+						overflow: hidden;
+						text-overflow: ellipsis;
+						white-space: nowrap;
+						margin-bottom: 8rpx;
+					}
+					
+					.memo-desc-large {
+						font-size: 28rpx;
+						color: #666;
+						line-height: 1.6;
+						display: -webkit-box;
+						-webkit-box-orient: vertical;
+						-webkit-line-clamp: 2;
+						overflow: hidden;
+						text-overflow: ellipsis;
+					}
+					
+					.memo-footer {
+						display: flex;
+						align-items: center;
+						gap: 20rpx;
+						margin-top: 12rpx;
+						
+						.memo-time {
+							font-size: 24rpx;
+							color: #999;
+						}
+					}
 				}
 				
-				.memo-item-content {
-					font-size: 26rpx;
-					color: #666;
-					line-height: 1.6;
-					display: -webkit-box;
-					-webkit-box-orient: vertical;
-					-webkit-line-clamp: 2;
-					overflow: hidden;
-					text-overflow: ellipsis;
-				}
-			}
-			
-			// 右侧收藏按钮
-			.memo-collect-btn {
-				flex-shrink: 0;
-				width: 80rpx;
-				height: 80rpx;
-				display: flex;
-				align-items: center;
-				justify-content: center;
-				background: #f5f5f5;
-				border-radius: 50%;
-				transition: all 0.3s;
-				
-				&:active {
-					transform: scale(0.9);
+				// 添加按钮容器
+				.collect-btn-wrapper {
+					display: flex;
+					justify-content: center;
+					align-items: center;
+					width: 100%;
+					margin-top: 8rpx;
 				}
 				
-				.collect-icon {
-					font-size: 48rpx;
-					color: #999;
-					transition: all 0.3s;
+				// 添加按钮
+				.collect-btn {
+					padding: 16rpx 48rpx;
+					height: 64rpx;
+					display: flex;
+					align-items: center;
+					justify-content: center;
+					background: linear-gradient(135deg, #f5f5f5 0%, #e8e8e8 100%);
+					border-radius: 32rpx;
+					transition: all 0.3s ease;
+					border: 2rpx solid transparent;
+					box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.1);
 					
 					&.collected {
-						color: #ff5a5f;
+						background: linear-gradient(135deg, #ff6b6b 0%, #ff8787 100%);
+						border-color: transparent;
+						box-shadow: 0 4rpx 12rpx rgba(255, 107, 107, 0.3);
+					}
+					
+					&:active {
+						transform: scale(0.96);
+					}
+					
+					.collect-text {
+						font-size: 28rpx;
+						color: #666;
+						font-weight: 500;
+					}
+					
+					&.collected .collect-text {
+						color: #fff;
+						font-weight: 600;
 					}
 				}
 			}

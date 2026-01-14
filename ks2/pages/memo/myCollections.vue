@@ -3,11 +3,11 @@
 		<!-- 空状态 -->
 		<view v-if="!loading && collections.length === 0" class="empty-state">
 			<text class="empty-icon">📌</text>
-			<text class="empty-text">暂无收藏记录</text>
-			<text class="empty-hint">还没有用户收藏备忘录~</text>
+			<text class="empty-text">暂无添加记录</text>
+			<text class="empty-hint">还没有用户添加备忘录~</text>
 		</view>
 
-		<!-- 收藏列表 -->
+		<!-- 添加列表 -->
 		<scroll-view v-else class="collections-list" scroll-y @scrolltolower="loadMore">
 			<view 
 				v-for="item in collections" 
@@ -30,7 +30,7 @@
 					
 					<!-- 右侧内容 -->
 					<view class="item-info">
-						<!-- 收藏者信息 -->
+						<!-- 添加者信息 -->
 						<view class="collector-info">
 							<image 
 								v-if="item.user_info && item.user_info.avatarUrl" 
@@ -41,7 +41,7 @@
 							<text class="collector-name">
 								{{ item.user_info ? item.user_info.nickName : '未知用户' }}
 							</text>
-							<text class="collector-label">收藏了</text>
+							<text class="collector-label">添加了</text>
 						</view>
 						
 						<!-- 标题 -->
@@ -67,11 +67,11 @@
 								</view>
 								<view v-else class="share-info">
 									<text class="share-icon">📝</text>
-									<text class="share-text">直接收藏</text>
+									<text class="share-text">直接添加</text>
 								</view>
 							</view>
 							
-							<!-- 收藏时间 -->
+							<!-- 添加时间 -->
 							<text class="collection-time">
 								{{ formatTime(item.collection_time) }}
 							</text>
@@ -82,7 +82,7 @@
 				<!-- 操作按钮 -->
 				<view class="item-actions">
 					<view class="action-btn cancel-btn" @click="cancelCollection(item)">
-						<text>取消收藏</text>
+						<text>取消添加</text>
 					</view>
 				</view>
 			</view>
@@ -126,9 +126,9 @@ export default {
 	},
 	
 	methods: {
-		// 加载收藏列表
+		// 加载添加列表
 		async loadCollections() {
-			console.log('=== 管理员加载所有收藏列表 ===')
+			console.log('=== 管理员加载所有添加列表 ===');
 			
 			// 获取用户角色
 			const userStore = useUserInfoStore()
@@ -156,20 +156,20 @@ export default {
 				const memoApi = uniCloud.importObject('memoList', { customUI: true })
 				const res = await memoApi.getAllCollections()
 				
-				console.log('所有收藏列表结果:', res)
+				console.log('所有添加列表结果:', res);
 				
 				if (res && res.code === 0) {
 					this.collections = res.data || []
 					this.noMore = true
-					console.log('加载成功，共', this.collections.length, '条收藏记录')
+					console.log('加载成功，共', this.collections.length, '条添加记录');
 				} else {
 					uni.showToast({
-						title: res?.message || '获取收藏列表失败',
+						title: res?.message || '获取添加列表失败',
 						icon: 'none'
 					})
 				}
 			} catch (e) {
-				console.error('加载收藏列表失败:', e)
+				console.error('加载添加列表失败:', e);
 				uni.showToast({
 					title: '加载失败，请重试',
 					icon: 'none'
@@ -179,15 +179,15 @@ export default {
 			}
 		},
 		
-		// 取消收藏
+		// 取消添加
 		async cancelCollection(item) {
-			console.log('=== 管理员取消收藏 ===', item)
+			console.log('=== 管理员取消添加 ===', item);
 			
 			// 二次确认
 			const confirmRes = await new Promise((resolve) => {
 				uni.showModal({
 					title: '提示',
-					content: `确定要删除用户"${item.user_info?.nickName || '未知用户'}"的收藏吗？`,
+					content: `确定要删除用户“${item.user_info?.nickName || '未知用户'}”的添加吗？`,
 					success: (res) => resolve(res.confirm)
 				})
 			})
@@ -206,7 +206,7 @@ export default {
 					}
 					
 					uni.showToast({
-						title: '已删除收藏记录',
+						title: '已删除添加记录',
 						icon: 'success',
 						duration: 1500
 					})
@@ -217,7 +217,7 @@ export default {
 					})
 				}
 			} catch (e) {
-				console.error('删除收藏失败:', e)
+				console.error('删除添加失败:', e);
 				uni.showToast({
 					title: '操作失败，请重试',
 					icon: 'none'
@@ -314,7 +314,7 @@ export default {
 	}
 }
 
-/* 收藏列表 */
+/* 添加列表 */
 .collections-list {
 	height: 100vh;
 	padding: 24rpx;
