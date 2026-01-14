@@ -6,8 +6,32 @@ const _sfc_main = {
     return {
       collections: [],
       loading: false,
-      noMore: false
+      noMore: false,
+      tabs: ["全部", "按分享者分类"],
+      currentTab: 0
     };
+  },
+  computed: {
+    // 按分享者分组的数据
+    groupedCollections() {
+      const grouped = {};
+      this.collections.forEach((item) => {
+        const shareUserId = item.share_user_id || "direct_add";
+        const shareUserNickname = item.share_user_nickname || "直接添加";
+        if (!grouped[shareUserId]) {
+          grouped[shareUserId] = {
+            userInfo: {
+              nickName: shareUserNickname,
+              avatarUrl: ""
+              // 分享者暂无头像信息
+            },
+            items: []
+          };
+        }
+        grouped[shareUserId].items.push(item);
+      });
+      return grouped;
+    }
   },
   onLoad() {
     this.loadCollections();
@@ -20,7 +44,14 @@ const _sfc_main = {
       common_vendor.index.stopPullDownRefresh();
     });
   },
+  // 页面显示时保持标签状态
+  onShow() {
+  },
   methods: {
+    // 切换标签
+    switchTab(index) {
+      this.currentTab = index;
+    },
     // 加载添加列表
     async loadCollections() {
       console.log("=== 管理员加载所有添加列表 ===");
@@ -141,9 +172,21 @@ const _sfc_main = {
 };
 function _sfc_render(_ctx, _cache, $props, $setup, $data, $options) {
   return common_vendor.e({
-    a: !$data.loading && $data.collections.length === 0
-  }, !$data.loading && $data.collections.length === 0 ? {} : common_vendor.e({
-    b: common_vendor.f($data.collections, (item, k0, i0) => {
+    a: common_vendor.f($data.tabs, (tab, index, i0) => {
+      return common_vendor.e({
+        a: common_vendor.t(tab),
+        b: $data.currentTab === index
+      }, $data.currentTab === index ? {} : {}, {
+        c: index,
+        d: common_vendor.n({
+          active: $data.currentTab === index
+        }),
+        e: common_vendor.o(($event) => $options.switchTab(index))
+      });
+    }),
+    b: !$data.loading && $data.collections.length === 0
+  }, !$data.loading && $data.collections.length === 0 ? {} : $data.currentTab === 0 ? common_vendor.e({
+    d: common_vendor.f($data.collections, (item, k0, i0) => {
       return common_vendor.e({
         a: item.memo_info && item.memo_info.image_url
       }, item.memo_info && item.memo_info.image_url ? {
@@ -171,13 +214,48 @@ function _sfc_render(_ctx, _cache, $props, $setup, $data, $options) {
         n: item._id
       });
     }),
-    c: $data.loading
+    e: $data.loading
   }, $data.loading ? {} : {}, {
-    d: !$data.loading && $data.noMore && $data.collections.length > 0
+    f: !$data.loading && $data.noMore && $data.collections.length > 0
   }, !$data.loading && $data.noMore && $data.collections.length > 0 ? {} : {}, {
-    e: common_vendor.o((...args) => $options.loadMore && $options.loadMore(...args))
-  }), {
-    f: common_vendor.gei(_ctx, "")
+    g: common_vendor.o((...args) => $options.loadMore && $options.loadMore(...args))
+  }) : $data.currentTab === 1 ? common_vendor.e({
+    i: common_vendor.f($options.groupedCollections, (userGroup, userId, i0) => {
+      return {
+        a: common_vendor.t(userGroup.userInfo.nickName),
+        b: common_vendor.t(userGroup.items.length),
+        c: common_vendor.f(userGroup.items, (item, k1, i1) => {
+          return common_vendor.e({
+            a: item.memo_info && item.memo_info.image_url
+          }, item.memo_info && item.memo_info.image_url ? {
+            b: item.memo_info.image_url
+          } : {}, {
+            c: item.memo_info && item.memo_info.title
+          }, item.memo_info && item.memo_info.title ? {
+            d: common_vendor.t(item.memo_info.title)
+          } : {}, {
+            e: item.memo_info
+          }, item.memo_info ? {
+            f: common_vendor.t(item.memo_info.content)
+          } : {}, {
+            g: item.user_info && item.user_info.avatarUrl
+          }, item.user_info && item.user_info.avatarUrl ? {
+            h: item.user_info.avatarUrl
+          } : {}, {
+            i: common_vendor.t(item.user_info ? item.user_info.nickName : "未知"),
+            j: common_vendor.t($options.formatTime(item.collection_time)),
+            k: common_vendor.o(($event) => $options.cancelCollection(item)),
+            l: item._id
+          });
+        }),
+        d: userId
+      };
+    }),
+    j: $data.loading
+  }, $data.loading ? {} : {}) : {}, {
+    c: $data.currentTab === 0,
+    h: $data.currentTab === 1,
+    k: common_vendor.gei(_ctx, "")
   });
 }
 const MiniProgramPage = /* @__PURE__ */ common_vendor._export_sfc(_sfc_main, [["render", _sfc_render], ["__scopeId", "data-v-b16fd458"]]);

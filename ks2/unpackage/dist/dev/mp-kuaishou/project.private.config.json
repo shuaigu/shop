@@ -16,9 +16,23 @@
                             "/subPages/recommendMemoList/recommendMemoList"
                         ]
                     }
+                },
+                {
+                    "configId": "cdd4eebb-1dea-4205-88eb-ea287324a9e1",
+                    "scene": "011001",
+                    "name": "/pages/memo/myCollections",
+                    "path": "/pages/memo/myCollections",
+                    "params": "__id__=1",
+                    "mockUpdate": false,
+                    "partialCompile": {
+                        "enabled": false,
+                        "pages": [
+                            "/pages/memo/myCollections"
+                        ]
+                    }
                 }
             ],
-            "active": ""
+            "active": "cdd4eebb-1dea-4205-88eb-ea287324a9e1"
         }
     }
 }

@@ -10,6 +10,133 @@
   width: 100%;
   min-height: 100vh;
   background: #f5f5f5;
+  display: flex;
+  flex-direction: column;
+}
+
+/* 标签栏样式 */
+.tabs-container.data-v-b16fd458 {
+  display: flex;
+  background: #fff;
+  padding: 0 24rpx;
+  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.08);
+  position: -webkit-sticky;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+.tabs-container .tab-item.data-v-b16fd458 {
+  flex: 1;
+  padding: 28rpx 0;
+  text-align: center;
+  position: relative;
+  transition: all 0.3s;
+}
+.tabs-container .tab-item .tab-text.data-v-b16fd458 {
+  font-size: 30rpx;
+  color: #666;
+  font-weight: 500;
+  transition: all 0.3s;
+}
+.tabs-container .tab-item.active .tab-text.data-v-b16fd458 {
+  color: #1976d2;
+  font-weight: 600;
+  font-size: 32rpx;
+}
+.tabs-container .tab-item .tab-indicator.data-v-b16fd458 {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 60rpx;
+  height: 6rpx;
+  background: linear-gradient(135deg, #1976d2 0%, #42a5f5 100%);
+  border-radius: 3rpx;
+  animation: slideIn-b16fd458 0.3s ease;
+}
+@keyframes slideIn-b16fd458 {
+from {
+    width: 0;
+}
+to {
+    width: 60rpx;
+}
+}
+/* 用户分组样式 */
+.user-group.data-v-b16fd458 {
+  margin-bottom: 32rpx;
+}
+.user-group .user-group-header.data-v-b16fd458 {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: 32rpx 24rpx;
+  margin: 0 24rpx;
+  margin-top: 24rpx;
+  border-radius: 16rpx 16rpx 0 0;
+  box-shadow: 0 4rpx 16rpx rgba(102, 126, 234, 0.3);
+}
+.user-group .user-group-header .user-info-section.data-v-b16fd458 {
+  display: flex;
+  align-items: center;
+  gap: 20rpx;
+}
+.user-group .user-group-header .user-info-section .share-icon-wrapper.data-v-b16fd458 {
+  width: 80rpx;
+  height: 80rpx;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.15);
+}
+.user-group .user-group-header .user-info-section .share-icon-wrapper .share-icon.data-v-b16fd458 {
+  font-size: 48rpx;
+}
+.user-group .user-group-header .user-info-section .user-avatar.data-v-b16fd458 {
+  width: 80rpx;
+  height: 80rpx;
+  border-radius: 50%;
+  border: 4rpx solid rgba(255, 255, 255, 0.5);
+  box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.15);
+}
+.user-group .user-group-header .user-info-section .user-text-info.data-v-b16fd458 {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8rpx;
+}
+.user-group .user-group-header .user-info-section .user-text-info .user-name.data-v-b16fd458 {
+  font-size: 36rpx;
+  color: #fff;
+  font-weight: 700;
+  text-shadow: 0 2rpx 4rpx rgba(0, 0, 0, 0.1);
+}
+.user-group .user-group-header .user-info-section .user-text-info .collection-count.data-v-b16fd458 {
+  font-size: 26rpx;
+  color: rgba(255, 255, 255, 0.9);
+  font-weight: 500;
+}
+.user-group .user-collection-items.data-v-b16fd458 {
+  padding: 0 24rpx;
+  background: #fff;
+  margin: 0 24rpx;
+  border-radius: 0 0 16rpx 16rpx;
+  box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.06);
+  overflow: hidden;
+}
+
+/* 分组内的卡片样式 */
+.collection-item-card.data-v-b16fd458 {
+  padding: 24rpx 0;
+  border-bottom: 1rpx solid #f0f0f0;
+}
+.collection-item-card.data-v-b16fd458:last-child {
+  border-bottom: none;
+}
+.collection-item-card .card-content.data-v-b16fd458 {
+  display: flex;
+  gap: 24rpx;
+  margin-bottom: 16rpx;
 }
 
 /* 空状态 */
@@ -47,7 +174,8 @@
 
 /* 添加列表 */
 .collections-list.data-v-b16fd458 {
-  height: 100vh;
+  flex: 1;
+  height: calc(100vh - 88rpx);
   padding: 24rpx;
   box-sizing: border-box;
 }
@@ -65,8 +193,8 @@
 }
 .collection-item .item-content .item-image-container.data-v-b16fd458 {
   flex-shrink: 0;
-  width: 160rpx;
-  height: 160rpx;
+  width: 120rpx;
+  height: 120rpx;
   border-radius: 12rpx;
   overflow: hidden;
 }
@@ -83,7 +211,7 @@
   justify-content: center;
 }
 .collection-item .item-content .item-image-container .item-image-placeholder .placeholder-icon.data-v-b16fd458 {
-  font-size: 80rpx;
+  font-size: 60rpx;
 }
 .collection-item .item-content .item-info.data-v-b16fd458 {
   flex: 1;
@@ -116,19 +244,19 @@
   color: #666;
 }
 .collection-item .item-content .item-info .item-title.data-v-b16fd458 {
-  font-size: 32rpx;
+  font-size: 30rpx;
   font-weight: bold;
   color: #333;
-  margin-bottom: 12rpx;
+  margin-bottom: 8rpx;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 .collection-item .item-content .item-info .item-content-text.data-v-b16fd458 {
-  font-size: 28rpx;
+  font-size: 26rpx;
   color: #666;
-  line-height: 1.6;
-  margin-bottom: 16rpx;
+  line-height: 1.5;
+  margin-bottom: 12rpx;
   display: -webkit-box;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
@@ -161,7 +289,7 @@
   font-size: 24rpx;
 }
 .collection-item .item-content .item-info .item-footer .share-info .share-text.data-v-b16fd458 {
-  font-size: 24rpx;
+  font-size: 22rpx;
   color: #ff6b6b;
   font-weight: 500;
   overflow: hidden;
@@ -169,9 +297,32 @@
   white-space: nowrap;
 }
 .collection-item .item-content .item-info .item-footer .collection-time.data-v-b16fd458 {
-  font-size: 24rpx;
+  font-size: 22rpx;
   color: #999;
   flex-shrink: 0;
+}
+.collection-item .item-content .item-info .item-footer .collector-info-inline.data-v-b16fd458 {
+  display: flex;
+  align-items: center;
+  gap: 6rpx;
+  flex: 1;
+  min-width: 0;
+}
+.collection-item .item-content .item-info .item-footer .collector-info-inline .collector-avatar-small.data-v-b16fd458 {
+  width: 28rpx;
+  height: 28rpx;
+  border-radius: 50%;
+  border: 1rpx solid #eee;
+  flex-shrink: 0;
+}
+.collection-item .item-content .item-info .item-footer .collector-info-inline .collector-text.data-v-b16fd458 {
+  font-size: 20rpx;
+  color: #1976d2;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  line-height: 1.2;
 }
 .collection-item .item-actions.data-v-b16fd458 {
   padding: 0 24rpx 24rpx;
@@ -181,7 +332,7 @@
 .collection-item .item-actions .action-btn.data-v-b16fd458 {
   padding: 12rpx 32rpx;
   border-radius: 8rpx;
-  font-size: 26rpx;
+  font-size: 24rpx;
 }
 .collection-item .item-actions .action-btn.cancel-btn.data-v-b16fd458 {
   background: #fff;

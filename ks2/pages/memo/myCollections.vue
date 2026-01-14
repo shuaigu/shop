@@ -1,5 +1,18 @@
 <template>
 	<view class="collections-container">
+		<!-- 标签栏切换 -->
+		<view class="tabs-container">
+			<view 
+				v-for="(tab, index) in tabs" 
+				:key="index"
+				:class="['tab-item', { active: currentTab === index }]"
+				@click="switchTab(index)"
+			>
+				<text class="tab-text">{{ tab }}</text>
+				<view v-if="currentTab === index" class="tab-indicator"></view>
+			</view>
+		</view>
+		
 		<!-- 空状态 -->
 		<view v-if="!loading && collections.length === 0" class="empty-state">
 			<text class="empty-icon">📌</text>
@@ -7,8 +20,13 @@
 			<text class="empty-hint">还没有用户添加备忘录~</text>
 		</view>
 
-		<!-- 添加列表 -->
-		<scroll-view v-else class="collections-list" scroll-y @scrolltolower="loadMore">
+		<!-- 按时间展示（原始列表） -->
+		<scroll-view 
+			v-else-if="currentTab === 0" 
+			class="collections-list" 
+			scroll-y 
+			@scrolltolower="loadMore"
+		>
 			<view 
 				v-for="item in collections" 
 				:key="item._id"
@@ -97,6 +115,106 @@
 				<text>没有更多了</text>
 			</view>
 		</scroll-view>
+		
+		<!-- 按用户分类展示 -->
+		<scroll-view 
+			v-else-if="currentTab === 1" 
+			class="collections-list" 
+			scroll-y
+		>
+			<!-- 遍历每个用户分组 -->
+			<view 
+				v-for="(userGroup, userId) in groupedCollections" 
+				:key="userId"
+				class="user-group"
+			>
+				<!-- 分享者分组头部 -->
+				<view class="user-group-header">
+					<view class="user-info-section">
+						<view class="share-icon-wrapper">
+							<text class="share-icon">🔗</text>
+						</view>
+						<view class="user-text-info">
+							<text class="user-name">{{ userGroup.userInfo.nickName }}</text>
+							<text class="collection-count">分享了 {{ userGroup.items.length }} 条信息</text>
+						</view>
+					</view>
+				</view>
+				
+				<!-- 该用户的所有添加项 -->
+				<view class="user-collection-items">
+					<view 
+						v-for="item in userGroup.items" 
+						:key="item._id"
+						class="collection-item-card"
+					>
+						<view class="card-content">
+							<!-- 左侧图片 -->
+							<view class="item-image-container">
+								<image 
+									v-if="item.memo_info && item.memo_info.image_url" 
+									:src="item.memo_info.image_url" 
+									class="item-image"
+									mode="aspectFill"
+								/>
+								<view v-else class="item-image-placeholder">
+									<text class="placeholder-icon">📝</text>
+								</view>
+							</view>
+							
+							<!-- 右侧内容 -->
+							<view class="item-info">
+								<!-- 标题 -->
+								<text v-if="item.memo_info && item.memo_info.title" class="item-title">
+									{{ item.memo_info.title }}
+								</text>
+								
+								<!-- 内容 -->
+								<text v-if="item.memo_info" class="item-content-text">
+									{{ item.memo_info.content }}
+								</text>
+								<text v-else class="item-content-text unavailable">
+									备忘录内容已不可用
+								</text>
+								
+								<!-- 底部信息 -->
+								<view class="item-footer">
+									<!-- 添加者信息 -->
+									<view class="collector-info-inline">
+										<image 
+											v-if="item.user_info && item.user_info.avatarUrl" 
+											:src="item.user_info.avatarUrl" 
+											class="collector-avatar-small"
+											mode="aspectFill"
+										/>
+										<text class="collector-text">
+											{{ item.user_info ? item.user_info.nickName : '未知' }} 添加
+										</text>
+									</view>
+									
+									<!-- 添加时间 -->
+									<text class="collection-time">
+										{{ formatTime(item.collection_time) }}
+									</text>
+								</view>
+							</view>
+						</view>
+						
+						<!-- 操作按钮 -->
+						<view class="item-actions">
+							<view class="action-btn cancel-btn" @click="cancelCollection(item)">
+								<text>取消添加</text>
+							</view>
+						</view>
+					</view>
+				</view>
+			</view>
+			
+			<!-- 加载状态 -->
+			<view v-if="loading" class="loading-state">
+				<text>加载中...</text>
+			</view>
+		</scroll-view>
 	</view>
 </template>
 
@@ -108,7 +226,36 @@ export default {
 		return {
 			collections: [],
 			loading: false,
-			noMore: false
+			noMore: false,
+			tabs: ['全部', '按分享者分类'],
+			currentTab: 0
+		}
+	},
+	
+	computed: {
+		// 按分享者分组的数据
+		groupedCollections() {
+			const grouped = {}
+			
+			this.collections.forEach(item => {
+				// 使用分享者信息作为分组依据
+				const shareUserId = item.share_user_id || 'direct_add'
+				const shareUserNickname = item.share_user_nickname || '直接添加'
+				
+				if (!grouped[shareUserId]) {
+					grouped[shareUserId] = {
+						userInfo: {
+							nickName: shareUserNickname,
+							avatarUrl: '' // 分享者暂无头像信息
+						},
+						items: []
+					}
+				}
+				
+				grouped[shareUserId].items.push(item)
+			})
+			
+			return grouped
 		}
 	},
 	
@@ -125,7 +272,17 @@ export default {
 		})
 	},
 	
+	// 页面显示时保持标签状态
+	onShow() {
+		// 标签状态会自动保持
+	},
+	
 	methods: {
+		// 切换标签
+		switchTab(index) {
+			this.currentTab = index
+		},
+		
 		// 加载添加列表
 		async loadCollections() {
 			console.log('=== 管理员加载所有添加列表 ===');
@@ -274,6 +431,151 @@ export default {
 	width: 100%;
 	min-height: 100vh;
 	background: #f5f5f5;
+	display: flex;
+	flex-direction: column;
+}
+
+/* 标签栏样式 */
+.tabs-container {
+	display: flex;
+	background: #fff;
+	padding: 0 24rpx;
+	box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.08);
+	position: sticky;
+	top: 0;
+	z-index: 10;
+	
+	.tab-item {
+		flex: 1;
+		padding: 28rpx 0;
+		text-align: center;
+		position: relative;
+		transition: all 0.3s;
+		
+		.tab-text {
+			font-size: 30rpx;
+			color: #666;
+			font-weight: 500;
+			transition: all 0.3s;
+		}
+		
+		&.active {
+			.tab-text {
+				color: #1976d2;
+				font-weight: 600;
+				font-size: 32rpx;
+			}
+		}
+		
+		.tab-indicator {
+			position: absolute;
+			bottom: 0;
+			left: 50%;
+			transform: translateX(-50%);
+			width: 60rpx;
+			height: 6rpx;
+			background: linear-gradient(135deg, #1976d2 0%, #42a5f5 100%);
+			border-radius: 3rpx;
+			animation: slideIn 0.3s ease;
+		}
+	}
+}
+
+@keyframes slideIn {
+	from {
+		width: 0;
+	}
+	to {
+		width: 60rpx;
+	}
+}
+
+/* 用户分组样式 */
+.user-group {
+	margin-bottom: 32rpx;
+	
+	.user-group-header {
+		background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+		padding: 32rpx 24rpx;
+		margin: 0 24rpx;
+		margin-top: 24rpx;
+		border-radius: 16rpx 16rpx 0 0;
+		box-shadow: 0 4rpx 16rpx rgba(102, 126, 234, 0.3);
+		
+		.user-info-section {
+			display: flex;
+			align-items: center;
+			gap: 20rpx;
+			
+			.share-icon-wrapper {
+				width: 80rpx;
+				height: 80rpx;
+				border-radius: 50%;
+				background: rgba(255, 255, 255, 0.25);
+				display: flex;
+				align-items: center;
+				justify-content: center;
+				box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.15);
+				
+				.share-icon {
+					font-size: 48rpx;
+				}
+			}
+			
+			.user-avatar {
+				width: 80rpx;
+				height: 80rpx;
+				border-radius: 50%;
+				border: 4rpx solid rgba(255, 255, 255, 0.5);
+				box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.15);
+			}
+			
+			.user-text-info {
+				flex: 1;
+				display: flex;
+				flex-direction: column;
+				gap: 8rpx;
+				
+				.user-name {
+					font-size: 36rpx;
+					color: #fff;
+					font-weight: 700;
+					text-shadow: 0 2rpx 4rpx rgba(0, 0, 0, 0.1);
+				}
+				
+				.collection-count {
+					font-size: 26rpx;
+					color: rgba(255, 255, 255, 0.9);
+					font-weight: 500;
+				}
+			}
+		}
+	}
+	
+	.user-collection-items {
+		padding: 0 24rpx;
+		background: #fff;
+		margin: 0 24rpx;
+		border-radius: 0 0 16rpx 16rpx;
+		box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.06);
+		overflow: hidden;
+	}
+}
+
+/* 分组内的卡片样式 */
+.collection-item-card {
+	padding: 24rpx 0;
+	border-bottom: 1rpx solid #f0f0f0;
+	
+	&:last-child {
+		border-bottom: none;
+	}
+	
+	.card-content {
+		display: flex;
+		gap: 24rpx;
+		margin-bottom: 16rpx;
+	}
 }
 
 /* 空状态 */
@@ -316,7 +618,8 @@ export default {
 
 /* 添加列表 */
 .collections-list {
-	height: 100vh;
+	flex: 1;
+	height: calc(100vh - 88rpx); // 减去标签栏高度
 	padding: 24rpx;
 	box-sizing: border-box;
 }
@@ -335,8 +638,8 @@ export default {
 		
 		.item-image-container {
 			flex-shrink: 0;
-			width: 160rpx;
-			height: 160rpx;
+			width: 120rpx;
+			height: 120rpx;
 			border-radius: 12rpx;
 			overflow: hidden;
 			
@@ -354,7 +657,7 @@ export default {
 				justify-content: center;
 				
 				.placeholder-icon {
-					font-size: 80rpx;
+					font-size: 60rpx;
 				}
 			}
 		}
@@ -364,7 +667,8 @@ export default {
 			display: flex;
 			flex-direction: column;
 			min-width: 0;
-						
+			
+			// 全部视图中显示用户信息
 			.collector-info {
 				display: flex;
 				align-items: center;
@@ -373,41 +677,41 @@ export default {
 				padding: 8rpx 16rpx;
 				background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 50%);
 				border-radius: 8rpx;
-							
+				
 				.collector-avatar {
 					width: 40rpx;
 					height: 40rpx;
 					border-radius: 50%;
 					border: 2rpx solid #fff;
 				}
-							
+				
 				.collector-name {
 					font-size: 26rpx;
 					color: #1976d2;
 					font-weight: 600;
 				}
-							
+				
 				.collector-label {
 					font-size: 24rpx;
 					color: #666;
 				}
 			}
-						
+			
 			.item-title {
-				font-size: 32rpx;
+				font-size: 30rpx;
 				font-weight: bold;
 				color: #333;
-				margin-bottom: 12rpx;
+				margin-bottom: 8rpx;
 				overflow: hidden;
 				text-overflow: ellipsis;
 				white-space: nowrap;
 			}
 			
 			.item-content-text {
-				font-size: 28rpx;
+				font-size: 26rpx;
 				color: #666;
-				line-height: 1.6;
-				margin-bottom: 16rpx;
+				line-height: 1.5;
+				margin-bottom: 12rpx;
 				display: -webkit-box;
 				-webkit-box-orient: vertical;
 				-webkit-line-clamp: 2;
@@ -431,7 +735,7 @@ export default {
 					flex: 1;
 					min-width: 0;
 				}
-									
+				
 				.share-info {
 					display: flex;
 					align-items: center;
@@ -439,13 +743,12 @@ export default {
 					flex: 1;
 					min-width: 0;
 					
-										
 					.share-icon {
 						font-size: 24rpx;
 					}
-										
+					
 					.share-text {
-						font-size: 24rpx;
+						font-size: 22rpx;
 						color: #ff6b6b;
 						font-weight: 500;
 						overflow: hidden;
@@ -455,14 +758,40 @@ export default {
 				}
 				
 				.collection-time {
-					font-size: 24rpx;
+					font-size: 22rpx;
 					color: #999;
 					flex-shrink: 0;
+				}
+				
+				// 分类视图中的添加者信息
+				.collector-info-inline {
+					display: flex;
+					align-items: center;
+					gap: 6rpx;
+					flex: 1;
+					min-width: 0;
+					
+					.collector-avatar-small {
+						width: 28rpx;
+						height: 28rpx;
+						border-radius: 50%;
+						border: 1rpx solid #eee;
+						flex-shrink: 0;
+					}
+					
+					.collector-text {
+						font-size: 20rpx;
+						color: #1976d2;
+						font-weight: 500;
+						overflow: hidden;
+						text-overflow: ellipsis;
+						white-space: nowrap;
+						line-height: 1.2;
+					}
 				}
 			}
 		}
 	}
-	
 	.item-actions {
 		padding: 0 24rpx 24rpx;
 		display: flex;
@@ -471,7 +800,7 @@ export default {
 		.action-btn {
 			padding: 12rpx 32rpx;
 			border-radius: 8rpx;
-			font-size: 26rpx;
+			font-size: 24rpx;
 			
 			&.cancel-btn {
 				background: #fff;
