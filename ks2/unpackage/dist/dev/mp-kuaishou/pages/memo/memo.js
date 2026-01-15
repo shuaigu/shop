@@ -91,6 +91,29 @@ const _sfc_main = {
     this.loadMemos();
     this.loadDefaultMemos();
   },
+  // 监听下拉刷新
+  async onPullDownRefresh() {
+    console.log("=== 开始下拉刷新 ===");
+    try {
+      await Promise.all([
+        this.loadDefaultMemos(),
+        Promise.resolve(this.loadMemos())
+      ]);
+      common_vendor.index.showToast({
+        title: "刷新成功",
+        icon: "success",
+        duration: 1500
+      });
+    } catch (e) {
+      console.error("下拉刷新失败:", e);
+      common_vendor.index.showToast({
+        title: "刷新失败，请重试",
+        icon: "none"
+      });
+    } finally {
+      common_vendor.index.stopPullDownRefresh();
+    }
+  },
   // 分享配置
   onShareAppMessage(options) {
     console.log("=== 触发分享 ===");

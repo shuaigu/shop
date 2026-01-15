@@ -8626,7 +8626,10 @@ const pages = [
     style: {
       navigationBarTitleText: "时光赞赞",
       navigationBarBackgroundColor: "#399bfe",
-      navigationBarTextStyle: "white"
+      navigationBarTextStyle: "white",
+      enablePullDownRefresh: true,
+      backgroundTextStyle: "dark",
+      disableSwipeBack: true
     }
   },
   {

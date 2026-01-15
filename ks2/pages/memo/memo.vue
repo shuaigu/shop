@@ -17,6 +17,8 @@
 		<scroll-view 
 			class="memo-list" 
 			scroll-y
+			:scroll-x="false"
+			:enable-flex="false"
 			refresher-enabled
 			:refresher-triggered="refresherTriggered"
 			@refresherrefresh="onRefresh"
@@ -326,6 +328,33 @@ export default {
 		
 		this.loadMemos();
 		this.loadDefaultMemos();
+	},
+	
+	// 监听下拉刷新
+	async onPullDownRefresh() {
+		console.log('=== 开始下拉刷新 ===');
+		try {
+			// 并行刷新本地备忘录和推荐备忘录
+			await Promise.all([
+				this.loadDefaultMemos(),
+				Promise.resolve(this.loadMemos())
+			]);
+			
+			uni.showToast({
+				title: '刷新成功',
+				icon: 'success',
+				duration: 1500
+			});
+		} catch (e) {
+			console.error('下拉刷新失败:', e);
+			uni.showToast({
+				title: '刷新失败，请重试',
+				icon: 'none'
+			});
+		} finally {
+			// 无论成功或失败，都停止下拉刷新
+			uni.stopPullDownRefresh();
+		}
 	},
 	
 	// 分享配置
@@ -802,6 +831,8 @@ export default {
 	background: #f5f5f5;
 	display: flex;
 	flex-direction: column;
+	overflow-x: hidden;
+	touch-action: pan-y;
 }
 
 /* 分类标签页 */
@@ -933,6 +964,8 @@ export default {
 	}
 	
 	.default-memo-list {
+		overflow-x: hidden;
+		
 		.memo-card-large {
 			background: #fff;
 			border-radius: 20rpx;
@@ -1077,6 +1110,9 @@ export default {
 .memo-list {
 	flex: 1;
 	padding: 24rpx;
+	overflow-x: hidden;
+	width: 100%;
+	max-width: 100%;
 }
 
 .empty-state {
