@@ -1105,7 +1105,7 @@ export default {
 /* 备忘录列表 */
 .memo-list {
 	flex: 1;
-	padding: 24rpx;
+	padding: 0rpx;
 }
 
 .empty-state {
