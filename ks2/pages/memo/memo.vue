@@ -256,9 +256,6 @@ export default {
 			// 输入框焦点控制
 			contentFocus: false,
 			
-			// 下拉刷新状态
-			refresherTriggered: false,
-			
 			// 表单数据
 			formData: {
 				id: '',
@@ -793,39 +790,6 @@ export default {
 					});
 				}
 			});
-		},
-		
-		// 下拉刷新
-		async onRefresh() {
-			console.log('=== 开始下拉刷新 ===');
-			this.refresherTriggered = true;
-			
-			try {
-				// 并行加载默认备忘录和本地备忘录
-				await Promise.all([
-					this.loadDefaultMemos(),
-					Promise.resolve(this.loadMemos())
-				]);
-				
-				uni.showToast({
-					title: '刷新成功',
-					icon: 'success',
-					duration: 1500
-				});
-			} catch (e) {
-				console.error('刷新失败:', e);
-				uni.showToast({
-					title: '刷新失败',
-					icon: 'none',
-					duration: 1500
-				});
-			} finally {
-				// 延迟关闭刷新动画，确保用户能看到反馈
-				setTimeout(() => {
-					this.refresherTriggered = false;
-					console.log('=== 下拉刷新完成 ===');
-				}, 500);
-			}
 		}
 	}
 };

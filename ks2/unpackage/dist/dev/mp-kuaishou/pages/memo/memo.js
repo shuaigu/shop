@@ -29,8 +29,6 @@ const _sfc_main = {
       isEdit: false,
       // 输入框焦点控制
       contentFocus: false,
-      // 下拉刷新状态
-      refresherTriggered: false,
       // 表单数据
       formData: {
         id: "",
@@ -497,34 +495,6 @@ const _sfc_main = {
           });
         }
       });
-    },
-    // 下拉刷新
-    async onRefresh() {
-      console.log("=== 开始下拉刷新 ===");
-      this.refresherTriggered = true;
-      try {
-        await Promise.all([
-          this.loadDefaultMemos(),
-          Promise.resolve(this.loadMemos())
-        ]);
-        common_vendor.index.showToast({
-          title: "刷新成功",
-          icon: "success",
-          duration: 1500
-        });
-      } catch (e) {
-        console.error("刷新失败:", e);
-        common_vendor.index.showToast({
-          title: "刷新失败",
-          icon: "none",
-          duration: 1500
-        });
-      } finally {
-        setTimeout(() => {
-          this.refresherTriggered = false;
-          console.log("=== 下拉刷新完成 ===");
-        }, 500);
-      }
     }
   }
 };
@@ -587,8 +557,8 @@ function _sfc_render(_ctx, _cache, $props, $setup, $data, $options) {
       });
     })
   }, {
-    h: $data.refresherTriggered,
-    i: common_vendor.o((...args) => $options.onRefresh && $options.onRefresh(...args)),
+    h: _ctx.refresherTriggered,
+    i: common_vendor.o((...args) => _ctx.onRefresh && _ctx.onRefresh(...args)),
     j: common_vendor.o((...args) => $options.openAddDialog && $options.openAddDialog(...args)),
     k: $data.showAddDialog
   }, $data.showAddDialog ? {
