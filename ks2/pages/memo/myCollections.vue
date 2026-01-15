@@ -21,12 +21,24 @@
 			class="collections-list" 
 			scroll-y
 		>
-			<!-- 一级：遍历每个分享者分组 -->
+			<!-- 一级：遍历每个日期分组 -->
 			<view 
-				v-for="(shareGroup, shareUserId) in groupedCollections" 
-				:key="shareUserId"
-				class="user-group"
+				v-for="(dateGroup, dateKey) in groupedCollections" 
+				:key="dateKey"
+				class="date-group"
 			>
+				<!-- 日期分组头部 -->
+				<view class="date-group-header">
+					<text class="date-icon">📅</text>
+					<text class="date-label">{{ dateGroup.dateInfo.label }}</text>
+				</view>
+				
+				<!-- 二级：该日期下的所有分享者分组 -->
+				<view 
+					v-for="(shareGroup, shareUserId) in dateGroup.shareGroups" 
+					:key="shareUserId"
+					class="user-group"
+				>
 				<!-- 分享者分组头部 -->
 				<view class="user-group-header">
 					<view class="user-info-section">
@@ -125,6 +137,7 @@
 							</view>
 						</view>
 					</view>
+					</view>
 				</view>
 			</view>
 			
@@ -150,46 +163,80 @@ export default {
 	},
 	
 	computed: {
-		// 按分享者分组的数据（三级结构：分享者 → 添加者 → 条目）
+		// 按日期+用户分组的数据（三级结构：日期 → 用户 → 条目）
 		groupedCollections() {
 			const grouped = {}
+			const today = new Date()
+			today.setHours(0, 0, 0, 0)
 			
 			this.collections.forEach(item => {
-				// 一级分组：使用分享者信息作为分组依据
+				// 获取日期分类键
+				const dateKey = this.getDateCategory(item.collection_time)
+				
+				// 一级分组：按日期
+				if (!grouped[dateKey]) {
+					grouped[dateKey] = {
+						dateInfo: {
+							label: this.getDateLabel(item.collection_time),
+							timestamp: item.collection_time,
+							sortKey: dateKey
+						},
+						shareGroups: {} // 二级分组：分享者（保持原有结构）
+					}
+				}
+				
+				// 二级分组：按分享者（或添加者）
 				const shareUserId = item.share_user_id || 'direct_add'
 				const shareUserNickname = item.share_user_nickname || '直接添加'
 				
-				if (!grouped[shareUserId]) {
-					grouped[shareUserId] = {
+				if (!grouped[dateKey].shareGroups[shareUserId]) {
+					grouped[dateKey].shareGroups[shareUserId] = {
 						userInfo: {
 							nickName: shareUserNickname,
-							avatarUrl: '' // 分享者暂无头像信息
+							avatarUrl: ''
 						},
-						collectors: {} // 二级分组：添加者
+						collectors: {} // 三级分组：添加者
 					}
 				}
 				
-				// 二级分组：按添加者分组
+				// 三级分组：按添加者分组
 				const collectorId = item.user_id || 'unknown'
 				const collectorNickname = item.user_info?.nickName || '未知用户'
 				const collectorAvatar = item.user_info?.avatarUrl || ''
-				const collectorPhone = item.user_info?.mobile || '' // 使用mobile字段获取手机号
+				const collectorPhone = item.user_info?.mobile || ''
 				
-				if (!grouped[shareUserId].collectors[collectorId]) {
-					grouped[shareUserId].collectors[collectorId] = {
+				if (!grouped[dateKey].shareGroups[shareUserId].collectors[collectorId]) {
+					grouped[dateKey].shareGroups[shareUserId].collectors[collectorId] = {
 						collectorInfo: {
 							nickName: collectorNickname,
 							avatarUrl: collectorAvatar,
-							phone: collectorPhone // 保存手机号
+							phone: collectorPhone
 						},
-						items: [] // 三级：具体条目
+						items: []
 					}
 				}
 				
-				grouped[shareUserId].collectors[collectorId].items.push(item)
+				grouped[dateKey].shareGroups[shareUserId].collectors[collectorId].items.push(item)
 			})
 			
-			return grouped
+			// 转换为数组并排序（今天 > 昨天 > 更早的日期）
+			return Object.entries(grouped)
+				.sort((a, b) => {
+					const order = { 'today': 0, 'yesterday': 1 }
+					const orderA = order[a[0]] !== undefined ? order[a[0]] : 2
+					const orderB = order[b[0]] !== undefined ? order[b[0]] : 2
+					
+					if (orderA !== orderB) return orderA - orderB
+					// 对于更早的日期，按时间戳降序排序
+					if (orderA === 2) {
+						return b[1].dateInfo.timestamp - a[1].dateInfo.timestamp
+					}
+					return 0
+				})
+				.reduce((acc, [key, value]) => {
+					acc[key] = value
+					return acc
+				}, {})
 		}
 	},
 	
@@ -385,6 +432,52 @@ export default {
 					})
 				}
 			})
+		},
+		
+		// 获取日期分类键
+		getDateCategory(timestamp) {
+			if (!timestamp) return 'unknown'
+			
+			const date = new Date(timestamp)
+			const today = new Date()
+			today.setHours(0, 0, 0, 0)
+			
+			const itemDate = new Date(date)
+			itemDate.setHours(0, 0, 0, 0)
+			
+			const diffDays = Math.floor((today - itemDate) / (24 * 60 * 60 * 1000))
+			
+			if (diffDays === 0) return 'today'
+			if (diffDays === 1) return 'yesterday'
+			
+			// 更早的日期，使用完整日期作为键
+			return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+		},
+		
+		// 获取日期显示标签
+		getDateLabel(timestamp) {
+			if (!timestamp) return '未知日期'
+			
+			const date = new Date(timestamp)
+			const today = new Date()
+			today.setHours(0, 0, 0, 0)
+			
+			const itemDate = new Date(date)
+			itemDate.setHours(0, 0, 0, 0)
+			
+			const diffDays = Math.floor((today - itemDate) / (24 * 60 * 60 * 1000))
+			
+			if (diffDays === 0) return '今天'
+			if (diffDays === 1) return '昨天'
+			
+			// 更早的日期
+			const year = date.getFullYear()
+			const month = date.getMonth() + 1
+			const day = date.getDate()
+			const weekdays = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六']
+			const weekday = weekdays[date.getDay()]
+			
+			return `${month}月${day}日 ${weekday}`
 		}
 	}
 }
@@ -430,6 +523,34 @@ export default {
 		font-weight: 600;
 		line-height: 1.5;
 		text-shadow: 0 2rpx 4rpx rgba(0, 0, 0, 0.15);
+	}
+}
+
+/* 日期分组样式 */
+.date-group {
+	margin-bottom: 40rpx;
+	
+	.date-group-header {
+		display: flex;
+		align-items: center;
+		gap: 12rpx;
+		padding: 16rpx 32rpx;
+		margin: 0 24rpx 16rpx;
+		background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+		border-radius: 12rpx;
+		box-shadow: 0 4rpx 16rpx rgba(240, 147, 251, 0.3);
+		
+		.date-icon {
+			font-size: 32rpx;
+			filter: drop-shadow(0 2rpx 4rpx rgba(0, 0, 0, 0.2));
+		}
+		
+		.date-label {
+			font-size: 32rpx;
+			color: #fff;
+			font-weight: 700;
+			text-shadow: 0 2rpx 4rpx rgba(0, 0, 0, 0.15);
+		}
 	}
 }
 

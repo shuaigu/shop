@@ -44,6 +44,31 @@
   text-shadow: 0 2rpx 4rpx rgba(0, 0, 0, 0.15);
 }
 
+/* 日期分组样式 */
+.date-group.data-v-b16fd458 {
+  margin-bottom: 40rpx;
+}
+.date-group .date-group-header.data-v-b16fd458 {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+  padding: 16rpx 32rpx;
+  margin: 0 24rpx 16rpx;
+  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+  border-radius: 12rpx;
+  box-shadow: 0 4rpx 16rpx rgba(240, 147, 251, 0.3);
+}
+.date-group .date-group-header .date-icon.data-v-b16fd458 {
+  font-size: 32rpx;
+  filter: drop-shadow(0 2rpx 4rpx rgba(0, 0, 0, 0.2));
+}
+.date-group .date-group-header .date-label.data-v-b16fd458 {
+  font-size: 32rpx;
+  color: #fff;
+  font-weight: 700;
+  text-shadow: 0 2rpx 4rpx rgba(0, 0, 0, 0.15);
+}
+
 /* 用户分组样式 */
 .user-group.data-v-b16fd458 {
   margin-bottom: 32rpx;

@@ -12,43 +12,67 @@ const _sfc_main = {
     };
   },
   computed: {
-    // 按分享者分组的数据（三级结构：分享者 → 添加者 → 条目）
+    // 按日期+用户分组的数据（三级结构：日期 → 用户 → 条目）
     groupedCollections() {
       const grouped = {};
+      const today = /* @__PURE__ */ new Date();
+      today.setHours(0, 0, 0, 0);
       this.collections.forEach((item) => {
         var _a, _b, _c;
+        const dateKey = this.getDateCategory(item.collection_time);
+        if (!grouped[dateKey]) {
+          grouped[dateKey] = {
+            dateInfo: {
+              label: this.getDateLabel(item.collection_time),
+              timestamp: item.collection_time,
+              sortKey: dateKey
+            },
+            shareGroups: {}
+            // 二级分组：分享者（保持原有结构）
+          };
+        }
         const shareUserId = item.share_user_id || "direct_add";
         const shareUserNickname = item.share_user_nickname || "直接添加";
-        if (!grouped[shareUserId]) {
-          grouped[shareUserId] = {
+        if (!grouped[dateKey].shareGroups[shareUserId]) {
+          grouped[dateKey].shareGroups[shareUserId] = {
             userInfo: {
               nickName: shareUserNickname,
               avatarUrl: ""
-              // 分享者暂无头像信息
             },
             collectors: {}
-            // 二级分组：添加者
+            // 三级分组：添加者
           };
         }
         const collectorId = item.user_id || "unknown";
         const collectorNickname = ((_a = item.user_info) == null ? void 0 : _a.nickName) || "未知用户";
         const collectorAvatar = ((_b = item.user_info) == null ? void 0 : _b.avatarUrl) || "";
         const collectorPhone = ((_c = item.user_info) == null ? void 0 : _c.mobile) || "";
-        if (!grouped[shareUserId].collectors[collectorId]) {
-          grouped[shareUserId].collectors[collectorId] = {
+        if (!grouped[dateKey].shareGroups[shareUserId].collectors[collectorId]) {
+          grouped[dateKey].shareGroups[shareUserId].collectors[collectorId] = {
             collectorInfo: {
               nickName: collectorNickname,
               avatarUrl: collectorAvatar,
               phone: collectorPhone
-              // 保存手机号
             },
             items: []
-            // 三级：具体条目
           };
         }
-        grouped[shareUserId].collectors[collectorId].items.push(item);
+        grouped[dateKey].shareGroups[shareUserId].collectors[collectorId].items.push(item);
       });
-      return grouped;
+      return Object.entries(grouped).sort((a, b) => {
+        const order = { "today": 0, "yesterday": 1 };
+        const orderA = order[a[0]] !== void 0 ? order[a[0]] : 2;
+        const orderB = order[b[0]] !== void 0 ? order[b[0]] : 2;
+        if (orderA !== orderB)
+          return orderA - orderB;
+        if (orderA === 2) {
+          return b[1].dateInfo.timestamp - a[1].dateInfo.timestamp;
+        }
+        return 0;
+      }).reduce((acc, [key, value]) => {
+        acc[key] = value;
+        return acc;
+      }, {});
     }
   },
   onLoad() {
@@ -210,6 +234,43 @@ const _sfc_main = {
           });
         }
       });
+    },
+    // 获取日期分类键
+    getDateCategory(timestamp) {
+      if (!timestamp)
+        return "unknown";
+      const date = new Date(timestamp);
+      const today = /* @__PURE__ */ new Date();
+      today.setHours(0, 0, 0, 0);
+      const itemDate = new Date(date);
+      itemDate.setHours(0, 0, 0, 0);
+      const diffDays = Math.floor((today - itemDate) / (24 * 60 * 60 * 1e3));
+      if (diffDays === 0)
+        return "today";
+      if (diffDays === 1)
+        return "yesterday";
+      return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+    },
+    // 获取日期显示标签
+    getDateLabel(timestamp) {
+      if (!timestamp)
+        return "未知日期";
+      const date = new Date(timestamp);
+      const today = /* @__PURE__ */ new Date();
+      today.setHours(0, 0, 0, 0);
+      const itemDate = new Date(date);
+      itemDate.setHours(0, 0, 0, 0);
+      const diffDays = Math.floor((today - itemDate) / (24 * 60 * 60 * 1e3));
+      if (diffDays === 0)
+        return "今天";
+      if (diffDays === 1)
+        return "昨天";
+      date.getFullYear();
+      const month = date.getMonth() + 1;
+      const day = date.getDate();
+      const weekdays = ["星期日", "星期一", "星期二", "星期三", "星期四", "星期五", "星期六"];
+      const weekday = weekdays[date.getDay()];
+      return `${month}月${day}日 ${weekday}`;
     }
   }
 };
@@ -226,46 +287,52 @@ function _sfc_render(_ctx, _cache, $props, $setup, $data, $options) {
   }, !$data.loading && $data.collections.length === 0 ? {
     g: common_vendor.t($data.userRole === "admin" ? "还没有用户添加备忘录~" : "还没有用户通过你的分享添加备忘录~")
   } : common_vendor.e({
-    h: common_vendor.f($options.groupedCollections, (shareGroup, shareUserId, i0) => {
+    h: common_vendor.f($options.groupedCollections, (dateGroup, dateKey, i0) => {
       return {
-        a: common_vendor.t(shareGroup.userInfo.nickName),
-        b: common_vendor.t(Object.keys(shareGroup.collectors).length),
-        c: common_vendor.f(shareGroup.collectors, (collectorGroup, collectorId, i1) => {
-          return common_vendor.e({
-            a: collectorGroup.collectorInfo.avatarUrl
-          }, collectorGroup.collectorInfo.avatarUrl ? {
-            b: collectorGroup.collectorInfo.avatarUrl
-          } : {}, {
-            c: common_vendor.t(collectorGroup.collectorInfo.nickName),
-            d: common_vendor.t(collectorGroup.items.length),
-            e: collectorGroup.collectorInfo.phone
-          }, collectorGroup.collectorInfo.phone ? {
-            f: common_vendor.t(collectorGroup.collectorInfo.phone),
-            g: common_vendor.o(($event) => $options.makePhoneCall(collectorGroup.collectorInfo.phone))
-          } : {}, {
-            h: common_vendor.f(collectorGroup.items, (item, k2, i2) => {
+        a: common_vendor.t(dateGroup.dateInfo.label),
+        b: common_vendor.f(dateGroup.shareGroups, (shareGroup, shareUserId, i1) => {
+          return {
+            a: common_vendor.t(shareGroup.userInfo.nickName),
+            b: common_vendor.t(Object.keys(shareGroup.collectors).length),
+            c: common_vendor.f(shareGroup.collectors, (collectorGroup, collectorId, i2) => {
               return common_vendor.e({
-                a: item.memo_info && item.memo_info.image_url
-              }, item.memo_info && item.memo_info.image_url ? {
-                b: item.memo_info.image_url
+                a: collectorGroup.collectorInfo.avatarUrl
+              }, collectorGroup.collectorInfo.avatarUrl ? {
+                b: collectorGroup.collectorInfo.avatarUrl
               } : {}, {
-                c: item.memo_info && item.memo_info.title
-              }, item.memo_info && item.memo_info.title ? {
-                d: common_vendor.t(item.memo_info.title)
+                c: common_vendor.t(collectorGroup.collectorInfo.nickName),
+                d: common_vendor.t(collectorGroup.items.length),
+                e: collectorGroup.collectorInfo.phone
+              }, collectorGroup.collectorInfo.phone ? {
+                f: common_vendor.t(collectorGroup.collectorInfo.phone),
+                g: common_vendor.o(($event) => $options.makePhoneCall(collectorGroup.collectorInfo.phone))
               } : {}, {
-                e: item.memo_info
-              }, item.memo_info ? {
-                f: common_vendor.t(item.memo_info.content)
-              } : {}, {
-                g: common_vendor.t($options.formatTime(item.collection_time)),
-                h: common_vendor.o(($event) => $options.cancelCollection(item)),
-                i: item._id
+                h: common_vendor.f(collectorGroup.items, (item, k3, i3) => {
+                  return common_vendor.e({
+                    a: item.memo_info && item.memo_info.image_url
+                  }, item.memo_info && item.memo_info.image_url ? {
+                    b: item.memo_info.image_url
+                  } : {}, {
+                    c: item.memo_info && item.memo_info.title
+                  }, item.memo_info && item.memo_info.title ? {
+                    d: common_vendor.t(item.memo_info.title)
+                  } : {}, {
+                    e: item.memo_info
+                  }, item.memo_info ? {
+                    f: common_vendor.t(item.memo_info.content)
+                  } : {}, {
+                    g: common_vendor.t($options.formatTime(item.collection_time)),
+                    h: common_vendor.o(($event) => $options.cancelCollection(item)),
+                    i: item._id
+                  });
+                }),
+                i: collectorId
               });
             }),
-            i: collectorId
-          });
+            d: shareUserId
+          };
         }),
-        d: shareUserId
+        c: dateKey
       };
     }),
     i: $data.loading
