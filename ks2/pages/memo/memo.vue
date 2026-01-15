@@ -831,8 +831,6 @@ export default {
 	background: #f5f5f5;
 	display: flex;
 	flex-direction: column;
-	overflow-x: hidden;
-	touch-action: pan-y;
 }
 
 /* 分类标签页 */
@@ -964,8 +962,6 @@ export default {
 	}
 	
 	.default-memo-list {
-		overflow-x: hidden;
-		
 		.memo-card-large {
 			background: #fff;
 			border-radius: 20rpx;
@@ -1110,9 +1106,6 @@ export default {
 .memo-list {
 	flex: 1;
 	padding: 24rpx;
-	overflow-x: hidden;
-	width: 100%;
-	max-width: 100%;
 }
 
 .empty-state {
