@@ -1,0 +1,232 @@
+
+.container.data-v-1cf27b2a {
+		min-height: 100vh;
+		background-color: #f5f5f5;
+		padding: 20rpx;
+}
+	
+	/* 头部 */
+.header.data-v-1cf27b2a {
+		background: linear-gradient(135deg, #1890ff 0%, #0066cc 100%);
+		border-radius: 20rpx;
+		padding: 60rpx 40rpx;
+		text-align: center;
+		margin-bottom: 20rpx;
+}
+.logo.data-v-1cf27b2a {
+		width: 120rpx;
+		height: 120rpx;
+		margin-bottom: 20rpx;
+}
+.title.data-v-1cf27b2a {
+		display: block;
+		font-size: 48rpx;
+		font-weight: bold;
+		color: #ffffff;
+		margin-bottom: 10rpx;
+}
+.subtitle.data-v-1cf27b2a {
+		display: block;
+		font-size: 28rpx;
+		color: rgba(255, 255, 255, 0.8);
+}
+	
+	/* 打印机卡片 */
+.printer-card.data-v-1cf27b2a {
+		background-color: #ffffff;
+		border-radius: 20rpx;
+		padding: 30rpx;
+		margin-bottom: 20rpx;
+}
+.card-header.data-v-1cf27b2a {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		margin-bottom: 20rpx;
+}
+.card-title.data-v-1cf27b2a {
+		font-size: 32rpx;
+		font-weight: bold;
+		color: #333333;
+}
+.more.data-v-1cf27b2a {
+		font-size: 28rpx;
+		color: #1890ff;
+}
+.printer-info.data-v-1cf27b2a {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		padding: 20rpx;
+		background-color: #f5f5f5;
+		border-radius: 12rpx;
+}
+.printer-name.data-v-1cf27b2a {
+		font-size: 30rpx;
+		color: #333333;
+}
+.printer-status.data-v-1cf27b2a {
+		font-size: 26rpx;
+		padding: 8rpx 20rpx;
+		border-radius: 20rpx;
+}
+.printer-status.online.data-v-1cf27b2a {
+		background-color: #e6f7ff;
+		color: #1890ff;
+}
+.printer-status.offline.data-v-1cf27b2a {
+		background-color: #fff1f0;
+		color: #ff4d4f;
+}
+	
+	/* 快捷功能 */
+.quick-actions.data-v-1cf27b2a {
+		display: flex;
+		justify-content: space-between;
+		margin-bottom: 20rpx;
+}
+.action-item.data-v-1cf27b2a {
+		flex: 1;
+		background-color: #ffffff;
+		border-radius: 20rpx;
+		padding: 30rpx 20rpx;
+		margin: 0 10rpx;
+		text-align: center;
+}
+.action-item.data-v-1cf27b2a:first-child {
+		margin-left: 0;
+}
+.action-item.data-v-1cf27b2a:last-child {
+		margin-right: 0;
+}
+.action-icon.data-v-1cf27b2a {
+		font-size: 60rpx;
+		margin-bottom: 15rpx;
+}
+.action-text.data-v-1cf27b2a {
+		display: block;
+		font-size: 26rpx;
+		color: #666666;
+}
+	
+	/* 统计卡片 */
+.stats-card.data-v-1cf27b2a {
+		background-color: #ffffff;
+		border-radius: 20rpx;
+		padding: 30rpx;
+		display: flex;
+		justify-content: space-around;
+		margin-bottom: 20rpx;
+}
+.stat-item.data-v-1cf27b2a {
+		text-align: center;
+}
+.stat-value.data-v-1cf27b2a {
+		display: block;
+		font-size: 48rpx;
+		font-weight: bold;
+		color: #1890ff;
+		margin-bottom: 10rpx;
+}
+.stat-label.data-v-1cf27b2a {
+		font-size: 26rpx;
+		color: #999999;
+}
+	
+	/* 最近打印 */
+.recent-section.data-v-1cf27b2a {
+		background-color: #ffffff;
+		border-radius: 20rpx;
+		padding: 30rpx;
+}
+.section-header.data-v-1cf27b2a {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		margin-bottom: 20rpx;
+}
+.section-title.data-v-1cf27b2a {
+		font-size: 32rpx;
+		font-weight: bold;
+		color: #333333;
+}
+.recent-list.data-v-1cf27b2a {
+}
+.recent-item.data-v-1cf27b2a {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		padding: 20rpx 0;
+		border-bottom: 1px solid #f0f0f0;
+}
+.recent-item.data-v-1cf27b2a:last-child {
+		border-bottom: none;
+}
+.item-left.data-v-1cf27b2a {
+		display: flex;
+		flex-direction: column;
+}
+.item-type.data-v-1cf27b2a {
+		font-size: 30rpx;
+		color: #333333;
+		margin-bottom: 10rpx;
+}
+.item-time.data-v-1cf27b2a {
+		font-size: 24rpx;
+		color: #999999;
+}
+.item-status.data-v-1cf27b2a {
+		font-size: 26rpx;
+		padding: 6rpx 16rpx;
+		border-radius: 12rpx;
+}
+.item-status.success.data-v-1cf27b2a {
+		background-color: #f6ffed;
+		color: #52c41a;
+}
+.item-status.failed.data-v-1cf27b2a {
+		background-color: #fff1f0;
+		color: #ff4d4f;
+}
+.item-status.pending.data-v-1cf27b2a {
+		background-color: #fff7e6;
+		color: #faad14;
+}
+.empty-tip.data-v-1cf27b2a {
+		text-align: center;
+		padding: 60rpx 0;
+		color: #999999;
+		font-size: 28rpx;
+}
+	
+	/* 测试按钮 */
+.test-section.data-v-1cf27b2a {
+		margin-top: 20rpx;
+		padding: 0 20rpx 40rpx;
+		display: flex;
+		gap: 20rpx;
+}
+.connection-test-btn.data-v-1cf27b2a {
+		flex: 1;
+		height: 100rpx;
+		line-height: 100rpx;
+		background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+		color: #ffffff;
+		border: none;
+		border-radius: 50rpx;
+		font-size: 32rpx;
+		font-weight: bold;
+		box-shadow: 0 8rpx 20rpx rgba(102, 126, 234, 0.4);
+}
+.test-btn.data-v-1cf27b2a {
+		flex: 1;
+		height: 100rpx;
+		line-height: 100rpx;
+		background: linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%);
+		color: #ffffff;
+		border: none;
+		border-radius: 50rpx;
+		font-size: 32rpx;
+		font-weight: bold;
+		box-shadow: 0 8rpx 20rpx rgba(255, 107, 107, 0.4);
+}
