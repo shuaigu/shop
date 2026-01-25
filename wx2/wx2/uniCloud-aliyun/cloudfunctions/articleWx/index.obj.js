@@ -2270,6 +2270,265 @@ module.exports = {
 		}
 	},
 	
+	/**
+	 * createBuyoutOrder 创建买断订单（用于支付前）
+	 * @param {string} article_id 文章ID
+	 * @param {string} user_id 买断用户ID
+	 * @param {number} buyoutPrice 买断价格
+	 * @param {object} userInfo 用户信息
+	 * @param {string} share_from_user_id 分享来源用户ID
+	 * @returns {object} 订单信息
+	 */
+	async createBuyoutOrder(article_id, user_id, buyoutPrice, userInfo = {}, share_from_user_id = null) {
+		try {
+			console.log('创建买断订单:', { article_id, user_id, buyoutPrice, share_from_user_id });
+			
+			// 参数验证
+			if (!article_id || !user_id || !buyoutPrice) {
+				return {
+					errCode: -1,
+					errMsg: '参数不完整'
+				};
+			}
+			
+			// 检查文章是否存在
+			const articleRes = await this.articleCollection.doc(article_id).get();
+			if (!articleRes.data || articleRes.data.length === 0) {
+				return {
+					errCode: -1,
+					errMsg: '文章不存在'
+				};
+			}
+			
+			const article = articleRes.data[0];
+			
+			// 检查砍价/买断功能是否开启
+			if (!article.enable_bargain || !article.enable_buyout) {
+				return {
+					errCode: -1,
+					errMsg: '买断功能未开启'
+				};
+			}
+			
+			// 检查是否是小组长（发起人）
+			const initiatorCheck = await this.bargainRecordCollection
+				.where({
+					article_id: article_id,
+					initiator_id: user_id
+				})
+				.limit(1)
+				.get();
+				
+			if (!initiatorCheck.data || initiatorCheck.data.length === 0) {
+				return {
+					errCode: -1,
+					errMsg: '只有砍价小组长（发起人）才能买断'
+				};
+			}
+			
+			// 检查用户是否已经买断过
+			const existingBuyout = await this.bargainRecordCollection
+				.where({
+					article_id: article_id,
+					user_id: user_id,
+					is_buyout: true
+				})
+				.get();
+				
+			if (existingBuyout.data && existingBuyout.data.length > 0) {
+				return {
+					errCode: -1,
+					errMsg: '您已经买断过该商品'
+				};
+			}
+			
+			// 生成订单号
+			const orderNo = 'BUYOUT' + Date.now() + Math.random().toString(36).substr(2, 9).toUpperCase();
+			
+			// 创建买断订单记录（存储到数据库）
+			const buyoutOrderCollection = this.db.collection('buyout_orders');
+			const now = Date.now();
+			
+			const orderData = {
+				order_no: orderNo,
+				article_id: article_id,
+				user_id: user_id,
+				initiator_id: user_id,
+				buyout_price: buyoutPrice,
+				status: 0, // 0-待支付, 1-已支付, 2-已取消
+				user_info: {
+					nickname: userInfo.nickName || '匿名用户',
+					avatar: userInfo.avatarUrl || '/static/images/touxiang.png'
+				},
+				share_from_user_id: share_from_user_id || user_id,
+				create_time: now,
+				update_time: now
+			};
+			
+			const insertRes = await buyoutOrderCollection.add(orderData);
+			
+			if (!insertRes.id) {
+				throw new Error('订单创建失败');
+			}
+			
+			console.log('买断订单创建成功:', orderNo);
+			
+			return {
+				errCode: 0,
+				errMsg: '订单创建成功',
+				data: {
+					order_no: orderNo,
+					buyout_id: insertRes.id,
+					amount: buyoutPrice
+				}
+			};
+			
+		} catch (err) {
+			console.error('创建买断订单失败:', err);
+			return {
+				errCode: -1,
+				errMsg: '创建订单失败: ' + err.message
+			};
+		}
+	},
+	
+	/**
+	 * completeBuyout 完成买断（支付成功后调用）
+	 * @param {string} order_no 订单号
+	 * @param {string} user_id 用户ID
+	 * @returns {object} 完成结果
+	 */
+	async completeBuyout(order_no, user_id) {
+		try {
+			console.log('完成买断:', { order_no, user_id });
+			
+			// 参数验证
+			if (!order_no || !user_id) {
+				return {
+					errCode: -1,
+					errMsg: '参数不完整'
+				};
+			}
+			
+			// 查询订单
+			const buyoutOrderCollection = this.db.collection('buyout_orders');
+			const orderRes = await buyoutOrderCollection
+				.where({
+					order_no: order_no,
+					user_id: user_id
+				})
+				.get();
+				
+			if (!orderRes.data || orderRes.data.length === 0) {
+				return {
+					errCode: -1,
+					errMsg: '订单不存在'
+				};
+			}
+			
+			const order = orderRes.data[0];
+			
+			// 检查订单状态
+			if (order.status === 1) {
+				return {
+					errCode: -1,
+					errMsg: '订单已完成，请勿重复操作'
+				};
+			}
+			
+			if (order.status === 2) {
+				return {
+					errCode: -1,
+					errMsg: '订单已取消'
+				};
+			}
+			
+			// 获取文章信息
+			const articleRes = await this.articleCollection.doc(order.article_id).get();
+			if (!articleRes.data || articleRes.data.length === 0) {
+				return {
+					errCode: -1,
+					errMsg: '文章不存在'
+				};
+			}
+			
+			const article = articleRes.data[0];
+			const now = Date.now();
+			
+			// 创建买断记录（写入 bargainRecord 表）
+			const buyoutRecord = {
+				article_id: order.article_id,
+				initiator_id: user_id,
+				initiator_nickname: order.user_info.nickname,
+				initiator_avatar: order.user_info.avatar,
+				user_id: user_id,
+				nickname: order.user_info.nickname,
+				avatar: order.user_info.avatar,
+				bargain_amount: order.buyout_price,
+				current_price: 0,
+				buyout_price: order.buyout_price,
+				is_buyout: true,
+				is_complete: true,
+				create_time: now
+			};
+			
+			await this.bargainRecordCollection.add(buyoutRecord);
+			
+			// 更新文章状态
+			await this.articleCollection.doc(order.article_id).update({
+				bargain_buyout_price: order.buyout_price,
+				bargain_buyout_time: now,
+				bargain_completed: true
+			});
+			
+			// 更新订单状态
+			await buyoutOrderCollection.doc(order._id).update({
+				status: 1,
+				update_time: now,
+				complete_time: now
+			});
+			
+			// 计算奖励积分
+			const rewardPoints = Math.floor(order.buyout_price);
+			
+			// 更新用户积分
+			if (rewardPoints > 0) {
+				try {
+					const _ = this.db.command;
+					await this.db.collection('user').doc(user_id).update({
+						points: _.inc(rewardPoints)
+					});
+					console.log('用户积分已更新:', { user_id, reward_points: rewardPoints });
+				} catch (err) {
+					console.error('更新用户积分失败:', err);
+				}
+			}
+			
+			console.log('买断完成:', {
+				order_no: order_no,
+				buyout_price: order.buyout_price,
+				reward_points: rewardPoints
+			});
+			
+			return {
+				errCode: 0,
+				errMsg: '买断完成',
+				data: {
+					buyout_price: order.buyout_price,
+					reward_points: rewardPoints,
+					is_complete: true
+				}
+			};
+			
+		} catch (err) {
+			console.error('完成买断失败:', err);
+			return {
+				errCode: -1,
+				errMsg: '完成买断失败: ' + err.message
+			};
+		}
+	},
+	
 	main: async function(event) {
 		console.log('云函数入口函数接收到的参数', event)
 		

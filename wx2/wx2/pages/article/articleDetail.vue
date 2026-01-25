@@ -298,15 +298,29 @@
 	const currentBargainPrice = ref(0) // 当前砍价剩余价格
 	const userOwnGroup = ref(null) // 用户自己发起的砍价小组信息
 	
+	// 测试模式：设置为 true 可以跳过实际支付，直接模拟支付成功
+	const TEST_MODE_SKIP_PAYMENT = false // 生产环境请设置为 false
+	
 	// 获取用户自己发起的砍价小组
 	const loadUserOwnGroup = async () => {
 		try {
+			console.log('=== loadUserOwnGroup 开始 ===', {
+				uid: userStore.userInfo?.uid,
+				articleId: articleDetail.value._id,
+				enableBuyout: articleDetail.value.enable_buyout,
+				enableBargain: articleDetail.value.enable_bargain
+			})
+			
 			if (!userStore.userInfo?.uid || !articleDetail.value._id) {
+				console.log('loadUserOwnGroup: 用户未登录或文章ID不存在，跳过')
 				userOwnGroup.value = null
 				return
 			}
 			
-			console.log('查询用户自己的砍价小组...')
+			console.log('查询用户自己的砍价小组...', {
+				articleId: articleDetail.value._id,
+				userId: userStore.userInfo.uid
+			})
 			
 			try {
 				// 尝试调用云函数获取用户小组信息
@@ -315,10 +329,19 @@
 					userStore.userInfo.uid
 				)
 				
+				console.log('getUserBargainGroup 云函数返回:', result)
+				
 				if (result.errCode === 0 && result.data) {
 					userOwnGroup.value = result.data
-					console.log('用户自己的砍价小组:', userOwnGroup.value)
+					console.log('✅ 成功获取用户砍价小组:', {
+						initiator_id: userOwnGroup.value.initiator_id,
+						current_price: userOwnGroup.value.current_price,
+						is_complete: userOwnGroup.value.is_complete,
+						is_buyout: userOwnGroup.value.is_buyout
+					})
 					return
+				} else {
+					console.log('云函数返回空数据，用户可能没有发起砍价小组')
 				}
 			} catch (apiErr) {
 				console.warn('云函数调用失败，使用备选逻辑:', apiErr.message)
@@ -326,19 +349,23 @@
 			
 			// 备选逻辑：检查 current_sharer_id 是否是当前用户
 			const sharerId = uni.getStorageSync('current_sharer_id')
+			console.log('备选逻辑检查:', { sharerId, currentUid: userStore.userInfo.uid })
+			
 			if (sharerId && sharerId === userStore.userInfo.uid) {
 				// 用户是当前页面的分享者/发起人，构造一个简单的小组信息
+				// 注意：这里使用 currentBargainPrice 作为当前价格
+				const fallbackPrice = currentBargainPrice.value || articleDetail.value.bargain_initial_price || 0
 				userOwnGroup.value = {
 					initiator_id: userStore.userInfo.uid,
 					initiator_nickname: userStore.userInfo.nickName || '匿名用户',
-					current_price: currentBargainPrice.value || articleDetail.value.bargain_initial_price || 0,
-					is_complete: false,
+					current_price: fallbackPrice,
+					is_complete: fallbackPrice <= 0,
 					is_buyout: false
 				}
-				console.log('使用备选逻辑设置用户小组:', userOwnGroup.value)
+				console.log('✅ 使用备选逻辑设置用户小组:', userOwnGroup.value)
 			} else {
 				userOwnGroup.value = null
-				console.log('用户没有发起砍价小组')
+				console.log('❌ 用户没有发起砍价小组（sharerId不匹配或不存在）')
 			}
 		} catch (err) {
 			console.error('获取用户砍价小组失败:', err)
@@ -377,13 +404,37 @@
 	})
 	
 	// 监听用户登录状态变化，刷新买断权限
-	watch(() => userStore.userInfo?.uid, (newUid, oldUid) => {
-		if (newUid && newUid !== oldUid && articleDetail.value.enable_buyout && articleDetail.value.enable_bargain) {
-			console.log('用户登录状态变化，刷新买断权限')
-			// 更新 current_sharer_id 为当前用户
-			uni.setStorageSync('current_sharer_id', newUid)
-			// 刷新用户小组信息
-			loadUserOwnGroup()
+	watch(() => userStore.userInfo?.uid, async (newUid, oldUid) => {
+		// 当用户 uid 变为有效值时（首次加载或登录后）
+		if (newUid && articleDetail.value.enable_buyout && articleDetail.value.enable_bargain && articleDetail.value._id) {
+			console.log('用户登录状态变化或首次获取用户信息，刷新买断权限', { newUid, oldUid })
+			
+			// 只在用户首次加载或登录时设置 current_sharer_id
+			// 如果已经有 sharer_id（通过分享进入），不覆盖它
+			const existingSharerId = uni.getStorageSync('current_sharer_id')
+			if (!existingSharerId) {
+				// 更新 current_sharer_id 为当前用户
+				uni.setStorageSync('current_sharer_id', newUid)
+				console.log('设置当前用户为默认分享者:', newUid)
+			} else {
+				console.log('已存在 sharer_id，不覆盖:', existingSharerId)
+			}
+			
+			// 延迟刷新用户小组信息，确保数据已准备好
+			await nextTick()
+			setTimeout(() => {
+				loadUserOwnGroup()
+			}, 500)
+		}
+	}, { immediate: true })
+	
+	// 监听文章数据加载完成，确保买断功能正确初始化
+	watch(() => articleDetail.value._id, (newId) => {
+		if (newId && userStore.userInfo?.uid && articleDetail.value.enable_buyout && articleDetail.value.enable_bargain) {
+			console.log('文章数据加载完成，初始化买断功能')
+			setTimeout(() => {
+				loadUserOwnGroup()
+			}, 500)
 		}
 	})
 	
@@ -464,55 +515,12 @@
 			uni.showModal({
 				title: '确认买断',
 				content: `您将以 ￥${computedBuyoutPrice.value.toFixed(2)} 的价格直接买断此商品，\n买断后将完成您的砍价活动。\n\n是否继续？`,
-				confirmText: '确认买断',
+				confirmText: '确认支付',
 				cancelText: '再考虑考虑',
 				success: async (res) => {
 					if (res.confirm) {
 						isBuyoutProcessing.value = true
-						uni.showLoading({ title: '处理中...', mask: true })
-						
-						try {
-							const result = await articleApi.buyoutBargain(
-								articleDetail.value._id || props.article_id,
-								userStore.userInfo.uid,
-								computedBuyoutPrice.value,
-								{
-									nickName: userStore.userInfo.nickName || '匿名用户',
-									avatarUrl: userStore.userInfo.avatarUrl || '/static/images/touxiang.png'
-								},
-								sharerId
-							)
-							
-							uni.hideLoading()
-							
-							if (result.errCode === 0) {
-								uni.showModal({
-									title: '买断成功！',
-									content: `恭喜您成功买断！\n您已完成砍价活动。${result.data?.reward_points ? `\n获得积分奖励: ${result.data.reward_points} 分` : ''}`,
-									showCancel: false,
-									confirmText: '太好了',
-									success: () => {
-										getArticleDetail()
-									}
-								})
-							} else {
-								uni.showModal({
-									title: '买断失败',
-									content: result.errMsg || '操作失败，请稍后重试',
-									showCancel: false
-								})
-							}
-						} catch (apiError) {
-							uni.hideLoading()
-							console.error('买断API调用失败:', apiError)
-							uni.showModal({
-								title: '买断失败',
-								content: apiError.errMsg || apiError.message || '网络异常，请稍后重试',
-								showCancel: false
-							})
-						} finally {
-							isBuyoutProcessing.value = false
-						}
+						await processBuyoutPayment(sharerId)
 					}
 				}
 			})
@@ -521,6 +529,367 @@
 			uni.showToast({ title: '操作失败', icon: 'none' })
 			isBuyoutProcessing.value = false
 		}
+	}
+	
+	// 处理买断支付
+	const processBuyoutPayment = async (sharerId) => {
+		try {
+			uni.showLoading({ title: '准备支付...', mask: true })
+			console.log('=== 开始买断支付流程 ===', {
+				sharerId,
+				articleId: articleDetail.value._id,
+				userId: userStore.userInfo.uid,
+				buyoutPrice: computedBuyoutPrice.value
+			})
+			
+			// 1. 创建买断订单（但不完成买断，等支付成功后再完成）
+			console.log('步骤1: 开始创建买断订单...')
+			
+			let orderRes
+			try {
+				orderRes = await articleApi.createBuyoutOrder(
+					articleDetail.value._id || props.article_id,
+					userStore.userInfo.uid,
+					computedBuyoutPrice.value,
+					{
+						nickName: userStore.userInfo.nickName || '匿名用户',
+						avatarUrl: userStore.userInfo.avatarUrl || '/static/images/touxiang.png'
+					},
+					sharerId
+				)
+				console.log('步骤1完成: 订单创建结果', orderRes)
+			} catch (err) {
+				console.error('步骤1失败: 创建订单出错', err)
+				throw new Error('创建订单失败: ' + (err.message || err.errMsg || '未知错误'))
+			}
+			
+			if (orderRes.errCode !== 0 || !orderRes.data) {
+				console.error('步骤1失败: 订单创建返回错误', orderRes)
+				throw new Error(orderRes.errMsg || '创建订单失败')
+			}
+			
+			console.log('✅ 买断订单创建成功:', orderRes.data)
+			
+			// 2. 获取 uni-pay 实例
+			console.log('步骤2: 创建 uni-pay-co 实例...')
+			let uniPayCo
+			try {
+				uniPayCo = uniCloud.importObject('uni-pay-co', { customUI: true })
+				console.log('✅ uni-pay-co 实例创建成功')
+			} catch (err) {
+				console.error('步骤2失败: 创建 uni-pay-co 实例失败', err)
+				throw new Error('支付模块加载失败，请检查 uni-pay 配置: ' + err.message)
+			}
+			
+			// 3. 获取用户的 openid
+			console.log('步骤3: 开始获取用户 openid...')
+			let openid = ''
+			try {
+				// 先尝试从缓存获取openid
+				openid = uni.getStorageSync('wx_openid')
+				console.log('从缓存获取的openid:', openid || '(空)')
+				
+				if (!openid) {
+					console.log('缓存中没有openid，开始通过 uni.login 获取...')
+					// 如果缓存中没有，则通过code获取
+					const loginRes = await new Promise((resolve, reject) => {
+						uni.login({
+							provider: 'weixin',
+							success: (res) => {
+								console.log('uni.login success:', res)
+								resolve(res)
+							},
+							fail: (err) => {
+								console.error('uni.login fail:', err)
+								reject(err)
+							}
+						})
+					})
+					
+					if (loginRes && loginRes.code) {
+						console.log('✅ 获取到登录code:', loginRes.code)
+						
+						console.log('开始调用 uniPayCo.getOpenid...')
+						const openidRes = await uniPayCo.getOpenid({
+							provider: 'wxpay',
+							code: loginRes.code
+						})
+						
+						console.log('getOpenid返回结果:', openidRes)
+						
+						if (openidRes.errCode === 0 && openidRes.openid) {
+							openid = openidRes.openid
+							// 缓存openid
+							uni.setStorageSync('wx_openid', openid)
+							console.log('✅ 获取openid成功:', openid)
+						} else {
+							console.error('❌ 获取openid失败:', openidRes)
+							throw new Error(openidRes.errMsg || '获取openid失败')
+						}
+					} else {
+						console.error('❌ 获取登录code失败')
+						throw new Error('获取登录code失败')
+					}
+				} else {
+					console.log('✅ 使用缓存的openid')
+				}
+			} catch (err) {
+				console.error('步骤3失败: 获取openid过程出错', err)
+				throw new Error('获取用户openid失败: ' + (err.message || '请重试'))
+			}
+			
+			if (!openid) {
+				console.error('❌ openid为空')
+				throw new Error('获取用户openid失败，openid为空')
+			}
+			
+			console.log('✅ 步骤3完成，openid已获取')
+			
+			// 4. 创建支付订单
+			console.log('步骤4: 开始创建支付订单...')
+			const payParams = {
+				provider: 'wxpay',
+				total_fee: Math.round(computedBuyoutPrice.value * 100), // 转换为分
+				order_no: orderRes.data.order_no,
+				description: '砍价买断',
+				type: 'recharge',
+				openid: openid,
+				custom: {
+					buyout_id: orderRes.data.buyout_id,
+					article_id: articleDetail.value._id
+				}
+			}
+			console.log('支付参数:', payParams)
+			
+			let payRes
+			try {
+				console.log('开始调用 uniPayCo.createOrder...')
+				payRes = await uniPayCo.createOrder(payParams)
+				console.log('createOrder 返回结果:', payRes)
+			} catch (err) {
+				console.error('步骤4失败: createOrder 调用出错', err)
+				throw new Error('创建支付订单失败: ' + (err.message || err.errMsg || '未知错误'))
+			}
+			
+			if (payRes.errCode !== 0) {
+				console.error('❌ createOrder 返回错误', payRes)
+				throw new Error(payRes.errMsg || '创建支付订单失败')
+			}
+			
+			// 5. 提取支付参数
+			const paymentParams = payRes.order
+			console.log('✅ 步骤4完成，实际支付参数:', paymentParams)
+			
+			if (!paymentParams) {
+				console.error('❌ 支付参数为空')
+				throw new Error('支付参数为空，请检查配置')
+			}
+			
+			// 6. 调起微信支付
+			console.log('步骤5: 准备调起微信支付...')
+			uni.hideLoading()
+			
+			// ========== 测试模式：跳过实际支付 ==========
+			if (TEST_MODE_SKIP_PAYMENT) {
+				console.warn('⚠️ 测试模式：跳过实际支付，直接模拟支付成功')
+				uni.showModal({
+					title: '测试模式',
+					content: '当前为测试模式，将跳过微信支付，直接模拟支付成功。\n\n是否继续？',
+					confirmText: '模拟支付成功',
+					cancelText: '取消',
+					success: async (res) => {
+						if (res.confirm) {
+							// 模拟支付成功
+							console.log('🎉 模拟支付成功！开始完成买断...')
+							uni.showLoading({ title: '处理中...', mask: true })
+							
+							try {
+								const completeRes = await articleApi.completeBuyout(
+									orderRes.data.order_no,
+									userStore.userInfo.uid
+								)
+								
+								uni.hideLoading()
+								
+								if (completeRes.errCode === 0) {
+									uni.showModal({
+										title: '买断成功！（测试模式）',
+										content: `恭喜您成功买断！\n您已完成砍价活动。${completeRes.data?.reward_points ? `\n获得积分奖励: ${completeRes.data.reward_points} 分` : ''}`,
+										showCancel: false,
+										confirmText: '太好了',
+										success: () => {
+											getArticleDetail()
+											loadUserOwnGroup()
+										}
+									})
+								} else {
+									throw new Error(completeRes.errMsg || '完成买断失败')
+								}
+							} catch (err) {
+								uni.hideLoading()
+								console.error('❌ 完成买断失败:', err)
+								uni.showModal({
+									title: '处理异常',
+									content: '支付成功但订单处理异常，请联系客服处理。订单号：' + orderRes.data.order_no,
+									showCancel: false
+								})
+							} finally {
+								isBuyoutProcessing.value = false
+							}
+						} else {
+							isBuyoutProcessing.value = false
+						}
+					}
+				})
+				return
+			}
+			// ========== 测试模式结束 ==========
+			
+			console.log('调用 uni.requestPayment，参数:', {
+				provider: 'wxpay',
+				...paymentParams
+			})
+			
+			uni.requestPayment({
+				provider: 'wxpay',
+				...paymentParams,
+				success: async () => {
+					console.log('🎉 支付成功！开始完成买断...')
+					uni.showLoading({ title: '处理中...', mask: true })
+					
+					try {
+						// 支付成功后，调用云函数完成买断
+						const completeRes = await articleApi.completeBuyout(
+							orderRes.data.order_no,
+							userStore.userInfo.uid
+						)
+						
+						uni.hideLoading()
+						
+						if (completeRes.errCode === 0) {
+							uni.showModal({
+								title: '买断成功！',
+								content: `恭喜您成功买断！\n您已完成砍价活动。${completeRes.data?.reward_points ? `\n获得积分奖励: ${completeRes.data.reward_points} 分` : ''}`,
+								showCancel: false,
+								confirmText: '太好了',
+								success: () => {
+									// 刷新页面数据
+									getArticleDetail()
+									// 刷新用户小组信息
+									loadUserOwnGroup()
+								}
+							})
+						} else {
+							throw new Error(completeRes.errMsg || '完成买断失败')
+						}
+					} catch (err) {
+						uni.hideLoading()
+						console.error('❌ 完成买断失败:', err)
+						uni.showModal({
+							title: '处理异常',
+							content: '支付成功但订单处理异常，请联系客服处理。订单号：' + orderRes.data.order_no,
+							showCancel: false
+						})
+					} finally {
+						isBuyoutProcessing.value = false
+					}
+				},
+				fail: (err) => {
+					console.error('❌ 支付失败或取消:', err)
+					isBuyoutProcessing.value = false
+					
+					if (err.errMsg && err.errMsg.indexOf('cancel') !== -1) {
+						uni.showToast({
+							title: '已取消支付',
+							icon: 'none',
+							duration: 2000
+						})
+					} else {
+						uni.showModal({
+							title: '支付失败',
+							content: err.errMsg || '支付失败，请重试',
+							showCancel: false
+						})
+					}
+				}
+			})
+			
+		} catch (err) {
+			console.error('❌ 买断支付流程失败:', err)
+			uni.hideLoading()
+			isBuyoutProcessing.value = false
+			
+			uni.showModal({
+				title: '操作失败',
+				content: err.message || '买断失败，请稍后重试',
+				showCancel: true,
+				cancelText: '关闭',
+				confirmText: '查看日志',
+				success: (res) => {
+					if (res.confirm) {
+						// 显示错误详情
+						console.log('=== 错误详情 ===')
+						console.error(err)
+					}
+				}
+			})
+		}
+	}
+	
+	// 显示买断调试信息
+	const showBuyoutDebugInfo = () => {
+		const sharerId = uni.getStorageSync('current_sharer_id')
+		const debugInfo = `
+买断功能调试信息：
+
+1. 文章状态：
+   - 文章ID: ${articleDetail.value._id || '未加载'}
+   - 启用买断: ${articleDetail.value.enable_buyout ? '是' : '否'}
+   - 启用砍价: ${articleDetail.value.enable_bargain ? '是' : '否'}
+   - 初始价格: ¥${articleDetail.value.bargain_initial_price || 0}
+
+2. 用户信息：
+   - 用户ID: ${userStore.userInfo?.uid || '未登录'}
+   - 昵称: ${userStore.userInfo?.nickName || '未知'}
+   - 分享者ID: ${sharerId || '无'}
+
+3. 小组状态：
+   - 用户小组: ${userOwnGroup.value ? '已加载' : '未加载'}
+   - 发起人ID: ${userOwnGroup.value?.initiator_id || '无'}
+   - 当前价格: ¥${userOwnGroup.value?.current_price || 0}
+   - 是否完成: ${userOwnGroup.value?.is_complete ? '是' : '否'}
+   - 是否买断: ${userOwnGroup.value?.is_buyout ? '是' : '否'}
+
+4. 计算状态：
+   - 买断价格: ¥${computedBuyoutPrice.value}
+   - 当前砍价价格: ¥${currentBargainPrice.value}
+   - 是否发起人: ${isCurrentUserInitiator.value ? '是' : '否'}
+   - 是否过期: ${isBargainExpired.value ? '是' : '否'}
+   - 是否完成: ${isBargainComplete.value ? '是' : '否'}
+
+5. 按钮显示条件：
+   - enable_buyout: ${articleDetail.value.enable_buyout ? '✓' : '✗'}
+   - computedBuyoutPrice > 0: ${computedBuyoutPrice.value > 0 ? '✓' : '✗'}
+   - !isBargainExpired: ${!isBargainExpired.value ? '✓' : '✗'}
+   - !isBargainComplete: ${!isBargainComplete.value ? '✓' : '✗'}
+   - isCurrentUserInitiator: ${isCurrentUserInitiator.value ? '✓' : '✗'}
+		`.trim()
+		
+		console.log('买断调试信息:', debugInfo)
+		
+		uni.showModal({
+			title: '买断调试信息',
+			content: debugInfo,
+			showCancel: true,
+			cancelText: '关闭',
+			confirmText: '刷新数据',
+			success: (res) => {
+				if (res.confirm) {
+					// 用户点击了刷新数据
+					loadUserOwnGroup()
+				}
+			}
+		})
 	}
 	
 	// 新增导航信息
@@ -1318,7 +1687,11 @@
 			
 			// 如果启用了买断功能，获取用户自己的砍价小组信息
 			if (articleDetail.value.enable_buyout && articleDetail.value.enable_bargain) {
-				loadUserOwnGroup()
+				// 延迟加载，确保用户信息和文章数据都已就绪
+				setTimeout(() => {
+					console.log('延迟加载用户砍价小组信息')
+					loadUserOwnGroup()
+				}, 1000)
 			}
 			
 			// 🎨 直接使用数据库的头像URL，不做复杂处理
@@ -3798,6 +4171,10 @@
 																		
 									<!-- 买断价格展示 -->
 									<view class="buyout-price-info" v-if="articleDetail.enable_buyout && computedBuyoutPrice > 0 && !isBargainExpired && !isBargainComplete">
+										<!-- 调试信息按钮（点击显示详细信息） -->
+										<view class="debug-btn" @click="showBuyoutDebugInfo" style="position: absolute; top: 5rpx; right: 5rpx; padding: 5rpx 10rpx; background: rgba(0,0,0,0.1); border-radius: 5rpx; font-size: 20rpx; color: #666;">
+											调试
+										</view>
 										<view class="buyout-price-row">
 											<view class="buyout-price-label">
 												<uni-icons type="star" size="16" color="#FFB800"></uni-icons>
