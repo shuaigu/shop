@@ -74,7 +74,9 @@ module.exports = {
 			bargain_popup_image = '',
 			bargain_popup_text = '',
 			bargain_amount_text = '',
-			bargain_end_time = null
+			bargain_end_time = null,
+			// 买断功能参数
+			enable_buyout = false
 		} = params
 		
 		// 🔍 关键调试：打印接收到的参数
@@ -135,7 +137,8 @@ module.exports = {
 			bargain_popup_image: enable_bargain ? (bargain_popup_image || '') : '',
 			bargain_popup_text: enable_bargain ? (bargain_popup_text || '') : '',
 			bargain_amount_text: enable_bargain ? (bargain_amount_text || '') : '',
-			bargain_end_time: enable_bargain ? (bargain_end_time || null) : null
+			bargain_end_time: enable_bargain ? (bargain_end_time || null) : null,
+			enable_buyout: enable_bargain ? !!enable_buyout : false
 		} )
 	},
 	
@@ -169,7 +172,8 @@ module.exports = {
 			bargain_popup_image = '',
 			bargain_popup_text = '',
 			bargain_amount_text = '',
-			bargain_end_time = null
+			bargain_end_time = null,
+			enable_buyout = false
 		} = params
 		
 		// 参数校验
@@ -201,7 +205,8 @@ module.exports = {
 			bargain_popup_image: enable_bargain ? (bargain_popup_image || '') : '',
 			bargain_popup_text: enable_bargain ? (bargain_popup_text || '') : '',
 			bargain_amount_text: enable_bargain ? (bargain_amount_text || '') : '',
-			bargain_end_time: enable_bargain ? (bargain_end_time || null) : null
+			bargain_end_time: enable_bargain ? (bargain_end_time || null) : null,
+			enable_buyout: enable_bargain ? !!enable_buyout : false
 		})
 	},
 	/**
@@ -1264,7 +1269,8 @@ module.exports = {
 				bargain_popup_image: data.enable_bargain ? (data.bargain_popup_image || '') : '',
 				bargain_popup_text: data.enable_bargain ? (data.bargain_popup_text || '') : '',
 				bargain_amount_text: data.enable_bargain ? (data.bargain_amount_text || '') : '',
-				bargain_end_time: data.enable_bargain ? (data.bargain_end_time || null) : null
+				bargain_end_time: data.enable_bargain ? (data.bargain_end_time || null) : null,
+				enable_buyout: data.enable_bargain ? !!data.enable_buyout : false
 			}
 
 			// 更新文章
@@ -1950,6 +1956,125 @@ module.exports = {
 	},
 	
 	/**
+	 * getUserBargainGroup 获取用户自己发起的砍价小组信息
+	 * @param {string} article_id 文章ID
+	 * @param {string} user_id 用户ID
+	 * @returns {object} 用户自己的砍价小组信息
+	 */
+	async getUserBargainGroup(article_id, user_id) {
+		try {
+			if (!article_id || !user_id) {
+				return {
+					errCode: -1,
+					errMsg: '参数不完整'
+				};
+			}
+			
+			console.log('=== 查询用户自己的砍价小组 ===', { article_id, user_id });
+			
+			// 查询该用户作为发起人的所有砍价记录
+			const records = await this.bargainRecordCollection
+				.where({ 
+					article_id: article_id,
+					initiator_id: user_id
+				})
+				.orderBy('create_time', 'desc')
+				.field({
+					user_id: true,
+					bargain_amount: true,
+					nickname: true,
+					avatar: true,
+					create_time: true,
+					initiator_id: true,
+					initiator_nickname: true,
+					initiator_avatar: true,
+					is_buyout: true
+				})
+				.get();
+			
+			if (!records.data || records.data.length === 0) {
+				console.log('用户没有发起砍价小组');
+				return {
+					errCode: 0,
+					data: null
+				};
+			}
+			
+			// 获取文章的起始价格
+			const article = await this.articleCollection
+				.doc(article_id)
+				.field({ 
+					bargain_initial_price: true,
+					bargain_completed: true
+				})
+				.get();
+			
+			const initialPrice = article.data && article.data.length > 0 ? article.data[0].bargain_initial_price : 0;
+			
+			// 计算小组信息
+			let totalBargainedAmount = 0;
+			let isBuyout = false;
+			const participantsMap = new Map();
+			let createTime = records.data[0].create_time;
+			
+			records.data.forEach(record => {
+				totalBargainedAmount += record.bargain_amount || 0;
+				
+				// 检查是否有买断记录
+				if (record.is_buyout) {
+					isBuyout = true;
+				}
+				
+				// 统计参与者
+				if (!participantsMap.has(record.user_id)) {
+					participantsMap.set(record.user_id, {
+						user_id: record.user_id,
+						nickname: record.nickname || '匿名用户',
+						avatar: record.avatar || '/static/images/touxiang.png'
+					});
+				}
+				
+				// 获取最早的创建时间
+				if (record.create_time < createTime) {
+					createTime = record.create_time;
+				}
+			});
+			
+			const currentPrice = Math.max(0, initialPrice - totalBargainedAmount);
+			const progress = initialPrice > 0 ? (totalBargainedAmount / initialPrice * 100).toFixed(2) : 0;
+			const isComplete = totalBargainedAmount >= initialPrice;
+			
+			const groupInfo = {
+				initiator_id: user_id,
+				initiator_nickname: records.data[0].initiator_nickname || '匿名用户',
+				initiator_avatar: records.data[0].initiator_avatar || '/static/images/touxiang.png',
+				create_time: createTime,
+				total_participants: participantsMap.size,
+				total_bargained_amount: totalBargainedAmount,
+				current_price: currentPrice,
+				progress: parseFloat(progress),
+				is_complete: isComplete,
+				is_buyout: isBuyout,
+				participants: Array.from(participantsMap.values()).slice(0, 5)
+			};
+			
+			console.log('用户砍价小组信息:', groupInfo);
+			
+			return {
+				errCode: 0,
+				data: groupInfo
+			};
+			
+		} catch (err) {
+			console.error('获取用户砍价小组失败:', err);
+			return {
+				errCode: -1,
+				errMsg: '获取失败: ' + err.message
+			};
+		}
+	},
+	
+	/**
 	 * buyoutBargain 买断砍价商品
 	 * @param {string} article_id 文章ID
 	 * @param {string} user_id 买断用户ID
@@ -1981,7 +2106,14 @@ module.exports = {
 			
 			const article = articleRes.data[0];
 			
-			// 检查买断功能是否开启
+			// 检查砍价/买断功能是否开启
+			if (!article.enable_bargain) {
+				return {
+					errCode: -1,
+					errMsg: '该文章未开启砍价功能'
+				};
+			}
+			
 			if (!article.enable_buyout) {
 				return {
 					errCode: -1,
@@ -2006,6 +2138,22 @@ module.exports = {
 				};
 			}
 			
+			// 检查是否是小组长（发起人）
+			const initiatorCheck = await this.bargainRecordCollection
+				.where({
+					article_id: article_id,
+					initiator_id: user_id
+				})
+				.limit(1)
+				.get();
+				
+			if (!initiatorCheck.data || initiatorCheck.data.length === 0) {
+				return {
+					errCode: -1,
+					errMsg: '只有砍价小组长（发起人）才能买断，请先发起砍价'
+				};
+			}
+			
 			// 检查用户是否已经买断过（防止重复买断）
 			const existingBuyout = await this.bargainRecordCollection
 				.where({
@@ -2022,6 +2170,34 @@ module.exports = {
 				};
 			}
 			
+			// 计算买断价格：以当前剩余金额为准（服务端重新计算，避免前端篡改）
+			let currentPrice = article.bargain_initial_price || 0;
+			try {
+				const lastRecord = await this.bargainRecordCollection
+					.where({
+						article_id: article_id,
+						initiator_id: user_id
+					})
+					.orderBy('create_time', 'desc')
+					.limit(1)
+					.get();
+				
+				if (lastRecord.data && lastRecord.data.length > 0) {
+					currentPrice = lastRecord.data[0].current_price;
+				}
+			} catch (err) {
+				console.warn('获取当前砍价剩余金额失败，使用初始价格:', err);
+			}
+			
+			if (!currentPrice || currentPrice <= 0) {
+				return {
+					errCode: -1,
+					errMsg: '当前价格已为0，无法买断'
+				};
+			}
+			
+			const finalBuyoutPrice = Math.max(0, currentPrice);
+			
 			// 创建买断记录
 			const buyoutRecord = {
 				article_id: article_id,
@@ -2031,9 +2207,9 @@ module.exports = {
 				user_id: user_id,
 				nickname: userInfo.nickName || '匿名用户',
 				avatar: userInfo.avatarUrl || '/static/images/touxiang.png',
-				bargain_amount: article.bargain_initial_price || 0,  // 买断金额等于原价
+				bargain_amount: finalBuyoutPrice,  // 买断金额等于剩余金额，确保总额不超出
 				current_price: 0,  // 买断后价格为0
-				buyout_price: buyoutPrice,  // 实际买断价格
+				buyout_price: finalBuyoutPrice,  // 实际买断价格（服务端计算）
 				is_buyout: true,  // 标记为买断记录
 				is_complete: true,  // 买断即完成
 				share_from_user_id: share_from_user_id,
@@ -2043,17 +2219,18 @@ module.exports = {
 			// 插入买断记录
 			await this.bargainRecordCollection.add(buyoutRecord);
 			
-			// 更新文章状态：标记为已完成
+			// 更新文章状态：标记为已完成并下架/锁定
 			await this.articleCollection.doc(article_id).update({
 				bargain_completed: true,
 				bargain_winner_id: user_id,
 				bargain_winner_nickname: userInfo.nickName || '匿名用户',
-				bargain_buyout_price: buyoutPrice,  // 记录买断价格
-				bargain_buyout_time: now  // 记录买断时间
+				bargain_buyout_price: finalBuyoutPrice,  // 记录买断价格
+				bargain_buyout_time: now,  // 记录买断时间
+				state: 2 // 自动下架/锁定文章
 			});
 			
 			// 计算奖励积分（买断价的整数部分）
-			const rewardPoints = Math.floor(buyoutPrice);
+			const rewardPoints = Math.floor(finalBuyoutPrice);
 			
 			// 更新用户积分
 			if (rewardPoints > 0) {
@@ -2078,7 +2255,7 @@ module.exports = {
 				errCode: 0,
 				errMsg: '买断成功',
 				data: {
-					buyout_price: buyoutPrice,
+				buyout_price: finalBuyoutPrice,
 					reward_points: rewardPoints,
 					is_complete: true
 				}

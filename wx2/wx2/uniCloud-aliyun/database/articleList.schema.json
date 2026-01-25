@@ -278,6 +278,17 @@
             "bsonType": "bool",
             "description": "是否启用买断功能（价格为当前剩余金额）",
             "defaultValue": true
+        },
+        "bargain_buyout_price": {
+            "bsonType": "number",
+            "description": "买断成交价格",
+            "minimum": 0,
+            "defaultValue": 0
+        },
+        "bargain_buyout_time": {
+            "bsonType": "timestamp",
+            "description": "买断时间",
+            "defaultValue": null
         }
     }
 }

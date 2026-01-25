@@ -296,27 +296,95 @@
 	const isBuyoutProcessing = ref(false) // 买断处理中标识
 	const dianzanBargainRef = ref(null) // dianzan组件引用
 	const currentBargainPrice = ref(0) // 当前砍价剩余价格
+	const userOwnGroup = ref(null) // 用户自己发起的砍价小组信息
 	
-	// 计算买断价格（基于当前砍价剩余金额）
+	// 获取用户自己发起的砍价小组
+	const loadUserOwnGroup = async () => {
+		try {
+			if (!userStore.userInfo?.uid || !articleDetail.value._id) {
+				userOwnGroup.value = null
+				return
+			}
+			
+			console.log('查询用户自己的砍价小组...')
+			
+			try {
+				// 尝试调用云函数获取用户小组信息
+				const result = await articleApi.getUserBargainGroup(
+					articleDetail.value._id,
+					userStore.userInfo.uid
+				)
+				
+				if (result.errCode === 0 && result.data) {
+					userOwnGroup.value = result.data
+					console.log('用户自己的砍价小组:', userOwnGroup.value)
+					return
+				}
+			} catch (apiErr) {
+				console.warn('云函数调用失败，使用备选逻辑:', apiErr.message)
+			}
+			
+			// 备选逻辑：检查 current_sharer_id 是否是当前用户
+			const sharerId = uni.getStorageSync('current_sharer_id')
+			if (sharerId && sharerId === userStore.userInfo.uid) {
+				// 用户是当前页面的分享者/发起人，构造一个简单的小组信息
+				userOwnGroup.value = {
+					initiator_id: userStore.userInfo.uid,
+					initiator_nickname: userStore.userInfo.nickName || '匿名用户',
+					current_price: currentBargainPrice.value || articleDetail.value.bargain_initial_price || 0,
+					is_complete: false,
+					is_buyout: false
+				}
+				console.log('使用备选逻辑设置用户小组:', userOwnGroup.value)
+			} else {
+				userOwnGroup.value = null
+				console.log('用户没有发起砍价小组')
+			}
+		} catch (err) {
+			console.error('获取用户砍价小组失败:', err)
+			userOwnGroup.value = null
+		}
+	}
+	
+	// 计算买断价格（基于用户自己小组的当前剩余金额）
 	const computedBuyoutPrice = computed(() => {
 		if (!articleDetail.value.enable_buyout) {
 			return 0
 		}
 		
-		// 买断价就是当前砍价剩余金额
+		// 如果用户有自己的小组，使用该小组的当前价格
+		if (userOwnGroup.value && userOwnGroup.value.current_price !== undefined) {
+			return userOwnGroup.value.current_price
+		}
+		
+		// 否则使用页面上的当前砍价价格（兼容旧逻辑）
 		return currentBargainPrice.value || articleDetail.value.bargain_initial_price || 0
 	})
 	
-	// 检查当前用户是否是发起人（小组长）
+	// 检查当前用户是否是某个砍价小组的发起人（小组长）
 	const isCurrentUserInitiator = computed(() => {
-		const sharerId = uni.getStorageSync('current_sharer_id')
-		return sharerId && userStore.userInfo?.uid && sharerId === userStore.userInfo.uid
+		// 用户有自己发起的砍价小组，且该小组未完成、未买断
+		if (userOwnGroup.value) {
+			return !userOwnGroup.value.is_complete && !userOwnGroup.value.is_buyout
+		}
+		return false
 	})
 	
 	// 检查砍价是否完成
 	const isBargainComplete = computed(() => {
 		// 当价格为0时，砍价完成
 		return currentBargainPrice.value <= 0 && articleDetail.value.enable_bargain
+	})
+	
+	// 监听用户登录状态变化，刷新买断权限
+	watch(() => userStore.userInfo?.uid, (newUid, oldUid) => {
+		if (newUid && newUid !== oldUid && articleDetail.value.enable_buyout && articleDetail.value.enable_bargain) {
+			console.log('用户登录状态变化，刷新买断权限')
+			// 更新 current_sharer_id 为当前用户
+			uni.setStorageSync('current_sharer_id', newUid)
+			// 刷新用户小组信息
+			loadUserOwnGroup()
+		}
 	})
 	
 	// 切换静音状态
@@ -367,19 +435,30 @@
 				return
 			}
 			
-			// 获取发起人ID
-			const sharerId = uni.getStorageSync('current_sharer_id')
-			
-			// 检查是否为发起人：只有发起人才能买断
-			if (!sharerId || sharerId !== userStore.userInfo.uid) {
+			// 检查用户是否有自己发起的砍价小组
+			if (!userOwnGroup.value) {
 				uni.showModal({
-					title: '权限不足',
-					content: '只有砍价小组的发起人（小组长）才能执行买断操作。\n请发起人登录后操作。',
+					title: '暂无砍价小组',
+					content: '您还没有发起砍价小组，请先参与砍价活动。',
 					showCancel: false,
 					confirmText: '我知道了'
 				})
 				return
 			}
+			
+			// 检查小组是否已完成或已买断
+			if (userOwnGroup.value.is_complete || userOwnGroup.value.is_buyout) {
+				uni.showModal({
+					title: '无法买断',
+					content: '您的砍价小组已完成或已买断。',
+					showCancel: false,
+					confirmText: '我知道了'
+				})
+				return
+			}
+			
+			// 使用用户自己小组的发起人ID（即用户自己的uid）
+			const sharerId = userOwnGroup.value.initiator_id || userStore.userInfo.uid
 			
 			// 确认买断
 			uni.showModal({
@@ -1236,6 +1315,11 @@
 			setTimeout(() => {
 				syncBargainCompleteStatus()
 			}, 500)
+			
+			// 如果启用了买断功能，获取用户自己的砍价小组信息
+			if (articleDetail.value.enable_buyout && articleDetail.value.enable_bargain) {
+				loadUserOwnGroup()
+			}
 			
 			// 🎨 直接使用数据库的头像URL，不做复杂处理
 			if (userStore.userInfo && userStore.userInfo.avatarUrl) {
@@ -2620,12 +2704,13 @@
 		} else {
 			console.log('⚠️ 未检测到分享者信息');
 			
-			// 【调试模式】显示未检测到分享者提示
-			uni.showToast({
-				title: '未检测到分享者信息',
-				icon: 'none',
-				duration: 2000
-			});
+			// 如果用户已登录，将自己设为默认分享者（用于砍价发起人判断）
+			if (userStore.userInfo?.uid) {
+				uni.setStorageSync('current_sharer_id', userStore.userInfo.uid);
+				uni.setStorageSync('current_sharer_name', userStore.userInfo.nickName || '匿名用户');
+				uni.setStorageSync('current_sharer_avatar', userStore.userInfo.avatarUrl || getDefaultImage('avatar'));
+				console.log('✅ 用户已登录，设置自己为默认分享者:', userStore.userInfo.uid);
+			}
 		}
 		
 		// 初始化页面进入时间
@@ -3371,6 +3456,12 @@
 				bargainGroupsRef.value.loadGroups()
 				console.log('已刷新砍价小组列表')
 			}, 1000) // 延迟1秒刷新，确保数据已更新
+		}
+		// 刷新用户自己的砍价小组信息（用于更新买断按钮状态和价格）
+		if (articleDetail.value.enable_buyout) {
+			setTimeout(() => {
+				loadUserOwnGroup()
+			}, 1500)
 		}
 	}
 	
