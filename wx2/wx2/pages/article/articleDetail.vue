@@ -292,6 +292,33 @@
 	const remainingTime = ref('') // 剩余时间字符串
 	const remainingSeconds = ref(0) // 剩余秒数（用于特殊显示）
 	
+	// 添加买断相关状态
+	const isBuyoutProcessing = ref(false) // 买断处理中标识
+	const dianzanBargainRef = ref(null) // dianzan组件引用
+	const currentBargainPrice = ref(0) // 当前砍价剩余价格
+	
+	// 计算买断价格（基于当前砍价剩余金额）
+	const computedBuyoutPrice = computed(() => {
+		if (!articleDetail.value.enable_buyout) {
+			return 0
+		}
+		
+		// 买断价就是当前砍价剩余金额
+		return currentBargainPrice.value || articleDetail.value.bargain_initial_price || 0
+	})
+	
+	// 检查当前用户是否是发起人（小组长）
+	const isCurrentUserInitiator = computed(() => {
+		const sharerId = uni.getStorageSync('current_sharer_id')
+		return sharerId && userStore.userInfo?.uid && sharerId === userStore.userInfo.uid
+	})
+	
+	// 检查砍价是否完成
+	const isBargainComplete = computed(() => {
+		// 当价格为0时，砍价完成
+		return currentBargainPrice.value <= 0 && articleDetail.value.enable_bargain
+	})
+	
 	// 切换静音状态
 	const toggleMute = () => {
 		try {
@@ -318,6 +345,102 @@
 				title: '操作失败',
 				icon: 'none'
 			})
+		}
+	}
+	
+	// 处理买断操作
+	const handleBuyout = async () => {
+		try {
+			// 防止重复提交
+			if (isBuyoutProcessing.value) return
+			
+			// 检查买断是否启用
+			if (!articleDetail.value.enable_buyout) {
+				uni.showToast({ title: '买断功能未开启', icon: 'none' })
+				return
+			}
+			
+			// 检查用户登录状态
+			const isLoggedIn = await testLogin()
+			if (!isLoggedIn || !userStore.userInfo?.uid) {
+				console.log('用户未登录，无法买断')
+				return
+			}
+			
+			// 获取发起人ID
+			const sharerId = uni.getStorageSync('current_sharer_id')
+			
+			// 检查是否为发起人：只有发起人才能买断
+			if (!sharerId || sharerId !== userStore.userInfo.uid) {
+				uni.showModal({
+					title: '权限不足',
+					content: '只有砍价小组的发起人（小组长）才能执行买断操作。\n请发起人登录后操作。',
+					showCancel: false,
+					confirmText: '我知道了'
+				})
+				return
+			}
+			
+			// 确认买断
+			uni.showModal({
+				title: '确认买断',
+				content: `您将以 ￥${computedBuyoutPrice.value.toFixed(2)} 的价格直接买断此商品，\n买断后将完成您的砍价活动。\n\n是否继续？`,
+				confirmText: '确认买断',
+				cancelText: '再考虑考虑',
+				success: async (res) => {
+					if (res.confirm) {
+						isBuyoutProcessing.value = true
+						uni.showLoading({ title: '处理中...', mask: true })
+						
+						try {
+							const result = await articleApi.buyoutBargain(
+								articleDetail.value._id || props.article_id,
+								userStore.userInfo.uid,
+								computedBuyoutPrice.value,
+								{
+									nickName: userStore.userInfo.nickName || '匿名用户',
+									avatarUrl: userStore.userInfo.avatarUrl || '/static/images/touxiang.png'
+								},
+								sharerId
+							)
+							
+							uni.hideLoading()
+							
+							if (result.errCode === 0) {
+								uni.showModal({
+									title: '买断成功！',
+									content: `恭喜您成功买断！\n您已完成砍价活动。${result.data?.reward_points ? `\n获得积分奖励: ${result.data.reward_points} 分` : ''}`,
+									showCancel: false,
+									confirmText: '太好了',
+									success: () => {
+										getArticleDetail()
+									}
+								})
+							} else {
+								uni.showModal({
+									title: '买断失败',
+									content: result.errMsg || '操作失败，请稍后重试',
+									showCancel: false
+								})
+							}
+						} catch (apiError) {
+							uni.hideLoading()
+							console.error('买断API调用失败:', apiError)
+							uni.showModal({
+								title: '买断失败',
+								content: apiError.errMsg || apiError.message || '网络异常，请稍后重试',
+								showCancel: false
+							})
+						} finally {
+							isBuyoutProcessing.value = false
+						}
+					}
+				}
+			})
+		} catch (err) {
+			console.error('买断操作失败:', err)
+			uni.showToast({ title: '操作失败', icon: 'none' })
+			isBuyoutProcessing.value = false
 		}
 	}
 	
@@ -1058,7 +1181,9 @@
 				bargain_end_time: articleData.bargain_end_time || 0,
 				bargain_popup_image: articleData.bargain_popup_image || '', // 砂价弹窗图片
 				bargain_popup_text: articleData.bargain_popup_text || '', // 砂价弹窗文字
-				bargain_amount_text: articleData.bargain_amount_text || '' // 砂价金额自定义文字
+				bargain_amount_text: articleData.bargain_amount_text || '', // 砂价金额自定义文字
+				// 买断功能字段（默认为 true）
+				enable_buyout: articleData.enable_buyout !== false
 			}
 			
 			// 添加调试日志
@@ -1085,7 +1210,10 @@
 				originalBargainPopupText: articleData.bargain_popup_text,
 				// 添加金额文字调试
 				bargainAmountText: articleDetail.value.bargain_amount_text,
-				originalBargainAmountText: articleData.bargain_amount_text
+				originalBargainAmountText: articleData.bargain_amount_text,
+				// 添加买断功能调试
+				enableBuyout: articleDetail.value.enable_buyout,
+				originalEnableBuyout: articleData.enable_buyout
 			});
 			
 			// 初始化点赞数
@@ -3404,11 +3532,6 @@
 	// 砍价小组列表组件引用
 	const bargainGroupsRef = ref(null)
 	
-	// 砍价组件引用
-	const dianzanBargainRef = ref(null)
-	// 砍价完成状态
-	const isBargainComplete = ref(false)
-	
 	// 获取砍价成功话术
 	const getBargainSuccessMessage = () => {
 		// 可以根据不同情况返回不同的话术
@@ -3562,24 +3685,45 @@
 											<text class="countdown-number">{{ countdownDays }}</text>
 										</view>
 										<text class="countdown-label">天</text>
-																
+																																						
 										<!-- 小时格子 -->
 										<view class="countdown-box">
 											<text class="countdown-number">{{ countdownHours }}</text>
 										</view>
 										<text class="countdown-label">小时</text>
-																
+																																						
 										<!-- 分钟格子 -->
 										<view class="countdown-box">
 											<text class="countdown-number">{{ countdownMinutes }}</text>
 										</view>
 										<text class="countdown-label">分钟</text>
-																
+																																						
 										<!-- 秒数格子 -->
 										<view class="countdown-box">
 											<text class="countdown-number">{{ countdownSeconds }}</text>
 										</view>
 										<text class="countdown-label">秒</text>
+									</view>
+																		
+									<!-- 买断价格展示 -->
+									<view class="buyout-price-info" v-if="articleDetail.enable_buyout && computedBuyoutPrice > 0 && !isBargainExpired && !isBargainComplete">
+										<view class="buyout-price-row">
+											<view class="buyout-price-label">
+												<uni-icons type="star" size="16" color="#FFB800"></uni-icons>
+												<text>买断价：</text>
+											</view>
+											<text class="buyout-price-value">￥{{ computedBuyoutPrice.toFixed(2) }}</text>
+										</view>
+										<button 
+											class="buyout-btn" 
+											:class="{ 'disabled': isBuyoutProcessing }"
+											:disabled="isBuyoutProcessing"
+											@click="handleBuyout"
+											v-if="isCurrentUserInitiator"
+										>
+											<uni-icons type="cart-filled" size="18" color="#fff"></uni-icons>
+											<text>{{ isBuyoutProcessing ? '处理中...' : '直接买断' }}</text>
+										</button>
 									</view>
 									
 									<dianzan 
@@ -3599,6 +3743,7 @@
 										:showCount="false"
 										@update:liked="(val) => isArticleLiked = val"
 										@update:count="(val) => likeCount = val"
+										@update:price="(val) => currentBargainPrice = val"
 										@bargain-success="handleBargainSuccess"
 										@bargain-complete="handleBargainComplete"
 										@share-invite="handleShareInvite"
@@ -6089,6 +6234,85 @@
 					color: #333333;
 					font-weight: 500;
 					margin-left: 4rpx;
+				}
+			}
+			
+			/* 买断价格信息区域 */
+			.buyout-price-info {
+				display: flex;
+				flex-direction: column;
+				align-items: center;
+				gap: 16rpx;
+				width: 100%;
+				padding: 24rpx;
+				background: linear-gradient(135deg, #fffbf0 0%, #fff8e1 100%);
+				border-radius: 12rpx;
+				border: 2rpx solid rgba(255, 184, 0, 0.2);
+				box-shadow: 0 4rpx 12rpx rgba(255, 184, 0, 0.1);
+				
+				.buyout-price-row {
+					display: flex;
+					align-items: center;
+					justify-content: space-between;
+					width: 100%;
+					
+					.buyout-price-label {
+						display: flex;
+						align-items: center;
+						gap: 8rpx;
+						
+						text {
+							font-size: 28rpx;
+							color: #666;
+							font-weight: 500;
+						}
+					}
+					
+					.buyout-price-value {
+						font-size: 40rpx;
+						color: #FF8C00;
+						font-weight: 700;
+						text-shadow: 0 2rpx 4rpx rgba(255, 140, 0, 0.2);
+					}
+				}
+				
+				.buyout-btn {
+					width: 100%;
+					height: 88rpx;
+					display: flex;
+					align-items: center;
+					justify-content: center;
+					gap: 10rpx;
+					background: linear-gradient(135deg, #FFB800 0%, #FF8C00 100%);
+					color: #fff;
+					border-radius: 44rpx;
+					font-size: 32rpx;
+					font-weight: 700;
+					border: none;
+					box-shadow: 0 8rpx 20rpx rgba(255, 184, 0, 0.4);
+					transition: all 0.3s ease;
+					
+					&::after {
+						border: none;
+					}
+					
+					&:active:not(.disabled) {
+						transform: scale(0.98);
+						box-shadow: 0 4rpx 12rpx rgba(255, 184, 0, 0.5);
+					}
+					
+					&.disabled {
+						opacity: 0.6;
+						background: linear-gradient(135deg, #ccc 0%, #999 100%);
+						box-shadow: none;
+						cursor: not-allowed;
+					}
+					
+					text {
+						color: #fff;
+						font-weight: 700;
+						letter-spacing: 1rpx;
+					}
 				}
 			}
 			

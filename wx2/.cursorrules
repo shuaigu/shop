@@ -1,0 +1,16 @@
+# Cursor AI 配置规则
+
+## 模型偏好
+优先使用最新的 GPT-4 模型（GPT-4 Turbo 或 GPT-4o）
+
+## 代码风格
+- 使用 Vue 3 Composition API
+- 遵循 uni-app 开发规范
+- 代码注释使用中文
+- 保持代码简洁和可维护性
+
+## 项目特定规则
+- 这是一个 uni-app 微信小程序项目
+- 使用 Pinia 进行状态管理
+- 使用 uniCloud 作为后端服务
+- 图片处理使用七牛云服务

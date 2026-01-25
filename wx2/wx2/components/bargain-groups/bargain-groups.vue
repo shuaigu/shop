@@ -31,8 +31,14 @@
 						<text class="initiator-name">{{ group.initiator_nickname }}</text>
 						<text class="create-time">{{ formatTime(group.create_time) }}</text>
 					</view>
-					<view class="group-badge" :class="{ 'complete': group.is_complete, 'rank-1': !group.is_complete && index === 0, 'rank-2': !group.is_complete && index === 1, 'rank-3': !group.is_complete && index === 2 }">
-						<text>{{ group.is_complete ? '已完成' : index + 1 }}</text>
+					<view class="group-badge" :class="{ 
+						'complete': group.is_complete, 
+						'buyout': group.is_buyout,
+						'rank-1': !group.is_complete && !group.is_buyout && index === 0, 
+						'rank-2': !group.is_complete && !group.is_buyout && index === 1, 
+						'rank-3': !group.is_complete && !group.is_buyout && index === 2 
+					}">
+						<text>{{ group.is_buyout ? '买断' : (group.is_complete ? '已完成' : index + 1) }}</text>
 					</view>
 				</view>
 				
@@ -424,6 +430,18 @@ onMounted(() => {
 			font-size: 22rpx;
 			min-width: auto;
 			height: auto;
+		}
+		
+		// 买断徽章
+		&.buyout {
+			background: linear-gradient(135deg, #FFB800 0%, #FF8C00 100%);
+			color: #fff;
+			border-radius: 24rpx;
+			padding: 6rpx 14rpx;
+			font-size: 22rpx;
+			min-width: auto;
+			height: auto;
+			box-shadow: 0 2rpx 8rpx rgba(255, 184, 0, 0.4);
 		}
 		
 		// 第1名 - 金色

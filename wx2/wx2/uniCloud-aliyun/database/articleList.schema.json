@@ -273,6 +273,11 @@
             "bsonType": "string",
             "description": "砍价活动获胜者昵称",
             "defaultValue": ""
+        },
+        "enable_buyout": {
+            "bsonType": "bool",
+            "description": "是否启用买断功能（价格为当前剩余金额）",
+            "defaultValue": true
         }
     }
 }

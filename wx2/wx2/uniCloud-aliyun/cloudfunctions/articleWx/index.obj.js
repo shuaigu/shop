@@ -1908,6 +1908,9 @@ module.exports = {
 				const participants = Array.from(group.participants_map.values());
 				const progress = initialPrice > 0 ? (group.total_bargained_amount / initialPrice * 100).toFixed(2) : 0;
 				
+				// 检查是否是买断记录（查找该小组中是否有is_buyout为true的记录）
+				const isBuyout = group.records.some(record => record.is_buyout);
+				
 				return {
 					initiator_id: group.initiator_id,
 					initiator_nickname: group.initiator_nickname,
@@ -1918,6 +1921,7 @@ module.exports = {
 					current_price: Math.max(0, initialPrice - group.total_bargained_amount),
 					progress: parseFloat(progress),
 					is_complete: group.total_bargained_amount >= initialPrice,
+					is_buyout: isBuyout,  // 新增买断标识
 					participants: participants.slice(0, 5) // 只返回前5个参与者头像
 				};
 			});
@@ -1941,6 +1945,150 @@ module.exports = {
 			return {
 				errCode: -1,
 				errMsg: '获取失败: ' + err.message
+			};
+		}
+	},
+	
+	/**
+	 * buyoutBargain 买断砍价商品
+	 * @param {string} article_id 文章ID
+	 * @param {string} user_id 买断用户ID
+	 * @param {number} buyoutPrice 买断价格
+	 * @param {object} userInfo 用户信息
+	 * @param {string} share_from_user_id 分享来源用户ID
+	 * @returns {object} 买断结果
+	 */
+	async buyoutBargain(article_id, user_id, buyoutPrice, userInfo = {}, share_from_user_id = null) {
+		try {
+			console.log('买断操作参数:', { article_id, user_id, buyoutPrice, share_from_user_id });
+			
+			// 参数验证
+			if (!article_id || !user_id || !buyoutPrice) {
+				return {
+					errCode: -1,
+					errMsg: '参数不完整'
+				};
+			}
+			
+			// 检查文章是否存在
+			const articleRes = await this.articleCollection.doc(article_id).get();
+			if (!articleRes.data || articleRes.data.length === 0) {
+				return {
+					errCode: -1,
+					errMsg: '文章不存在'
+				};
+			}
+			
+			const article = articleRes.data[0];
+			
+			// 检查买断功能是否开启
+			if (!article.enable_buyout) {
+				return {
+					errCode: -1,
+					errMsg: '该文章未开启买断功能'
+				};
+			}
+			
+			// 检查是否已结束或已有人完成
+			if (article.bargain_completed) {
+				return {
+					errCode: -1,
+					errMsg: '该砍价活动已完成，无法买断'
+				};
+			}
+			
+			// 检查活动是否过期
+			const now = Date.now();
+			if (article.bargain_end_time && now >= article.bargain_end_time) {
+				return {
+					errCode: -1,
+					errMsg: '该砍价活动已过期'
+				};
+			}
+			
+			// 检查用户是否已经买断过（防止重复买断）
+			const existingBuyout = await this.bargainRecordCollection
+				.where({
+					article_id: article_id,
+					user_id: user_id,
+					is_buyout: true
+				})
+				.get();
+				
+			if (existingBuyout.data && existingBuyout.data.length > 0) {
+				return {
+					errCode: -1,
+					errMsg: '您已经买断过该商品，请勿重复操作'
+				};
+			}
+			
+			// 创建买断记录
+			const buyoutRecord = {
+				article_id: article_id,
+				initiator_id: user_id,  // 买断者即是发起人
+				initiator_nickname: userInfo.nickName || '匿名用户',
+				initiator_avatar: userInfo.avatarUrl || '/static/images/touxiang.png',
+				user_id: user_id,
+				nickname: userInfo.nickName || '匿名用户',
+				avatar: userInfo.avatarUrl || '/static/images/touxiang.png',
+				bargain_amount: article.bargain_initial_price || 0,  // 买断金额等于原价
+				current_price: 0,  // 买断后价格为0
+				buyout_price: buyoutPrice,  // 实际买断价格
+				is_buyout: true,  // 标记为买断记录
+				is_complete: true,  // 买断即完成
+				share_from_user_id: share_from_user_id,
+				create_time: now
+			};
+			
+			// 插入买断记录
+			await this.bargainRecordCollection.add(buyoutRecord);
+			
+			// 更新文章状态：标记为已完成
+			await this.articleCollection.doc(article_id).update({
+				bargain_completed: true,
+				bargain_winner_id: user_id,
+				bargain_winner_nickname: userInfo.nickName || '匿名用户',
+				bargain_buyout_price: buyoutPrice,  // 记录买断价格
+				bargain_buyout_time: now  // 记录买断时间
+			});
+			
+			// 计算奖励积分（买断价的整数部分）
+			const rewardPoints = Math.floor(buyoutPrice);
+			
+			// 更新用户积分
+			if (rewardPoints > 0) {
+				try {
+					await this.db.collection('user').doc(user_id).update({
+						points: this.db.command.inc(rewardPoints)
+					});
+					console.log(`用户 ${user_id} 获得 ${rewardPoints} 积分`);
+				} catch (err) {
+					console.warn('更新用户积分失败:', err);
+				}
+			}
+			
+			console.log('买断成功:', {
+				article_id,
+				user_id,
+				buyout_price: buyoutPrice,
+				reward_points: rewardPoints
+			});
+			
+			return {
+				errCode: 0,
+				errMsg: '买断成功',
+				data: {
+					buyout_price: buyoutPrice,
+					reward_points: rewardPoints,
+					is_complete: true
+				}
+			};
+			
+		} catch (err) {
+			console.error('买断操作失败:', err);
+			return {
+				errCode: -1,
+				errMsg: '买断失败: ' + err.message
 			};
 		}
 	},

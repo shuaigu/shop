@@ -44,6 +44,9 @@ export default {
 	const bargainAmountText = ref('') // 砂价金额自定义文字
 	const bargainEndTime = ref('') // 砍价结束时间（显示用）
 	const bargainEndTimeValue = ref('') // 砍价结束时间（picker标准格式）
+	// 买断相关变量
+	// 注：买断价格为实时动态计算，不需要配置固定价格
+	const enableBuyout = ref(false) // 是否启用买断
 	// 自定义时间选择弹窗相关变量
 	const showCustomTimePicker = ref(false)
 	const selectedDateIndex = ref(0) // 选中的日期索引
@@ -1014,6 +1017,12 @@ export default {
 			defaultEndDate.setDate(defaultEndDate.getDate() + 7)
 			bargainEndTime.value = formatDateTime(defaultEndDate)
 			bargainEndTimeValue.value = formatDateTimeForPicker(defaultEndDate)
+			
+			// 默认同时开启买断功能（直接赋值，不触发开关事件）
+			if (!enableBuyout.value) {
+				enableBuyout.value = true
+				console.log('砍价功能开启，同时默认开启买断功能')
+			}
 		}
 		
 		// 关闭时清空
@@ -1023,7 +1032,26 @@ export default {
 			bargainStep.value = 10
 			bargainEndTime.value = ''
 			bargainEndTimeValue.value = ''
+			// 关闭砍价时，也关闭买断功能（直接赋值，不触发开关事件）
+			if (enableBuyout.value) {
+				enableBuyout.value = false
+				console.log('砍价功能关闭，同时关闭买断功能')
+			}
 		}
+	}
+	
+	// 处理买断功能开关变化
+	const handleBuyoutSwitch = (e) => {
+		const newValue = e.detail.value
+		
+		// 防止重复触发：只在值真正改变时才更新
+		if (enableBuyout.value === newValue) {
+			console.log('买断功能状态未改变，忽略此次触发')
+			return
+		}
+		
+		enableBuyout.value = newValue
+		console.log('买断功能开关变化:', newValue)
 	}
 	
 	// 格式化日期时间（显示用）
@@ -1657,6 +1685,7 @@ export default {
 				console.log('数据库中的 bargain_popup_image:', articleData.bargain_popup_image)
 				console.log('数据库中的 bargain_popup_text:', articleData.bargain_popup_text)
 				console.log('数据库中的 bargain_amount_text:', articleData.bargain_amount_text)
+				console.log('数据库中的 enable_buyout:', articleData.enable_buyout)
 				console.log('==========================')
 						
 				enableBargain.value = true
@@ -1671,10 +1700,13 @@ export default {
 				bargainPopupImage.value = articleData.bargain_popup_image || ''
 				bargainPopupText.value = articleData.bargain_popup_text || ''
 				bargainAmountText.value = articleData.bargain_amount_text || ''
+				// 加载买断功能配置（默认为 true）
+				enableBuyout.value = articleData.enable_buyout !== false
 						
 				console.log('加载后 bargainPopupImage.value:', bargainPopupImage.value)
 				console.log('加载后 bargainPopupText.value:', bargainPopupText.value)
 				console.log('加载后 bargainAmountText.value:', bargainAmountText.value)
+				console.log('加载后 enableBuyout.value:', enableBuyout.value)
 						
 				// 加载结束时间
 				if (articleData.bargain_end_time) {
@@ -1828,15 +1860,19 @@ export default {
 				bargain_amount_text: bargainAmountText.value || '',
 				bargain_end_time: bargainEndTimeValue.value 
 					? new Date(bargainEndTimeValue.value.replace(' ', 'T')).getTime()
-					: null
+					: null,
+				// 添加买断配置（只保存启用状态，买断价格为实时计算）
+				enable_buyout: enableBuyout.value
 			})
 			
-			console.log('砂价参数:', {
-				enable_bargain: true,
-				bargain_popup_image: bargainPopupImage.value || '',
-				bargain_popup_text: bargainPopupText.value || '',
-				bargain_amount_text: bargainAmountText.value || ''
-			})
+			console.log('====== 砂价和买断参数 ======')
+			console.log('enable_bargain:', true)
+			console.log('enable_buyout:', enableBuyout.value)
+			console.log('enableBuyout变量类型:', typeof enableBuyout.value)
+			console.log('bargain_popup_image:', bargainPopupImage.value || '')
+			console.log('bargain_popup_text:', bargainPopupText.value || '')
+			console.log('bargain_amount_text:', bargainAmountText.value || '')
+			console.log('=============================')
 		} else {
 			Object.assign(params, {
 				enable_bargain: false,
@@ -1850,7 +1886,9 @@ export default {
 				bargain_popup_image: '',
 				bargain_popup_text: '',
 				bargain_amount_text: '',
-				bargain_end_time: null
+				bargain_end_time: null,
+				// 添加买断默认值
+				enable_buyout: false
 			})
 		}
 
@@ -1937,10 +1975,11 @@ export default {
 					
 			console.log('=== 提交表单参数 ===', {
 				enableBargain: params.enable_bargain,
+				enableBuyout: params.enable_buyout,
 				bargainEndTime: params.bargain_end_time,
 				bargainEndTimeValue: bargainEndTimeValue.value,
 				bargainInitialPrice: params.bargain_initial_price,
-				share_cover_image: params.share_cover_image // 添加封面图日志
+				share_cover_image: params.share_cover_image
 			})
 			
 			// 🔍 关键调试：打印完整params对象
@@ -3441,6 +3480,22 @@ export default {
 					></textarea>
 					<text class="text-count">{{ bargainAmountText.length }}/50</text>
 					<text class="field-tip">例如：恭喜发财、大吉大利、财运亨通等</text>
+				</view>
+				
+				<!-- 买断功能设置 -->
+				<view class="setting-item buyout-section">
+					<view class="buyout-header">
+						<text class="setting-label">买断功能</text>
+						<switch :checked="enableBuyout" @change="handleBuyoutSwitch" color="#FFB800" />
+					</view>
+					<view class="buyout-description" v-if="enableBuyout">
+						<uni-icons type="info" size="14" color="#FFB800"></uni-icons>
+						<text>用户可以直接以当前砍价剩余金额购买，无需等待砍价</text>
+					</view>
+					<view class="buyout-tip" v-if="enableBuyout">
+						<uni-icons type="info-filled" size="14" color="#FF8C00"></uni-icons>
+						<text>买断价格为用户当前参与砍价的实时剩余金额，随砍价进度动态变化</text>
+					</view>
 				</view>
 				
 				<!-- 预览提示 -->
@@ -5611,6 +5666,44 @@ export default {
 			background-color: #f0f9ff;
 			border-left: 4rpx solid #2196F3;
 			border-radius: 4rpx;
+		}
+		
+		// 买断相关样式
+		.buyout-section {
+			flex-direction: column;
+			align-items: stretch;
+			gap: 16rpx;
+			background: linear-gradient(135deg, #fff9e6 0%, #fff 100%);
+			border-left: 4rpx solid #FFB800;
+			
+			.buyout-header {
+				display: flex;
+				justify-content: space-between;
+				align-items: center;
+				width: 100%;
+			}
+			
+			.buyout-description, .buyout-tip {
+				display: flex;
+				align-items: flex-start;
+				gap: 8rpx;
+				font-size: 24rpx;
+				color: #666;
+				line-height: 1.6;
+				
+				.uni-icons {
+					flex-shrink: 0;
+					margin-top: 2rpx;
+				}
+			}
+			
+			.buyout-tip {
+				margin-top: 8rpx;
+				padding: 12rpx;
+				background: #FFF3CD;
+				border-radius: 8rpx;
+				color: #856404;
+			}
 		}
 	}
 </style>

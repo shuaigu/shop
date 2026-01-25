@@ -173,6 +173,22 @@
 				</view>
 			</view>
 			
+			<!-- 买断功能设置 -->
+			<view class="setting-item buyout-section">
+				<view class="buyout-header">
+					<text class="setting-label">买断功能</text>
+					<switch :checked="bargainConfig.enableBuyout" @change="handleBuyoutSwitch" color="#FFB800" />
+				</view>
+				<view class="buyout-description" v-if="bargainConfig.enableBuyout">
+					<uni-icons type="info" size="14" color="#FFB800"></uni-icons>
+					<text>用户可以直接以当前砍价剩余金额购买，无需等待砍价</text>
+				</view>
+				<view class="buyout-tip" v-if="bargainConfig.enableBuyout">
+					<uni-icons type="info-filled" size="14" color="#FF8C00"></uni-icons>
+					<text>买断价格为用户当前参与砍价的实时剩余金额，随砍价进度动态变化</text>
+				</view>
+			</view>
+			
 			<!-- 预览提示 -->
 			<view class="bargain-preview" v-if="bargainConfig.initialPrice > 0">
 				<view class="preview-header">
@@ -218,7 +234,8 @@ export default {
 				maxAmount: 20,
 				percentage: 1,
 				decreaseRate: 0.8,
-				popupImage: '' // 弹窗图片
+				popupImage: '', // 弹窗图片
+				enableBuyout: false // 启用买断功能（买断价格为实时计算）
 			})
 		}
 	},
@@ -234,7 +251,8 @@ export default {
 				maxAmount: 20,
 				percentage: 1,
 				decreaseRate: 0.8,
-				popupImage: '' // 弹窗图片
+				popupImage: '', // 弹窗图片
+				enableBuyout: false // 启用买断功能
 			},
 			// 递减比例选项
 			decreaseRateOptions: [0.9, 0.85, 0.8, 0.75, 0.7]
@@ -329,6 +347,35 @@ export default {
 		
 		// 处理配置变化
 		handleConfigChange() {
+			this.emitChange()
+		},
+		
+		// 处理买断开关变化
+		handleBuyoutSwitch(e) {
+			this.bargainConfig.enableBuyout = e.detail.value
+			
+			// 开启时，设置默认值（9折）
+			if (e.detail.value && !this.bargainConfig.buyoutPrice) {
+				this.bargainConfig.buyoutType = 'discount'
+				this.bargainConfig.buyoutPrice = 90
+			}
+			
+			this.emitChange()
+		},
+		
+		// 切换买断价格类型
+		handleBuyoutTypeChange(type) {
+			this.bargainConfig.buyoutType = type
+			
+			// 根据类型设置默认值
+			if (type === 'discount') {
+				// 按折扣：默认9折
+				this.bargainConfig.buyoutPrice = 90
+			} else {
+				// 固定金额：默认为起始价格的90%
+				this.bargainConfig.buyoutPrice = Math.round(this.bargainConfig.initialPrice * 0.9)
+			}
+			
 			this.emitChange()
 		},
 		
@@ -662,6 +709,35 @@ export default {
 					}
 				}
 			}
+			
+			&.buyout-section {
+				flex-direction: column;
+				align-items: flex-start;
+				gap: 12rpx;
+				
+				.buyout-header {
+					width: 100%;
+					display: flex;
+					align-items: center;
+					justify-content: space-between;
+				}
+				
+				.buyout-description {
+					display: flex;
+					align-items: center;
+					gap: 8rpx;
+					padding: 16rpx;
+					background-color: rgba(255, 184, 0, 0.08);
+					border-radius: 8rpx;
+					width: 100%;
+					
+					text {
+						font-size: 24rpx;
+						color: #666;
+						line-height: 1.5;
+					}
+				}
+			}
 		}
 		
 		.mode-tabs {
@@ -771,6 +847,111 @@ export default {
 			border-left: 4rpx solid #2196F3;
 			border-radius: 4rpx;
 			margin-top: 12rpx;
+		}
+		
+		// 买断配置区域
+		.buyout-config {
+			margin-top: 12rpx;
+			padding: 20rpx;
+			background-color: #fffbf0;
+			border-radius: 12rpx;
+			border-left: 4rpx solid #FFB800;
+			
+			.buyout-type-tabs {
+				display: flex;
+				gap: 12rpx;
+				flex: 1;
+				
+				.type-tab {
+					flex: 1;
+					height: 60rpx;
+					display: flex;
+					align-items: center;
+					justify-content: center;
+					background-color: #fff;
+					border: 2rpx solid #e0e0e0;
+					border-radius: 8rpx;
+					transition: all 0.3s;
+					
+					text {
+						font-size: 26rpx;
+						color: #666;
+						font-weight: 400;
+					}
+					
+					&.active {
+						background: linear-gradient(135deg, #FFB800 0%, #FF8C00 100%);
+						border-color: #FFB800;
+						box-shadow: 0 4rpx 12rpx rgba(255, 184, 0, 0.3);
+						
+						text {
+							color: #fff;
+							font-weight: 600;
+						}
+					}
+				}
+			}
+			
+			.buyout-preview {
+				padding: 20rpx;
+				background: linear-gradient(135deg, #FFB800 0%, #FF8C00 100%);
+				border-radius: 12rpx;
+				margin-top: 20rpx;
+				box-shadow: 0 8rpx 16rpx rgba(255, 184, 0, 0.25);
+				
+				.preview-row {
+					display: flex;
+					align-items: center;
+					justify-content: space-between;
+					margin-bottom: 8rpx;
+					
+					&:last-child {
+						margin-bottom: 0;
+					}
+					
+					.preview-label {
+						font-size: 26rpx;
+						color: rgba(255, 255, 255, 0.85);
+					}
+					
+					.preview-value {
+						font-size: 28rpx;
+						color: rgba(255, 255, 255, 0.9);
+						font-weight: 500;
+						
+						&.buyout {
+							font-size: 36rpx;
+							color: #fff;
+							font-weight: 700;
+						}
+					}
+					
+					&.highlight {
+						background-color: rgba(255, 255, 255, 0.15);
+						padding: 8rpx 12rpx;
+						border-radius: 8rpx;
+					}
+				}
+			}
+		}
+		
+		// 买断功能提示样式
+		.buyout-tip {
+			display: flex;
+			align-items: flex-start;
+			gap: 8rpx;
+			margin-top: 8rpx;
+			padding: 12rpx;
+			background: #FFF3CD;
+			border-radius: 8rpx;
+			font-size: 24rpx;
+			color: #856404;
+			line-height: 1.6;
+			
+			.uni-icons {
+				flex-shrink: 0;
+				margin-top: 2rpx;
+			}
 		}
 	}
 }
