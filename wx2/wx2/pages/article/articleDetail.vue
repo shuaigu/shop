@@ -470,11 +470,29 @@
 	// 处理买断操作
 	const handleBuyout = async () => {
 		try {
+			// ========== 调试日志开始 ==========
+			console.log('========== 🔍 点击买断按钮 ==========');
+			console.log('1️⃣ 是否正在处理:', isBuyoutProcessing.value);
+			console.log('2️⃣ 买断功能是否启用:', articleDetail.value.enable_buyout);
+			console.log('3️⃣ 用户登录信息:', {
+				hasUser: !!userStore.userInfo,
+				uid: userStore.userInfo?.uid,
+				nickName: userStore.userInfo?.nickName
+			});
+			console.log('4️⃣ 用户砍价小组:', userOwnGroup.value);
+			console.log('5️⃣ 买断价格:', computedBuyoutPrice.value);
+			console.log('=====================================');
+			// ========== 调试日志结束 ==========
+			
 			// 防止重复提交
-			if (isBuyoutProcessing.value) return
+			if (isBuyoutProcessing.value) {
+				console.log('❌ 阻止原因: 正在处理中');
+				return;
+			}
 			
 			// 检查买断是否启用
 			if (!articleDetail.value.enable_buyout) {
+				console.log('❌ 阻止原因: 买断功能未开启');
 				uni.showToast({ title: '买断功能未开启', icon: 'none' })
 				return
 			}
@@ -482,15 +500,16 @@
 			// 检查用户登录状态
 			const isLoggedIn = await testLogin()
 			if (!isLoggedIn || !userStore.userInfo?.uid) {
-				console.log('用户未登录，无法买断')
+				console.log('❌ 阻止原因: 用户未登录');
 				return
 			}
 			
 			// 检查用户是否有自己发起的砍价小组
 			if (!userOwnGroup.value) {
+				console.log('❌ 阻止原因: 用户没有发起砍价小组');
 				uni.showModal({
 					title: '暂无砍价小组',
-					content: '您还没有发起砍价小组，请先参与砍价活动。',
+					content: '您还没有发起砍价小组，请先点击"帮砍一刀"参与砍价活动。',
 					showCancel: false,
 					confirmText: '我知道了'
 				})
@@ -499,6 +518,7 @@
 			
 			// 检查小组是否已完成或已买断
 			if (userOwnGroup.value.is_complete || userOwnGroup.value.is_buyout) {
+				console.log('❌ 阻止原因: 小组已完成或已买断');
 				uni.showModal({
 					title: '无法买断',
 					content: '您的砍价小组已完成或已买断。',
@@ -508,22 +528,50 @@
 				return
 			}
 			
+			console.log('✅ 所有检查通过，准备显示确认弹窗');
+			
 			// 使用用户自己小组的发起人ID（即用户自己的uid）
 			const sharerId = userOwnGroup.value.initiator_id || userStore.userInfo.uid
+			console.log('📝 sharerId:', sharerId);
+			console.log('📝 买断价格:', computedBuyoutPrice.value);
 			
 			// 确认买断
+			console.log('🔔 准备调用 uni.showModal...');
+			
+			// 使用 setTimeout 确保在下一个事件循环中执行，避免被阻塞
+			setTimeout(() => {
 			uni.showModal({
 				title: '确认买断',
-				content: `您将以 ￥${computedBuyoutPrice.value.toFixed(2)} 的价格直接买断此商品，\n买断后将完成您的砍价活动。\n\n是否继续？`,
+				content: `您将以 ￥${computedBuyoutPrice.value.toFixed(2)} 的价格直接买断此商品，买断后将完成您的砍价活动。\n\n是否继续？`,
 				confirmText: '确认支付',
-				cancelText: '再考虑考虑',
-				success: async (res) => {
-					if (res.confirm) {
-						isBuyoutProcessing.value = true
-						await processBuyoutPayment(sharerId)
+				cancelText: '再想想',
+					success: async (res) => {
+						console.log('🔔 showModal success 回调被触发，用户选择:', res);
+						if (res.confirm) {
+							console.log('✅ 用户点击了确认支付，开始支付流程');
+							isBuyoutProcessing.value = true
+							await processBuyoutPayment(sharerId)
+						} else {
+							console.log('❌ 用户点击了取消');
+						}
+					},
+					fail: (err) => {
+						console.error('❌ showModal 调用失败:', err);
+						// 如果 showModal 失败，使用 Toast 提示
+						uni.showToast({
+							title: 'showModal失败，请重试',
+							icon: 'none',
+							duration: 2000
+						});
+					},
+					complete: () => {
+						console.log('🔔 showModal complete 回调被触发');
 					}
-				}
-			})
+				});
+				console.log('🔔 uni.showModal 已调用');
+			}, 100);
+			
+			console.log('🔔 已设置延迟调用 showModal');
 		} catch (err) {
 			console.error('买断操作失败:', err)
 			uni.showToast({ title: '操作失败', icon: 'none' })

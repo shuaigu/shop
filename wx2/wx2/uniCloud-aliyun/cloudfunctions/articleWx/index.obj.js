@@ -2428,11 +2428,19 @@ module.exports = {
 			
 			const order = orderRes.data[0];
 			
-			// 检查订单状态
+			// 检查订单状态 - 如果已完成，返回成功（幂等性）
 			if (order.status === 1) {
+				console.log('订单已完成，返回已有结果（幂等）');
+				const rewardPoints = Math.floor(order.buyout_price);
 				return {
-					errCode: -1,
-					errMsg: '订单已完成，请勿重复操作'
+					errCode: 0,
+					errMsg: '买断已完成',
+					data: {
+						buyout_price: order.buyout_price,
+						reward_points: rewardPoints,
+						is_complete: true,
+						already_completed: true // 标记为已完成
+					}
 				};
 			}
 			
@@ -2455,26 +2463,41 @@ module.exports = {
 			const article = articleRes.data[0];
 			const now = Date.now();
 			
-			// 创建买断记录（写入 bargainRecord 表）
-			const buyoutRecord = {
-				article_id: order.article_id,
-				initiator_id: user_id,
-				initiator_nickname: order.user_info.nickname,
-				initiator_avatar: order.user_info.avatar,
-				user_id: user_id,
-				nickname: order.user_info.nickname,
-				avatar: order.user_info.avatar,
-				bargain_amount: order.buyout_price,
-				current_price: 0,
-				buyout_price: order.buyout_price,
-				is_buyout: true,
-				is_complete: true,
-				create_time: now
-			};
+			// 检查是否已存在买断记录（防止重复创建）
+			const existingBargainRes = await this.bargainRecordCollection
+				.where({
+					article_id: order.article_id,
+					initiator_id: user_id,
+					is_buyout: true
+				})
+				.get();
 			
-			await this.bargainRecordCollection.add(buyoutRecord);
+			// 只有在没有买断记录时才创建
+			if (!existingBargainRes.data || existingBargainRes.data.length === 0) {
+				// 创建买断记录（写入 bargainRecord 表）
+				const buyoutRecord = {
+					article_id: order.article_id,
+					initiator_id: user_id,
+					initiator_nickname: order.user_info.nickname,
+					initiator_avatar: order.user_info.avatar,
+					user_id: user_id,
+					nickname: order.user_info.nickname,
+					avatar: order.user_info.avatar,
+					bargain_amount: order.buyout_price,
+					current_price: 0,
+					buyout_price: order.buyout_price,
+					is_buyout: true,
+					is_complete: true,
+					create_time: now
+				};
+				
+				await this.bargainRecordCollection.add(buyoutRecord);
+				console.log('✅ 买断记录已创建');
+			} else {
+				console.log('⚠️ 买断记录已存在，跳过创建');
+			}
 			
-			// 更新文章状态
+			// 更新文章状态（幂等操作）
 			await this.articleCollection.doc(order.article_id).update({
 				bargain_buyout_price: order.buyout_price,
 				bargain_buyout_time: now,
@@ -2491,20 +2514,21 @@ module.exports = {
 			// 计算奖励积分
 			const rewardPoints = Math.floor(order.buyout_price);
 			
-			// 更新用户积分
+			// 更新用户积分（只在订单首次完成时奖励）
 			if (rewardPoints > 0) {
 				try {
 					const _ = this.db.command;
 					await this.db.collection('user').doc(user_id).update({
 						points: _.inc(rewardPoints)
 					});
-					console.log('用户积分已更新:', { user_id, reward_points: rewardPoints });
+					console.log('✅ 用户积分已更新:', { user_id, reward_points: rewardPoints });
 				} catch (err) {
-					console.error('更新用户积分失败:', err);
+					console.error('❌ 更新用户积分失败:', err);
+					// 积分更新失败不影响主流程
 				}
 			}
 			
-			console.log('买断完成:', {
+			console.log('🎉 买断完成:', {
 				order_no: order_no,
 				buyout_price: order.buyout_price,
 				reward_points: rewardPoints
@@ -2521,7 +2545,7 @@ module.exports = {
 			};
 			
 		} catch (err) {
-			console.error('完成买断失败:', err);
+			console.error('❌ 完成买断失败:', err);
 			return {
 				errCode: -1,
 				errMsg: '完成买断失败: ' + err.message
