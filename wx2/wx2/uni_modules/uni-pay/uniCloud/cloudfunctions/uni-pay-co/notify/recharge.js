@@ -113,13 +113,17 @@ module.exports = async ( obj ) => {
 				console.log('⚠️ 买断记录已存在，跳过创建');
 			}
 			
-			// 6. 更新文章状态（幂等操作，可重复执行）
+			// 6. 更新文章状态 - 标记砍价活动完成并下架文章
 			await db.collection('articleList').doc(buyoutOrder.article_id).update({
-				bargain_buyout_price: buyoutOrder.buyout_price,
-				bargain_buyout_time: now,
-				bargain_completed: true
+				bargain_completed: true, // 标记砍价完成
+				bargain_winner_id: buyoutOrder.user_id, // 记录获胜者ID
+				bargain_winner_nickname: buyoutOrder.user_info.nickname || '匿名用户', // 记录获胜者昵称
+				bargain_buyout_price: buyoutOrder.buyout_price, // 记录买断价格
+				bargain_buyout_time: now, // 记录买断时间
+				state: 2, // 下架文章，防止其他人继续砍价
+				enable_bargain: false // 关闭砍价功能
 			});
-			console.log('✅ 文章状态已更新');
+			console.log('✅ 文章状态已更新，砍价活动已结束，文章已下架');
 			
 			// 7. 更新用户积分（只在第一次处理时奖励）
 			const rewardPoints = Math.floor(buyoutOrder.buyout_price);

@@ -2221,12 +2221,13 @@ module.exports = {
 			
 			// 更新文章状态：标记为已完成并下架/锁定
 			await this.articleCollection.doc(article_id).update({
-				bargain_completed: true,
-				bargain_winner_id: user_id,
-				bargain_winner_nickname: userInfo.nickName || '匿名用户',
-				bargain_buyout_price: finalBuyoutPrice,  // 记录买断价格
-				bargain_buyout_time: now,  // 记录买断时间
-				state: 2 // 自动下架/锁定文章
+				bargain_completed: true, // 标记砍价完成
+				bargain_winner_id: user_id, // 记录获胜者ID
+				bargain_winner_nickname: userInfo.nickName || '匿名用户', // 记录获胜者昵称
+				bargain_buyout_price: finalBuyoutPrice, // 记录买断价格
+				bargain_buyout_time: now, // 记录买断时间
+				state: 2, // 自动下架/锁定文章
+				enable_bargain: false // 关闭砍价功能，防止其他人继续参与
 			});
 			
 			// 计算奖励积分（买断价的整数部分）
@@ -2497,11 +2498,15 @@ module.exports = {
 				console.log('⚠️ 买断记录已存在，跳过创建');
 			}
 			
-			// 更新文章状态（幂等操作）
+			// 更新文章状态 - 标记砍价活动完成并下架文章
 			await this.articleCollection.doc(order.article_id).update({
-				bargain_buyout_price: order.buyout_price,
-				bargain_buyout_time: now,
-				bargain_completed: true
+				bargain_completed: true, // 标记砍价完成
+				bargain_winner_id: user_id, // 记录获胜者ID
+				bargain_winner_nickname: order.user_info.nickname || '匿名用户', // 记录获胜者昵称
+				bargain_buyout_price: order.buyout_price, // 记录买断价格
+				bargain_buyout_time: now, // 记录买断时间
+				state: 2, // 自动下架/锁定文章
+				enable_bargain: false // 关闭砍价功能，防止其他人继续参与
 			});
 			
 			// 更新订单状态

@@ -399,8 +399,9 @@
 	
 	// 检查砍价是否完成
 	const isBargainComplete = computed(() => {
-		// 当价格为0时，砍价完成
-		return currentBargainPrice.value <= 0 && articleDetail.value.enable_bargain
+		// 检查砍价是否完成：价格为0 或 后端标记已完成
+		return (currentBargainPrice.value <= 0 && articleDetail.value.enable_bargain) 
+			|| articleDetail.value.bargain_completed === true
 	})
 	
 	// 监听用户登录状态变化，刷新买断权限
@@ -4195,8 +4196,22 @@
 								</view>
 							</view>
 							
+							<!-- 砍价活动已结束提示（买断完成） -->
+							<view class="bargain-ended-card" v-if="articleDetail.bargain_completed && !articleDetail.enable_bargain">
+								<view class="ended-icon">
+									<uni-icons type="checkmarkempty" size="48" color="#52c41a"></uni-icons>
+								</view>
+								<view class="ended-content">
+									<text class="ended-title">砍价活动已结束</text>
+									<text class="ended-subtitle" v-if="articleDetail.bargain_winner_nickname">
+										恭喜 {{ articleDetail.bargain_winner_nickname }} 以 ￥{{ articleDetail.bargain_buyout_price?.toFixed(2) || '0.00' }} 买断成功！
+									</text>
+									<text class="ended-subtitle" v-else>该商品已被买断</text>
+								</view>
+							</view>
+							
 							<!-- 砍价信息卡片 - 在视频播放器下方显示 -->
-							<view class="bargain-info-card" v-if="articleDetail.enable_bargain">
+							<view class="bargain-info-card" v-if="articleDetail.enable_bargain && !articleDetail.bargain_completed">
 								<view class="bargain-card-header">
 									<!-- 优先显示本地图片，加载失败后显示备用图标 -->
 									<image 
@@ -6681,6 +6696,52 @@
 	}
 	
 	/* 砍价信息卡片样式 */
+	// 砍价活动已结束提示卡片
+	.bargain-ended-card {
+		background: linear-gradient(135deg, #f6ffed 0%, #f0f9ff 100%);
+		margin: 20rpx;
+		border-radius: 16rpx;
+		padding: 40rpx;
+		box-shadow: 0 4rpx 16rpx rgba(82, 196, 26, 0.15);
+		border: 2rpx solid #b7eb8f;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 20rpx;
+		
+		.ended-icon {
+			width: 96rpx;
+			height: 96rpx;
+			background: linear-gradient(135deg, #52c41a, #73d13d);
+			border-radius: 50%;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			box-shadow: 0 4rpx 12rpx rgba(82, 196, 26, 0.3);
+		}
+		
+		.ended-content {
+			display: flex;
+			flex-direction: column;
+			align-items: center;
+			gap: 12rpx;
+			
+			.ended-title {
+				font-size: 36rpx;
+				font-weight: 700;
+				color: #52c41a;
+				text-align: center;
+			}
+			
+			.ended-subtitle {
+				font-size: 28rpx;
+				color: #666;
+				text-align: center;
+				line-height: 1.6;
+			}
+		}
+	}
+	
 	.bargain-info-card {
 		background-color: #fff;
 		margin: 20rpx;
