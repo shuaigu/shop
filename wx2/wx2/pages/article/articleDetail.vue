@@ -391,11 +391,17 @@
 		return false
 	})
 	
-	// 检查砍价是否完成
+	// 检查整个砍价活动是否完成（只有买断才算整个活动完成）
 	const isBargainComplete = computed(() => {
-		// 检查砍价是否完成：价格为0 或 后端标记已完成
-		return (currentBargainPrice.value <= 0 && articleDetail.value.enable_bargain) 
-			|| articleDetail.value.bargain_completed === true
+		// 只检查后端标记是否完成（买断后会设置为true）
+		return articleDetail.value.bargain_completed === true
+	})
+	
+	// 检查当前用户自己的小组是否完成
+	const isCurrentUserGroupComplete = computed(() => {
+		// 当前用户小组砍价到0元，或者小组标记为已完成
+		return (currentBargainPrice.value <= 0 && articleDetail.value.enable_bargain)
+			|| (userOwnGroup.value && userOwnGroup.value.is_complete === true)
 	})
 	
 	// 监听用户登录状态变化，刷新买断权限
@@ -908,13 +914,14 @@
    - 当前砍价价格: ¥${currentBargainPrice.value}
    - 是否发起人: ${isCurrentUserInitiator.value ? '是' : '否'}
    - 是否过期: ${isBargainExpired.value ? '是' : '否'}
-   - 是否完成: ${isBargainComplete.value ? '是' : '否'}
+   - 整个活动是否完成: ${isBargainComplete.value ? '是（买断）' : '否'}
+   - 当前用户小组是否完成: ${isCurrentUserGroupComplete.value ? '是' : '否'}
 
 5. 按钮显示条件：
    - enable_buyout: ${articleDetail.value.enable_buyout ? '✓' : '✗'}
    - computedBuyoutPrice > 0: ${computedBuyoutPrice.value > 0 ? '✓' : '✗'}
    - !isBargainExpired: ${!isBargainExpired.value ? '✓' : '✗'}
-   - !isBargainComplete: ${!isBargainComplete.value ? '✓' : '✗'}
+   - !isBargainComplete: ${!isBargainComplete.value ? '✓ (活动未结束)' : '✗ (活动已结束)'}
    - isCurrentUserInitiator: ${isCurrentUserInitiator.value ? '✓' : '✗'}
 		`.trim()
 		
@@ -1901,10 +1908,20 @@
 			return
 		}
 		
-		// 检查砍价是否已完成
+		// 检查砍价活动是否已结束（买断）
 		if (isBargainComplete.value) {
 			uni.showToast({
-				title: '您已完成砍价',
+				title: '砍价活动已结束',
+				icon: 'none',
+				duration: 2000
+			})
+			return
+		}
+		
+		// 检查当前用户小组是否已完成
+		if (isCurrentUserGroupComplete.value) {
+			uni.showToast({
+				title: '您的小组已完成砍价',
 				icon: 'none',
 				duration: 2000
 			})
@@ -1924,12 +1941,13 @@
 		}
 	}
 	
-	// 同步砍价组件的完成状态到页面
+	// 同步砍价组件的完成状态到页面（已废弃，状态由computed自动计算）
 	const syncBargainCompleteStatus = () => {
-		if (dianzanBargainRef.value && dianzanBargainRef.value.isBargainComplete) {
-			isBargainComplete.value = dianzanBargainRef.value.isBargainComplete.value
-			console.log('已同步砍价完成状态:', isBargainComplete.value)
-		}
+		// 不再需要手动同步，状态会根据 articleDetail 和 userOwnGroup 自动更新
+		console.log('砍价完成状态:', {
+			整个活动是否完成: isBargainComplete.value,
+			当前用户小组是否完成: isCurrentUserGroupComplete.value
+		})
 	}
 
 	// 修改 customTestLogin 方法，解决showLoading/hideLoading配对问题
@@ -3884,12 +3902,17 @@
 	// 砍价完成事件处理
 	const handleBargainComplete = (data) => {
 		console.log('砍价完成:', data)
-		// 更新完成状态
-		isBargainComplete.value = true
-		// 刷新砍价小组列表
+		// 注意：不需要手动设置完成状态，状态会根据数据自动更新
+		// 刷新砍价小组列表和用户小组信息
 		if (bargainGroupsRef.value && typeof bargainGroupsRef.value.loadGroups === 'function') {
 			setTimeout(() => {
 				bargainGroupsRef.value.loadGroups()
+			}, 1000)
+		}
+		// 刷新用户自己的小组信息
+		if (articleDetail.value.enable_buyout) {
+			setTimeout(() => {
+				loadUserOwnGroup()
 			}, 1000)
 		}
 			
@@ -3965,9 +3988,12 @@
 	// 处理买断成功
 	const handleBuyoutSuccess = (data) => {
 		console.log('买断成功:', data)
-		// 更新完成状态
-		isBargainComplete.value = true
-		// 刷新页面数据
+		// 注意：不需要手动设置完成状态，后端会更新 articleDetail.bargain_completed
+		// 刷新页面数据，获取最新的 bargain_completed 状态
+		setTimeout(() => {
+			getArticleDetail()
+		}, 500)
+		// 刷新砍价小组列表
 		if (bargainGroupsRef.value && typeof bargainGroupsRef.value.loadGroups === 'function') {
 			setTimeout(() => {
 				bargainGroupsRef.value.loadGroups()
@@ -4561,16 +4587,38 @@
 					</view>
 				</button>
 				
+				<!-- 帮砍一刀按钮 -->
 				<view 
 					class="call-btn" 
 					:class="{ 
-						'complete': isBargainComplete,
-						'disabled': !articleDetail.enable_bargain || isBargainExpired || !dianzanBargainRef
+						'complete': isBargainComplete || isCurrentUserGroupComplete,
+						'disabled': !articleDetail.enable_bargain || isBargainExpired || !dianzanBargainRef,
+						'has-buyout': articleDetail.enable_buyout && isCurrentUserInitiator && computedBuyoutPrice > 0 && !isBargainComplete && !isCurrentUserGroupComplete
 					}"
 					@click="handleBargainHelp"
 				>
 					<image src="/static/images/砍价.png" class="bargain-icon"></image>
-					<view class="call-text">{{ isBargainComplete ? '已完成' : (!articleDetail.enable_bargain ? '未开启' : isBargainExpired ? '已结束' : '帮砍一刀') }}</view>
+					<view class="call-text">{{ 
+						isBargainComplete ? '活动已结束' : 
+						isCurrentUserGroupComplete ? '小组已完成' : 
+						(!articleDetail.enable_bargain ? '未开启' : 
+						isBargainExpired ? '已结束' : 
+						'帮砍一刀') 
+					}}</view>
+				</view>
+				
+				<!-- 买断按钮 - 只对小组长显示 -->
+				<view 
+					v-if="articleDetail.enable_buyout && isCurrentUserInitiator && computedBuyoutPrice > 0 && !isBargainComplete && !isCurrentUserGroupComplete"
+					class="buyout-btn" 
+					:class="{ 'disabled': isBuyoutProcessing || isBargainExpired }"
+					@click="handleBuyout"
+				>
+					<uni-icons type="wallet-filled" size="20" color="#fff"></uni-icons>
+					<view class="buyout-text">
+						<text class="buyout-label">买断</text>
+						<text class="buyout-price">¥{{ computedBuyoutPrice.toFixed(2) }}</text>
+					</view>
 				</view>
 			</view>
 		</view>
@@ -5148,6 +5196,7 @@
 				justify-content: center;
 				gap: 12rpx;
 				margin: auto 0; /* 添加上下外边距为auto，实现垂直居中 */
+				transition: all 0.3s ease;
 
 				.bargain-icon {
 					width: 34rpx;
@@ -5163,6 +5212,74 @@
 
 				&:active {
 					opacity: 0.8;
+				}
+				
+				// 当有买断按钮时，调整宽度
+				&.has-buyout {
+					flex: 1.2;
+					margin-right: 16rpx;
+				}
+				
+				// 完成状态样式
+				&.complete {
+					background: linear-gradient(135deg, #95de64 0%, #52c41a 100%);
+				}
+				
+				// 禁用状态样式
+				&.disabled {
+					background-color: #d9d9d9;
+					opacity: 0.6;
+					pointer-events: none;
+				}
+			}
+			
+			// 买断按钮样式
+			.buyout-btn {
+				flex: 1;
+				height: 80rpx;
+				background: linear-gradient(135deg, #FFB800 0%, #FF8C00 100%);
+				color: #fff;
+				border-radius: 8rpx;
+				display: flex;
+				align-items: center;
+				justify-content: center;
+				gap: 8rpx;
+				margin: auto 0;
+				box-shadow: 0 4rpx 12rpx rgba(255, 184, 0, 0.3);
+				transition: all 0.3s ease;
+				
+				.buyout-text {
+					display: flex;
+					flex-direction: column;
+					align-items: flex-start;
+					justify-content: center;
+					line-height: 1.2;
+					
+					.buyout-label {
+						font-size: 24rpx;
+						color: rgba(255, 255, 255, 0.9);
+						font-weight: 500;
+					}
+					
+					.buyout-price {
+						font-size: 32rpx;
+						color: #ffffff;
+						font-weight: 700;
+						letter-spacing: 0.5rpx;
+					}
+				}
+				
+				&:active {
+					opacity: 0.8;
+					transform: scale(0.98);
+				}
+				
+				// 禁用状态
+				&.disabled {
+					background: linear-gradient(135deg, #d9d9d9 0%, #bfbfbf 100%);
+					box-shadow: none;
+					opacity: 0.6;
+					pointer-events: none;
 				}
 			}
 		}
