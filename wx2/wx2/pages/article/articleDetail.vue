@@ -303,72 +303,49 @@
 	
 	// 获取用户自己发起的砍价小组
 	const loadUserOwnGroup = async () => {
+		console.log('=== loadUserOwnGroup 开始 ===', {
+			uid: userStore.userInfo?.uid,
+			articleId: articleDetail.value._id,
+			enableBuyout: articleDetail.value.enable_buyout,
+			enableBargain: articleDetail.value.enable_bargain
+		})
+		
+		if (!userStore.userInfo?.uid || !articleDetail.value._id) {
+			console.log('loadUserOwnGroup: 用户未登录或文章ID不存在，跳过')
+			userOwnGroup.value = null
+			return
+		}
+		
+		console.log('查询用户自己的砍价小组...', {
+			articleId: articleDetail.value._id,
+			userId: userStore.userInfo.uid
+		})
+		
 		try {
-			console.log('=== loadUserOwnGroup 开始 ===', {
-				uid: userStore.userInfo?.uid,
-				articleId: articleDetail.value._id,
-				enableBuyout: articleDetail.value.enable_buyout,
-				enableBargain: articleDetail.value.enable_bargain
-			})
+			// 调用云函数获取用户小组信息（只返回用户作为发起人的砍价小组）
+			const result = await articleApi.getUserBargainGroup(
+				articleDetail.value._id,
+				userStore.userInfo.uid
+			)
 			
-			if (!userStore.userInfo?.uid || !articleDetail.value._id) {
-				console.log('loadUserOwnGroup: 用户未登录或文章ID不存在，跳过')
-				userOwnGroup.value = null
-				return
-			}
+			console.log('getUserBargainGroup 云函数返回:', result)
 			
-			console.log('查询用户自己的砍价小组...', {
-				articleId: articleDetail.value._id,
-				userId: userStore.userInfo.uid
-			})
-			
-			try {
-				// 尝试调用云函数获取用户小组信息
-				const result = await articleApi.getUserBargainGroup(
-					articleDetail.value._id,
-					userStore.userInfo.uid
-				)
-				
-				console.log('getUserBargainGroup 云函数返回:', result)
-				
-				if (result.errCode === 0 && result.data) {
-					userOwnGroup.value = result.data
-					console.log('✅ 成功获取用户砍价小组:', {
-						initiator_id: userOwnGroup.value.initiator_id,
-						current_price: userOwnGroup.value.current_price,
-						is_complete: userOwnGroup.value.is_complete,
-						is_buyout: userOwnGroup.value.is_buyout
-					})
-					return
-				} else {
-					console.log('云函数返回空数据，用户可能没有发起砍价小组')
-				}
-			} catch (apiErr) {
-				console.warn('云函数调用失败，使用备选逻辑:', apiErr.message)
-			}
-			
-			// 备选逻辑：检查 current_sharer_id 是否是当前用户
-			const sharerId = uni.getStorageSync('current_sharer_id')
-			console.log('备选逻辑检查:', { sharerId, currentUid: userStore.userInfo.uid })
-			
-			if (sharerId && sharerId === userStore.userInfo.uid) {
-				// 用户是当前页面的分享者/发起人，构造一个简单的小组信息
-				// 注意：这里使用 currentBargainPrice 作为当前价格
-				const fallbackPrice = currentBargainPrice.value || articleDetail.value.bargain_initial_price || 0
-				userOwnGroup.value = {
-					initiator_id: userStore.userInfo.uid,
-					initiator_nickname: userStore.userInfo.nickName || '匿名用户',
-					current_price: fallbackPrice,
-					is_complete: fallbackPrice <= 0,
-					is_buyout: false
-				}
-				console.log('✅ 使用备选逻辑设置用户小组:', userOwnGroup.value)
+			if (result.errCode === 0 && result.data) {
+				// 用户是小组长，设置小组信息
+				userOwnGroup.value = result.data
+				console.log('✅ 用户是小组长，成功获取砍价小组:', {
+					initiator_id: userOwnGroup.value.initiator_id,
+					current_price: userOwnGroup.value.current_price,
+					is_complete: userOwnGroup.value.is_complete,
+					is_buyout: userOwnGroup.value.is_buyout
+				})
 			} else {
+				// 用户不是小组长（没有发起砍价小组）
+				console.log('✅ 用户不是小组长（没有发起砍价小组）')
 				userOwnGroup.value = null
-				console.log('❌ 用户没有发起砍价小组（sharerId不匹配或不存在）')
 			}
-		} catch (err) {
-			console.error('获取用户砍价小组失败:', err)
+		} catch (apiErr) {
+			console.error('云函数调用失败:', apiErr.message)
 			userOwnGroup.value = null
 		}
 	}
@@ -390,9 +367,26 @@
 	
 	// 检查当前用户是否是某个砍价小组的发起人（小组长）
 	const isCurrentUserInitiator = computed(() => {
-		// 用户有自己发起的砍价小组，且该小组未完成、未买断
+		// 必须同时满足以下条件才显示买断按钮：
+		// 1. 用户有自己发起的砍价小组
+		// 2. 小组未完成、未买断
+		// 3. 小组至少有1个参与者（即用户自己已经砍了一刀）
+		// 4. 已砍金额大于0（确保真的发起了砍价）
 		if (userOwnGroup.value) {
-			return !userOwnGroup.value.is_complete && !userOwnGroup.value.is_buyout
+			const hasParticipants = userOwnGroup.value.total_participants > 0
+			const hasBargained = userOwnGroup.value.total_bargained_amount > 0
+			const isActive = !userOwnGroup.value.is_complete && !userOwnGroup.value.is_buyout
+			
+			console.log('🔍 检查买断按钮显示条件:', {
+				hasParticipants,
+				hasBargained,
+				isActive,
+				total_participants: userOwnGroup.value.total_participants,
+				total_bargained_amount: userOwnGroup.value.total_bargained_amount
+			})
+			
+			// 只有当小组有参与者、有砍价金额、且小组活跃时，才显示买断按钮
+			return hasParticipants && hasBargained && isActive
 		}
 		return false
 	})
@@ -4259,33 +4253,34 @@
 										<text class="countdown-label">秒</text>
 									</view>
 									
-									<dianzan 
-										ref="dianzanBargainRef"
-										mode="bargain"
-										:articleId="articleDetail._id || props.article_id"
-										:initialLiked="isArticleLiked"
-										:initialCount="likeCount"
-										:initialPrice="articleDetail.bargain_initial_price || 0"
-										:bargainStep="articleDetail.bargain_step || 10"
-										:bargainEndTime="articleDetail.bargain_end_time || 0"
-										:bargainSuccessMessage="getBargainSuccessMessage()"
-										:bargainPopupImage="articleDetail.bargain_popup_image"
-										:bargainAmountText="articleDetail.bargain_amount_text || ''"
-										:showBargainPopup="true"
-										:showText="true"
-										:showCount="false"
-										:enableBuyout="true"
-										@update:liked="(val) => isArticleLiked = val"
-										@update:count="(val) => likeCount = val"
-										@update:price="(val) => currentBargainPrice = val"
-										@bargain-success="handleBargainSuccess"
-										@bargain-complete="handleBargainComplete"
-										@share-invite="handleShareInvite"
-										@view-detail="handleViewDetail"
-										@buyout-click="handleBuyout"
-										@buyout-success="handleBuyoutSuccess"
-										@buyout-error="handleBuyoutError"
-									/>
+								<dianzan 
+									ref="dianzanBargainRef"
+									mode="bargain"
+									:articleId="articleDetail._id || props.article_id"
+									:initialLiked="isArticleLiked"
+									:initialCount="likeCount"
+									:initialPrice="articleDetail.bargain_initial_price || 0"
+									:bargainStep="articleDetail.bargain_step || 10"
+									:bargainEndTime="articleDetail.bargain_end_time || 0"
+									:bargainSuccessMessage="getBargainSuccessMessage()"
+									:bargainPopupImage="articleDetail.bargain_popup_image"
+									:bargainAmountText="articleDetail.bargain_amount_text || ''"
+									:showBargainPopup="true"
+									:showText="true"
+									:showCount="false"
+									:enableBuyout="true"
+									:isInitiator="isCurrentUserInitiator"
+									@update:liked="(val) => isArticleLiked = val"
+									@update:count="(val) => likeCount = val"
+									@update:price="(val) => currentBargainPrice = val"
+									@bargain-success="handleBargainSuccess"
+									@bargain-complete="handleBargainComplete"
+									@share-invite="handleShareInvite"
+									@view-detail="handleViewDetail"
+									@buyout-click="handleBuyout"
+									@buyout-success="handleBuyoutSuccess"
+									@buyout-error="handleBuyoutError"
+								/>
 
 								</view>
 							</view>

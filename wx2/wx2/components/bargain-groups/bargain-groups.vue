@@ -343,10 +343,19 @@ onMounted(() => {
 }
 
 .groups-list {
-	display: grid;
-	grid-template-columns: repeat(2, 1fr);
+	display: flex;
+	overflow-x: auto;
+	overflow-y: hidden;
 	gap: 20rpx;
-	padding: 0 24rpx;
+	padding: 0 24rpx 16rpx;
+	scroll-behavior: smooth;
+	-webkit-overflow-scrolling: touch;
+	
+	// 隐藏滚动条但保持滚动功能
+	&::-webkit-scrollbar {
+		display: none;
+	}
+	scrollbar-width: none;
 }
 
 .group-card {
@@ -358,6 +367,8 @@ onMounted(() => {
 	transition: all 0.3s ease;
 	position: relative;
 	overflow: hidden;
+	flex-shrink: 0;
+	width: 320rpx;
 	
 	&:active {
 		transform: scale(0.98);

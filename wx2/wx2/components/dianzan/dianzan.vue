@@ -65,15 +65,15 @@
 					</view>
 				</view>
 				
-				<!-- 买断按钮（紧凑版，在价格后面） -->
-				<view 
-					v-if="enableBuyout && !isBargainComplete && !isBargainExpired && currentPrice > 0"
-					class="buyout-button-compact"
-					:class="{ 'buyout-clicking': isBuyoutClicking }"
-					@click="handleBuyoutClick"
-				>
-					<text>买断</text>
-				</view>
+			<!-- 买断按钮（紧凑版，在价格后面）- 只有小组长才能看到 -->
+			<view 
+				v-if="enableBuyout && isInitiator && !isBargainComplete && !isBargainExpired && currentPrice > 0"
+				class="buyout-button-compact"
+				:class="{ 'buyout-clicking': isBuyoutClicking }"
+				@click="handleBuyoutClick"
+			>
+				<text>买断</text>
+			</view>
 				
 				<!-- 右侧按钮 - 添加点击事件和动画类 -->
 				<view 
@@ -275,6 +275,11 @@ const props = defineProps({
 	// 买断功能相关属性
 	// 是否启用买断
 	enableBuyout: {
+		type: Boolean,
+		default: false
+	},
+	// 是否是小组长（发起人）- 只有小组长才能看到买断按钮
+	isInitiator: {
 		type: Boolean,
 		default: false
 	}
