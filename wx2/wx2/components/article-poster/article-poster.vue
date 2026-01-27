@@ -136,10 +136,26 @@ const handlePosterButtonClick = () => {
 // 生成海报（支持静默模式）
 const generatePoster = async (silent = false) => {
 	if (isGenerating.value) {
+		console.warn('⚠️ 海报生成中，跳过重复请求');
 		return;
 	}
 	
 	isGenerating.value = true;
+	
+	// ✅ 增加生成超时保护（30秒）
+	const timeoutId = setTimeout(() => {
+		if (isGenerating.value) {
+			console.error('❌ 海报生成超时（30秒）');
+			isGenerating.value = false;
+			if (!silent) {
+				uni.hideLoading();
+				uni.showToast({
+					title: '生成超时，请重试',
+					icon: 'none'
+				});
+			}
+		}
+	}, 30000);
 	
 	// 🔥 每次生成前清空缓存，确保使用最新数据
 	qrcodeBase64.value = '';
@@ -155,18 +171,24 @@ const generatePoster = async (silent = false) => {
 	}
 	
 	try {
-		// 先生成小程序码
-		await generateArticleQRCode();
+		console.log('🚀 开始生成海报...');
 		
-		// 等待小程序码生成完成（最多等3秒）
-		let waitCount = 0;
-		while (!qrcodeBase64.value && waitCount < 30) {
-			await new Promise(resolve => setTimeout(resolve, 100));
-			waitCount++;
-		}
+		// ✅ 优化：并行执行小程序码生成（带超时）
+		const qrcodePromise = Promise.race([
+			generateArticleQRCode(),
+			new Promise((resolve) => {
+				setTimeout(() => {
+					console.warn('⚠️ 小程序码生成超时（12秒），继续生成海报');
+					resolve(null);
+				}, 12000); // 12秒超时
+			})
+		]);
+		
+		// 等待小程序码生成（或超时）
+		await qrcodePromise;
 		
 		if (!qrcodeBase64.value) {
-			console.warn('⚠️ 小程序码生成超时，将继续生成海报（使用占位图）');
+			console.warn('⚠️ 小程序码未生成，将使用占位图继续');
 		} else {
 			console.log('✅ 小程序码已准备就绪');
 		}
@@ -180,19 +202,23 @@ const generatePoster = async (silent = false) => {
 			.exec(async (res) => {
 				if (!res[0] || !res[0].node) {
 					// 降级方案：使用离屏canvas
+					console.warn('⚠️ Canvas节点未找到，尝试创建离屏Canvas');
 					try {
 						const canvas = wx.createOffscreenCanvas({ 
 							type: '2d', 
 							width: canvasWidth.value, 
 							height: canvasHeight.value 
 						});
+						console.log('✅ 离屏Canvas创建成功');
 						await drawPoster(canvas, silent);
+						clearTimeout(timeoutId); // ✅ 清除超时定时器
 					} catch (err) {
-						console.error('离屏canvas创建失败:', err);
+						console.error('❌ 离屏canvas创建失败:', err);
+						clearTimeout(timeoutId);
 						if (!silent) {
 							uni.hideLoading();
 							uni.showToast({
-								title: '生成失败，请重试',
+								title: '生成失败: ' + (err.message || '未知错误'),
 								icon: 'none'
 							});
 						}
@@ -202,13 +228,16 @@ const generatePoster = async (silent = false) => {
 					const canvas = res[0].node;
 					canvas.width = canvasWidth.value;
 					canvas.height = canvasHeight.value;
+					console.log('✅ Canvas节点获取成功');
 					await drawPoster(canvas, silent);
+					clearTimeout(timeoutId); // ✅ 清除超时定时器
 				}
 			});
 		// #endif
 		
 		// #ifndef MP-WEIXIN
 		// 非微信小程序环境
+		clearTimeout(timeoutId);
 		if (!silent) {
 			uni.hideLoading();
 			uni.showToast({
@@ -220,12 +249,14 @@ const generatePoster = async (silent = false) => {
 		// #endif
 		
 	} catch (err) {
-		console.error('生成海报失败:', err);
+		console.error('❌ 生成海报失败:', err);
+		clearTimeout(timeoutId);
 		if (!silent) {
 			uni.hideLoading();
 			uni.showToast({
-				title: '生成失败，请重试',
-				icon: 'none'
+				title: '生成失败: ' + (err.message || '未知错误'),
+				icon: 'none',
+				duration: 3000
 			});
 		}
 		isGenerating.value = false;
@@ -745,37 +776,46 @@ const drawImageFit = (ctx, img, x, y, w, h) => {
 	ctx.drawImage(img, sx, sy, sw, sh, x, y, w, h);
 };
 
-// 生成文章小程序码
+// 生成文章小程序码（优化版）
 const generateArticleQRCode = async () => {
-	return new Promise(async (resolve, reject) => {
-		try {
-			const wxacodeApi = uniCloud.importObject('getWxacode', { customUI: true });
-			const res = await wxacodeApi.generateArticleQRCode({
-				article_id: props.articleId
-			});
-						
-			if (res.errCode === 0 && res.qrcodeBase64) {
-				// #ifdef MP-WEIXIN
-				// Canvas可以直接使用base64，不需要转换为文件
-				qrcodeBase64.value = res.qrcodeBase64;
-				resolve(res.qrcodeBase64);
-				// #endif
-							
-				// #ifndef MP-WEIXIN
-				qrcodeBase64.value = res.qrcodeBase64;
-				resolve(res.qrcodeBase64);
-				// #endif
-			} else {
-				console.error('🎨[海报] 小程序码生成失败:', res.errMsg);
-				qrcodeBase64.value = ''; // 清空
-				resolve('');
+	console.log('📝 开始生成小程序码...');
+	console.log('   文章ID:', props.articleId);
+	
+	try {
+		const startTime = Date.now();
+		const wxacodeApi = uniCloud.importObject('getWxacode', { 
+			customUI: true,
+			// ✅ 增加超时时间
+			timeout: 15000
+		});
+		
+		const res = await wxacodeApi.generateArticleQRCode({
+			article_id: props.articleId
+		});
+		
+		const elapsed = Date.now() - startTime;
+		console.log(`⏱️ 云函数调用耗时: ${elapsed}ms`);
+		
+		if (res.errCode === 0 && res.qrcodeBase64) {
+			qrcodeBase64.value = res.qrcodeBase64;
+			console.log('✅ 小程序码生成成功');
+			console.log('   base64长度:', res.qrcodeBase64.length);
+			return res.qrcodeBase64;
+		} else {
+			console.error('❌ 小程序码生成失败:', res.errMsg);
+			if (res.error) {
+				console.error('   错误详情:', res.error);
 			}
-		} catch (err) {
-			console.error('🎨[海报] 调用云函数失败:', err.message);
-			qrcodeBase64.value = ''; // 清空
-			resolve('');
+			qrcodeBase64.value = '';
+			return null;
 		}
-	});
+	} catch (err) {
+		console.error('❌ 调用云函数失败:', err);
+		console.error('   错误类型:', err.name);
+		console.error('   错误信息:', err.message);
+		qrcodeBase64.value = '';
+		return null;
+	}
 };
 
 // 显示海报预览
