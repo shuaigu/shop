@@ -65,6 +65,16 @@
 					</view>
 				</view>
 				
+				<!-- 买断按钮（紧凑版，在价格后面） -->
+				<view 
+					v-if="enableBuyout && !isBargainComplete && !isBargainExpired && currentPrice > 0"
+					class="buyout-button-compact"
+					:class="{ 'buyout-clicking': isBuyoutClicking }"
+					@click="handleBuyoutClick"
+				>
+					<text>买断</text>
+				</view>
+				
 				<!-- 右侧按钮 - 添加点击事件和动画类 -->
 				<view 
 					class="bargain-button" 
@@ -92,8 +102,8 @@
 				<view class="progress-percentage">{{ bargainProgress }}%</view>
 			</view>
 			
-			<!-- 买断功能按钮（在进度条下方） -->
-			<view class="buyout-section" v-if="enableBuyout && !isBargainComplete && !isBargainExpired && currentPrice > 0">
+			<!-- 买断功能按钮（在进度条下方） - 已移至价格后面，此处隐藏 -->
+			<!-- <view class="buyout-section" v-if="enableBuyout && !isBargainComplete && !isBargainExpired && currentPrice > 0">
 				<view class="buyout-price-info">
 					<uni-icons type="star" size="16" color="#FFB800"></uni-icons>
 					<text class="buyout-label">买断价：</text>
@@ -107,7 +117,7 @@
 					<uni-icons type="cart-filled" size="18" color="#fff"></uni-icons>
 					<text>直接买断</text>
 				</view>
-			</view>
+			</view> -->
 			
 			<!-- 砍价统计信息（在进度条下方，只要有参与就显示） -->
 			<view class="bargain-stats" v-if="bargainStats && bargainStats.total_participants > 0">
@@ -285,6 +295,7 @@ const emit = defineEmits([
 	'share-invite', // 邀请好友砍价事件
 	'view-detail', // 查看详情事件
 	// 买断相关事件
+	'buyout-click', // 买断按钮点击事件
 	'buyout-success', // 买断成功事件
 	'buyout-error' // 买断失败事件
 ])
@@ -999,136 +1010,18 @@ const handleBargain = async () => {
 }
 
 // 处理买断按钮点击
-const handleBuyoutClick = async () => {
-	try {
-		// 检查用户登录状态
-		const isLoggedIn = await customTestLogin()
-		if (!isLoggedIn) {
-			console.log('用户未登录，无法买断')
-			return
-		}
-		
-		if (!userStore.userInfo?.uid) {
-			console.error('用户信息不完整，无法买断')
-			uni.showToast({
-				title: '登录信息异常，请重新登录',
-				icon: 'none'
-			})
-			return
-		}
-		
-		// 添加点击动画效果
-		isBuyoutClicking.value = true
-		setTimeout(() => {
-			isBuyoutClicking.value = false
-		}, 300)
-		
-		// 获取发起人ID（从本地存储中获取分享者ID）
-		const sharerId = uni.getStorageSync('current_sharer_id')
-		
-		// 检查是否扫自己的码
-		if (!sharerId || sharerId === userStore.userInfo.uid) {
-			// 自己发起的砍价，不能买断
-			uni.showModal({
-				title: '提示',
-				content: '这是您自己发起的砍价活动，不能买断哦！\n请分享给好友后，由好友来买断。',
-				showCancel: false,
-				confirmText: '我知道了'
-			})
-			return
-		}
-		
-		// 确认买断
-		uni.showModal({
-			title: '确认买断',
-			content: `您将以 ￥${currentPrice.value.toFixed(2)} 的价格直接买断此商品，\n买断后将为发起人完成砍价。\n\n是否继续？`,
-			confirmText: '确认买断',
-			cancelText: '再考虑考虑',
-			success: async (res) => {
-				if (res.confirm) {
-					// 用户确认买断
-					uni.showLoading({
-						title: '处理中...',
-						mask: true
-					})
-					
-					try {
-						// 调用云函数执行买断操作
-						const result = await articleApi.buyoutBargain(
-							props.articleId,
-							userStore.userInfo.uid,
-							currentPrice.value, // 当前剩余价格作为买断价
-							{
-								nickName: userStore.userInfo.nickName || '匿名用户',
-								avatarUrl: userStore.userInfo.avatarUrl || '/static/images/touxiang.png'
-							},
-							sharerId // 发起人ID
-						)
-						
-						uni.hideLoading()
-						
-						if (result.errCode === 0) {
-							// 买断成功
-							currentPrice.value = 0
-							isBargainComplete.value = true
-							
-							// 显示成功提示
-							uni.showModal({
-								title: '买断成功！',
-								content: `恭喜您成功买断！\n您为发起人完成了砍价活动。${result.data?.reward_points ? `\n获得积分奖励: ${result.data.reward_points} 分` : ''}`,
-								showCancel: false,
-								confirmText: '太好了'
-							})
-							
-							// 发送买断成功事件
-							emit('buyout-success', {
-								buyoutPrice: currentPrice.value,
-								rewardPoints: result.data?.reward_points || 0
-							})
-							
-							// 更新统计数据
-							await getBargainStats()
-							
-							// 发送全局事件
-							uni.$emit('updateBargainStatus', {
-								articleId: props.articleId,
-								currentPrice: 0,
-								isComplete: true,
-								isBuyout: true
-							})
-						} else {
-							// 买断失败
-							uni.showModal({
-								title: '买断失败',
-								content: result.errMsg || '操作失败，请稍后重试',
-								showCancel: false
-							})
-							
-							emit('buyout-error', result)
-						}
-					} catch (apiError) {
-						uni.hideLoading()
-						console.error('买断API调用失败:', apiError)
-						
-						uni.showModal({
-							title: '买断失败',
-							content: apiError.errMsg || apiError.message || '网络异常，请稍后重试',
-							showCancel: false
-						})
-						
-						emit('buyout-error', apiError)
-					}
-				}
-			}
-		})
-	} catch (err) {
-		console.error('买断操作失败:', err)
-		uni.showToast({
-			title: '操作失败',
-			icon: 'none'
-		})
-		emit('buyout-error', err)
-	}
+// 处理买断按钮点击 - 发出事件，由父组件处理
+const handleBuyoutClick = () => {
+	// 添加点击动画效果
+	isBuyoutClicking.value = true
+	setTimeout(() => {
+		isBuyoutClicking.value = false
+	}, 300)
+	
+	// 发出买断点击事件，由父组件 articleDetail.vue 处理具体的买断逻辑
+	emit('buyout-click', {
+		currentPrice: currentPrice.value
+	})
 }
 
 // 统一的点击处理函数
@@ -1749,6 +1642,65 @@ const handlePopupClose = () => {
 				width: 32rpx;
 				height: 32rpx;
 				flex-shrink: 0;
+			}
+		}
+		
+		// 紧凑版买断按钮（在价格后面）
+		.buyout-button-compact {
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			padding: 16rpx 28rpx;
+			background: linear-gradient(135deg, #FFB800 0%, #FF8C00 100%);
+			border-radius: 50rpx;
+			box-shadow: 0 4rpx 12rpx rgba(255, 184, 0, 0.3);
+			transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+			cursor: pointer;
+			position: relative;
+			overflow: hidden;
+			flex-shrink: 0;
+			
+			// 添加光晕效果
+			&::before {
+				content: '';
+				position: absolute;
+				top: 50%;
+				left: 50%;
+				width: 0;
+				height: 0;
+				border-radius: 50%;
+				background: rgba(255, 255, 255, 0.3);
+				transform: translate(-50%, -50%);
+				transition: width 0.6s ease, height 0.6s ease;
+			}
+			
+			&:hover {
+				box-shadow: 0 6rpx 16rpx rgba(255, 184, 0, 0.4);
+				transform: translateY(-2rpx);
+			}
+			
+			&:active {
+				transform: scale(0.95) translateY(0);
+				box-shadow: 0 2rpx 8rpx rgba(255, 184, 0, 0.2);
+				
+				&::before {
+					width: 300rpx;
+					height: 300rpx;
+				}
+			}
+			
+			// 按钮点击动画类
+			&.buyout-clicking {
+				animation: buttonPulse 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+			}
+			
+			text {
+				font-size: 26rpx;
+				color: #fff;
+				font-weight: 600;
+				white-space: nowrap;
+				position: relative;
+				z-index: 1;
 			}
 		}
 	}

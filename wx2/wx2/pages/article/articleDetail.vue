@@ -3967,6 +3967,33 @@
 		})
 	}
 	
+	// 处理买断成功
+	const handleBuyoutSuccess = (data) => {
+		console.log('买断成功:', data)
+		// 更新完成状态
+		isBargainComplete.value = true
+		// 刷新页面数据
+		if (bargainGroupsRef.value && typeof bargainGroupsRef.value.loadGroups === 'function') {
+			setTimeout(() => {
+				bargainGroupsRef.value.loadGroups()
+			}, 1000)
+		}
+		// 刷新文章详情
+		setTimeout(() => {
+			loadArticleDetail()
+		}, 1500)
+	}
+	
+	// 处理买断失败
+	const handleBuyoutError = (error) => {
+		console.error('买断失败:', error)
+		uni.showToast({
+			title: error.message || '买断失败，请重试',
+			icon: 'none',
+			duration: 2000
+		})
+	}
+	
 	// 处理查看详情
 	const handleViewDetail = () => {
 		console.log('用户点击查看详情')
@@ -4216,31 +4243,6 @@
 										</view>
 										<text class="countdown-label">秒</text>
 									</view>
-																		
-									<!-- 买断价格展示 -->
-									<view class="buyout-price-info" v-if="articleDetail.enable_buyout && computedBuyoutPrice > 0 && !isBargainExpired && !isBargainComplete">
-										<!-- 调试信息按钮（点击显示详细信息） -->
-										<view class="debug-btn" @click="showBuyoutDebugInfo" style="position: absolute; top: 5rpx; right: 5rpx; padding: 5rpx 10rpx; background: rgba(0,0,0,0.1); border-radius: 5rpx; font-size: 20rpx; color: #666;">
-											调试
-										</view>
-										<view class="buyout-price-row">
-											<view class="buyout-price-label">
-												<uni-icons type="star" size="16" color="#FFB800"></uni-icons>
-												<text>买断价：</text>
-											</view>
-											<text class="buyout-price-value">￥{{ computedBuyoutPrice.toFixed(2) }}</text>
-										</view>
-										<button 
-											class="buyout-btn" 
-											:class="{ 'disabled': isBuyoutProcessing }"
-											:disabled="isBuyoutProcessing"
-											@click="handleBuyout"
-											v-if="isCurrentUserInitiator"
-										>
-											<uni-icons type="cart-filled" size="18" color="#fff"></uni-icons>
-											<text>{{ isBuyoutProcessing ? '处理中...' : '直接买断' }}</text>
-										</button>
-									</view>
 									
 									<dianzan 
 										ref="dianzanBargainRef"
@@ -4257,6 +4259,7 @@
 										:showBargainPopup="true"
 										:showText="true"
 										:showCount="false"
+										:enableBuyout="true"
 										@update:liked="(val) => isArticleLiked = val"
 										@update:count="(val) => likeCount = val"
 										@update:price="(val) => currentBargainPrice = val"
@@ -4264,6 +4267,9 @@
 										@bargain-complete="handleBargainComplete"
 										@share-invite="handleShareInvite"
 										@view-detail="handleViewDetail"
+										@buyout-click="handleBuyout"
+										@buyout-success="handleBuyoutSuccess"
+										@buyout-error="handleBuyoutError"
 									/>
 
 								</view>
