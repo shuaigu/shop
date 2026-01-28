@@ -4216,22 +4216,10 @@
 								</view>
 							</view>
 							
-							<!-- 砍价活动已结束提示（买断完成） -->
-							<view class="bargain-ended-card" v-if="articleDetail.bargain_completed && !articleDetail.enable_bargain">
-								<view class="ended-icon">
-									<uni-icons type="checkmarkempty" size="48" color="#52c41a"></uni-icons>
-								</view>
-								<view class="ended-content">
-									<text class="ended-title">砍价活动已结束</text>
-									<text class="ended-subtitle" v-if="articleDetail.bargain_winner_nickname">
-										恭喜 {{ articleDetail.bargain_winner_nickname }} 以 ￥{{ articleDetail.bargain_buyout_price?.toFixed(2) || '0.00' }} 买断成功！
-									</text>
-									<text class="ended-subtitle" v-else>该商品已被买断</text>
-								</view>
-							</view>
-							
-							<!-- 砍价信息卡片 - 在视频播放器下方显示 -->
-							<view class="bargain-info-card" v-if="articleDetail.enable_bargain && !articleDetail.bargain_completed">
+						<!-- 砍价活动已结束提示（买断完成） - 显示在砍价信息卡片内部 -->
+						
+						<!-- 砍价信息卡片 - 在视频播放器下方显示，砍价完成后也继续显示 -->
+						<view class="bargain-info-card" v-if="articleDetail.enable_bargain">
 								<view class="bargain-card-header">
 									<!-- 优先显示本地图片，加载失败后显示备用图标 -->
 									<image 
@@ -4249,11 +4237,28 @@
 										size="28" 
 										color="#ff6b6b"
 									></uni-icons>
-									<text class="bargain-title">砍价活动</text>
+								<text class="bargain-title">砍价活动</text>
+							</view>
+							<view class="bargain-card-content">
+								<!-- 砍价完成提示横幅 -->
+								<view class="bargain-completed-banner" v-if="articleDetail.bargain_completed">
+									<view class="completed-icon">
+										<uni-icons type="checkmarkempty" size="28" color="#52c41a"></uni-icons>
+									</view>
+									<view class="completed-content">
+										<text class="completed-title">砍价活动已结束</text>
+										<text class="completed-subtitle" v-if="articleDetail.bargain_winner_nickname">
+											恭喜 {{ articleDetail.bargain_winner_nickname }} 以 ￥{{ articleDetail.bargain_buyout_price?.toFixed(2) || '0.00' }} 买断成功！
+										</text>
+										<text class="completed-subtitle" v-else-if="articleDetail.winner_nickname">
+											恭喜 {{ articleDetail.winner_nickname }} 砍价成功！
+										</text>
+										<text class="completed-subtitle" v-else>活动已完成</text>
+									</view>
 								</view>
-								<view class="bargain-card-content">
-									<!-- 倒计时显示 - 简洁样式 -->
-									<view class="bargain-countdown-top" v-if="articleDetail.bargain_end_time && articleDetail.bargain_end_time > 0 && !isBargainExpired">
+								
+								<!-- 倒计时显示 - 简洁样式，砍价完成后隐藏 -->
+								<view class="bargain-countdown-top" v-if="!articleDetail.bargain_completed && articleDetail.bargain_end_time && articleDetail.bargain_end_time > 0 && !isBargainExpired">
 										<!-- 天数格子 -->
 										<view class="countdown-box">
 											<text class="countdown-number">{{ countdownDays }}</text>
@@ -6894,6 +6899,52 @@
 			justify-content: center;
 			padding: 24rpx 24rpx 0rpx 24rpx;
 			gap: 20rpx;
+			
+			/* 砍价完成横幅 */
+			.bargain-completed-banner {
+				width: 100%;
+				background: linear-gradient(135deg, #f6ffed 0%, #e6f7ff 100%);
+				border-radius: 12rpx;
+				padding: 24rpx;
+				box-shadow: 0 2rpx 8rpx rgba(82, 196, 26, 0.12);
+				border: 2rpx solid #b7eb8f;
+				display: flex;
+				align-items: center;
+				gap: 16rpx;
+				margin-bottom: 8rpx;
+				
+				.completed-icon {
+					width: 56rpx;
+					height: 56rpx;
+					background: linear-gradient(135deg, #52c41a, #73d13d);
+					border-radius: 50%;
+					display: flex;
+					align-items: center;
+					justify-content: center;
+					flex-shrink: 0;
+					box-shadow: 0 2rpx 8rpx rgba(82, 196, 26, 0.3);
+				}
+				
+				.completed-content {
+					flex: 1;
+					display: flex;
+					flex-direction: column;
+					gap: 6rpx;
+					
+					.completed-title {
+						font-size: 30rpx;
+						font-weight: 700;
+						color: #52c41a;
+						line-height: 1.4;
+					}
+					
+					.completed-subtitle {
+						font-size: 24rpx;
+						color: #666;
+						line-height: 1.5;
+					}
+				}
+			}
 			
 			/* 内容区域顶部居中倒计时 - 简洁样式 */
 			.bargain-countdown-top {
