@@ -38,6 +38,12 @@
 			<view class="dialog" @click.stop>
 				<view class="dialog-title">添加打印机</view>
 				
+				<view class="quick-fill-section">
+					<button class="quick-fill-btn" @click="quickFillDevice">
+						⚡ 快速填充测试设备
+					</button>
+				</view>
+				
 				<view class="dialog-content">
 					<view class="form-item">
 						<text class="label">打印机名称</text>
@@ -69,14 +75,23 @@
 						</view>
 					</view>
 					
-					<view class="form-item">
-						<text class="label">打印机密钥</text>
-						<input 
-							v-model="newPrinter.secret" 
-							class="input"
-							placeholder="请输入打印机密钥"
-						/>
-					</view>
+				<view class="form-item">
+					<text class="label">打印机密钥</text>
+					<input 
+						v-model="newPrinter.password" 
+						class="input"
+						placeholder="请输入打印机密钥"
+					/>
+				</view>
+				
+				<view class="form-item">
+					<text class="label">驱动名称</text>
+					<input 
+						v-model="newPrinter.driverName" 
+						class="input"
+						placeholder="请输入驱动名称（可选）"
+					/>
+				</view>
 				</view>
 				
 				<view class="dialog-footer">
@@ -97,12 +112,13 @@
 				printerList: [],
 				selectedPrinter: null,
 				showDialog: false,
-				newPrinter: {
-					name: '',
-					model: '',
-					id: '',
-					secret: ''
-				}
+			newPrinter: {
+				name: '',
+				model: '',
+				id: '',
+				password: '',
+				driverName: ''
+			}
 			}
 		},
 		
@@ -171,110 +187,117 @@
 				this.showDialog = true;
 			},
 			
-			// 关闭对话框
-			closeDialog() {
-				this.showDialog = false;
-				this.newPrinter = {
-					name: '',
-					model: '',
-					id: '',
-					secret: ''
-				};
-			},
+		// 关闭对话框
+		closeDialog() {
+			this.showDialog = false;
+			this.newPrinter = {
+				name: '',
+				model: '',
+				id: '',
+				password: '',
+				driverName: ''
+			};
+		},
 			
-			// 扫码
-			scanCode() {
-				uni.scanCode({
-					success: (res) => {
-						// 解析二维码内容
-						try {
-							const data = JSON.parse(res.result);
-							this.newPrinter.id = data.deviceId || data.printerId || res.result;
-							this.newPrinter.secret = data.secret || data.password || '';
-							this.newPrinter.name = data.name || this.newPrinter.name;
-							this.newPrinter.model = data.model || this.newPrinter.model;
-						} catch (error) {
-							this.newPrinter.id = res.result;
-						}
+		// 扫码
+		scanCode() {
+			uni.scanCode({
+				success: (res) => {
+					// 解析二维码内容
+					try {
+						const data = JSON.parse(res.result);
+						this.newPrinter.id = data.deviceId || data.printerId || res.result;
+						this.newPrinter.password = data.secret || data.password || '';
+						this.newPrinter.name = data.name || this.newPrinter.name;
+						this.newPrinter.model = data.model || this.newPrinter.model;
+						this.newPrinter.driverName = data.driverName || this.newPrinter.driverName;
+					} catch (error) {
+						this.newPrinter.id = res.result;
 					}
-				});
-			},
+				}
+			});
+		},
 			
-			// 快速填充示例设备
-			quickFillDevice() {
-				const defaultDevice = printApi.getDefaultDevice();
-				this.newPrinter.id = defaultDevice.id;
-				this.newPrinter.name = '测试云盒 - ' + defaultDevice.name;
-				this.newPrinter.model = defaultDevice.model;
-				this.newPrinter.secret = defaultDevice.password;
+		// 快速填充示例设备
+		quickFillDevice() {
+			const defaultDevice = printApi.getDefaultDevice();
+			this.newPrinter.id = defaultDevice.id;
+			this.newPrinter.name = '测试云盒 - ' + defaultDevice.name;
+			this.newPrinter.model = defaultDevice.model;
+			this.newPrinter.password = defaultDevice.password;
+			this.newPrinter.driverName = defaultDevice.driverName;
+			uni.showToast({
+				title: '已填充设备信息',
+				icon: 'success'
+			});
+		},
+			
+		// 添加打印机
+		async addPrinter() {
+			// 验证表单
+			if (!this.newPrinter.name) {
 				uni.showToast({
-					title: '已填充设备信息',
+					title: '请输入打印机名称',
+					icon: 'none'
+				});
+				return;
+			}
+			
+			if (!this.newPrinter.id) {
+				uni.showToast({
+					title: '请输入打印机ID',
+					icon: 'none'
+				});
+				return;
+			}
+			
+			uni.showLoading({
+				title: '添加中...'
+			});
+			
+			try {
+				// 调用API添加打印机
+				const result = await printApi.addPrinter({
+					name: this.newPrinter.name,
+					model: this.newPrinter.model,
+					printerId: this.newPrinter.id,
+					password: this.newPrinter.password
+				});
+				
+				// 添加到本地列表
+				const printer = {
+					id: this.newPrinter.id,
+					name: this.newPrinter.name,
+					model: this.newPrinter.model,
+					password: this.newPrinter.password,
+					driverName: this.newPrinter.driverName || this.newPrinter.model,
+					status: 'online'
+				};
+				
+				this.printerList.push(printer);
+				uni.setStorageSync('printers', this.printerList);
+				
+				// 如果是第一台打印机，自动选中
+				if (this.printerList.length === 1) {
+					this.selectPrinter(printer);
+				}
+				
+				uni.hideLoading();
+				uni.showToast({
+					title: '添加成功',
 					icon: 'success'
 				});
-			},
-			
-			// 添加打印机
-			async addPrinter() {
-				// 验证表单
-				if (!this.newPrinter.name) {
-					uni.showToast({
-						title: '请输入打印机名称',
-						icon: 'none'
-					});
-					return;
-				}
 				
-				if (!this.newPrinter.id) {
-					uni.showToast({
-						title: '请输入打印机ID',
-						icon: 'none'
-					});
-					return;
-				}
+				this.closeDialog();
 				
-				uni.showLoading({
-					title: '添加中...'
+			} catch (error) {
+				uni.hideLoading();
+				uni.showToast({
+					title: error.message || '添加失败',
+					icon: 'none'
 				});
-				
-				try {
-					// 调用API添加打印机
-					const result = await printApi.addPrinter({
-						name: this.newPrinter.name,
-						model: this.newPrinter.model,
-						printerId: this.newPrinter.id,
-						secret: this.newPrinter.secret
-					});
-					
-					// 添加到本地列表
-					const printer = {
-						...this.newPrinter,
-						status: 'online'
-					};
-					
-					this.printerList.push(printer);
-					uni.setStorageSync('printers', this.printerList);
-					
-					// 如果是第一台打印机，自动选中
-					if (this.printerList.length === 1) {
-						this.selectPrinter(printer);
-					}
-					
-					uni.hideLoading();
-					uni.showToast({
-						title: '添加成功',
-						icon: 'success'
-					});
-					
-					this.closeDialog();
-					
-				} catch (error) {
-					uni.hideLoading();
-					uni.showToast({
-						title: error.message || '添加失败',
-						icon: 'none'
-					});
-				}
-			},
+			}
+		},
 			
 			// 删除打印机（长按）
 			deletePrinter(printer) {
@@ -440,6 +463,22 @@
 		color: #333333;
 		padding: 40rpx 30rpx 20rpx;
 		text-align: center;
+	}
+	
+	.quick-fill-section {
+		padding: 0 30rpx 20rpx;
+	}
+	
+	.quick-fill-btn {
+		width: 100%;
+		height: 70rpx;
+		line-height: 70rpx;
+		background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+		color: #ffffff;
+		border: none;
+		border-radius: 12rpx;
+		font-size: 28rpx;
+		padding: 0;
 	}
 	
 	.dialog-content {

@@ -96,7 +96,8 @@ const _sfc_main = {
           id: defaultDevice.id,
           name: "测试云盒 - " + defaultDevice.name,
           model: defaultDevice.model,
-          secret: defaultDevice.password,
+          password: defaultDevice.password,
+          driverName: defaultDevice.driverName,
           status: "online"
         };
         printers.push(printer);
@@ -125,63 +126,149 @@ const _sfc_main = {
         });
         return;
       }
-      common_vendor.index.showModal({
-        title: "测试打印",
-        content: "将打印一份测试文档到「" + this.currentPrinter.name + "」，是否继续？",
-        success: async (res) => {
-          var _a;
-          if (res.confirm) {
-            common_vendor.index.showLoading({
-              title: "正在打印..."
-            });
-            try {
-              const testContent = "链科云打印测试\n\n设备ID: " + this.currentPrinter.id + "\n设备型号: " + this.currentPrinter.model + "\n测试时间: " + (/* @__PURE__ */ new Date()).toLocaleString() + "\n\n如果您看到这段文字，说明打印功能正常！";
-              const result = await utils_printApi.printApi.printText({
-                printerId: this.currentPrinter.id,
-                content: testContent,
-                copies: 1,
-                fontSize: 14,
-                paperSize: "A4",
-                orientation: "portrait"
-              });
-              let history = common_vendor.index.getStorageSync("printHistory") || [];
-              history.unshift({
-                id: ((_a = result.data) == null ? void 0 : _a.jobId) || Date.now(),
-                type: "text",
-                printer: this.currentPrinter.name,
-                time: (/* @__PURE__ */ new Date()).toISOString(),
-                status: "success"
-              });
-              common_vendor.index.setStorageSync("printHistory", history);
-              common_vendor.index.hideLoading();
-              common_vendor.index.showToast({
-                title: "测试打印成功",
-                icon: "success"
-              });
-              this.loadStats();
-              this.loadRecentPrints();
-            } catch (error) {
-              let history = common_vendor.index.getStorageSync("printHistory") || [];
-              history.unshift({
-                id: Date.now(),
-                type: "text",
-                printer: this.currentPrinter.name,
-                time: (/* @__PURE__ */ new Date()).toISOString(),
-                status: "success"
-                // 模拟测试，显示成功
-              });
-              common_vendor.index.setStorageSync("printHistory", history);
-              common_vendor.index.hideLoading();
-              common_vendor.index.showToast({
-                title: "测试打印已发送（模拟）",
-                icon: "success"
-              });
-              this.loadStats();
-              this.loadRecentPrints();
+      common_vendor.index.showLoading({
+        title: "测试连接..."
+      });
+      try {
+        common_vendor.index.__f__("log", "at pages/index/index.vue:249", "🧪 测试external_api连接...");
+        const printerListResult = await utils_printApi.printApi.getDevicePrinterList(
+          this.currentPrinter.id,
+          this.currentPrinter.password
+        );
+        common_vendor.index.__f__("log", "at pages/index/index.vue:257", "✅ external_api可用！打印机列表:", printerListResult);
+        common_vendor.index.hideLoading();
+        let printerNames = "";
+        if (printerListResult.data && Array.isArray(printerListResult.data) && printerListResult.data.length > 0) {
+          printerNames = "\n\n可用打印机:\n" + printerListResult.data.map((p) => `- ${p.name || p.printerName}`).join("\n");
+        }
+        common_vendor.index.showModal({
+          title: "✅ 连接测试成功",
+          content: `设备连接正常！${printerNames}
+
+提示：V3 API暂时不可用(503错误)，建议联系技术支持开通V3权限或使用旧版API。`,
+          confirmText: "继续测试V3",
+          cancelText: "关闭",
+          success: async (modalRes) => {
+            if (modalRes.confirm) {
+              this.testV3Print();
             }
           }
-        }
+        });
+      } catch (error) {
+        common_vendor.index.hideLoading();
+        common_vendor.index.__f__("error", "at pages/index/index.vue:282", "❌ external_api测试失败:", error);
+        common_vendor.index.showModal({
+          title: "❌ 连接测试失败",
+          content: `无法连接到打印服务
+
+错误: ${error.message || error.msg || "网络请求失败"}
+
+请检查:
+1. 设备ID和密码是否正确
+2. 网络连接是否正常
+3. 链科云服务是否可用`,
+          showCancel: false
+        });
+      }
+    },
+    // 测试V3 API打印
+    async testV3Print() {
+      var _a, _b, _c, _d;
+      common_vendor.index.showLoading({
+        title: "正在打印..."
       });
+      try {
+        const result = await utils_printApi.printApi.submitPrintTask({
+          deviceId: this.currentPrinter.id,
+          devicePassword: this.currentPrinter.password,
+          printerName: this.currentPrinter.model || this.currentPrinter.name,
+          driverName: this.currentPrinter.driverName || this.currentPrinter.model,
+          jobFileUrl: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf",
+          dmPaperSize: 9,
+          // A4
+          dmOrientation: 1,
+          // 竖向
+          dmColor: 1,
+          // 黑白
+          dmDuplex: 1,
+          // 关闭双面
+          dmCopies: 1,
+          // 1份
+          isPreview: 1
+          // 生成预览图
+        });
+        let history = common_vendor.index.getStorageSync("printHistory") || [];
+        history.unshift({
+          id: ((_a = result.data) == null ? void 0 : _a.task_id) || ((_b = result.data) == null ? void 0 : _b.jobId) || Date.now(),
+          type: "document",
+          printer: this.currentPrinter.name,
+          time: (/* @__PURE__ */ new Date()).toISOString(),
+          status: "pending"
+        });
+        common_vendor.index.setStorageSync("printHistory", history);
+        common_vendor.index.hideLoading();
+        const taskId = ((_c = result.data) == null ? void 0 : _c.task_id) || ((_d = result.data) == null ? void 0 : _d.jobId);
+        if (taskId) {
+          common_vendor.index.showModal({
+            title: "✅ 测试打印已提交",
+            content: `任务ID: ${taskId}
+
+可在历史记录或测试页面查询任务状态`,
+            confirmText: "去测试页面",
+            cancelText: "关闭",
+            success: (modalRes) => {
+              if (modalRes.confirm) {
+                common_vendor.index.navigateTo({
+                  url: "/pages/test/test"
+                });
+              }
+            }
+          });
+        } else {
+          common_vendor.index.showToast({
+            title: "测试打印成功",
+            icon: "success"
+          });
+        }
+        this.loadStats();
+        this.loadRecentPrints();
+      } catch (error) {
+        common_vendor.index.hideLoading();
+        common_vendor.index.__f__("error", "at pages/index/index.vue:357", "❌ V3 API测试打印失败:", error);
+        const is503 = error.message && error.message.includes("503");
+        common_vendor.index.showModal({
+          title: "❌ V3 API不可用",
+          content: is503 ? "V3 API返回503错误，服务暂时不可用。\n\n建议:\n1. 联系技术支持确认V3权限\n2. 暂时使用管理后台打印\n\n要打开管理后台吗？" : `错误: ${error.message || error.msg || "未知错误"}
+
+请联系技术支持`,
+          confirmText: "打开后台",
+          cancelText: "关闭",
+          success: (modalRes) => {
+            if (modalRes.confirm) {
+              const url = utils_printApi.printApi.getPrintManageUrl();
+              common_vendor.index.__f__("log", "at pages/index/index.vue:373", "管理后台URL:", url);
+              common_vendor.index.showModal({
+                title: "管理后台地址",
+                content: url,
+                confirmText: "复制",
+                success: (res) => {
+                  if (res.confirm) {
+                    common_vendor.index.setClipboardData({
+                      data: url,
+                      success: () => {
+                        common_vendor.index.showToast({
+                          title: "已复制到剪贴板",
+                          icon: "success"
+                        });
+                      }
+                    });
+                  }
+                }
+              });
+            }
+          }
+        });
+      }
     }
   }
 };

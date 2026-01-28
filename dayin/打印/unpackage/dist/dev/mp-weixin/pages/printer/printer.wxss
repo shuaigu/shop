@@ -116,6 +116,20 @@
 		padding: 40rpx 30rpx 20rpx;
 		text-align: center;
 }
+.quick-fill-section.data-v-4bff6566 {
+		padding: 0 30rpx 20rpx;
+}
+.quick-fill-btn.data-v-4bff6566 {
+		width: 100%;
+		height: 70rpx;
+		line-height: 70rpx;
+		background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+		color: #ffffff;
+		border: none;
+		border-radius: 12rpx;
+		font-size: 28rpx;
+		padding: 0;
+}
 .dialog-content.data-v-4bff6566 {
 		padding: 20rpx 30rpx;
 		max-height: 800rpx;

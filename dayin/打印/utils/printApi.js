@@ -1,10 +1,10 @@
 // 链科云打印API配置和封装
 const config = {
 	// API配置 - 请从链科云打印管理后台获取
-	clientId: 'dImA9V2fbB556AFMYaK88eHtXyHpCCgH', // 你的clientId
-	clientSecret: 'dImA9V2fbB556AFMYaK88eHtXyHpCCgH', // 你的密钥
+	clientId: 'dImA9V2fbB556AFMYaK88eHtXyHpCCgH', // 你的clientId（旧版API使用）
+	clientSecret: 'dImA9V2fbB556AFMYaK88eHtXyHpCCgH', // 你的密钥（V3 API的ApiKey）
 	baseUrl: 'https://cloud.liankenet.com', // API基础地址（不包含/api）
-	version: 'v1', // API版本
+	version: 'v1', // API版本（旧版使用）
 	// 默认设备信息（从 open.liankenet.com 获取）
 	defaultDevice: {
 		id: 'lc01cc05708199',
@@ -16,7 +16,44 @@ const config = {
 	// 生成Base64 Token
 	getToken() {
 		const tokenStr = `${this.defaultDevice.id}:${this.defaultDevice.password}`;
-		return uni.base64Encode(tokenStr);
+		// 在小程序中使用原生的base64编码
+		// 方法1：使用btoa（在某些环境可能不支持中文）
+		// return btoa(tokenStr);
+		// 方法2：手动实现base64编码（支持中文和特殊字符）
+		return this.base64Encode(tokenStr);
+	},
+	
+	// Base64编码函数（支持中文）
+	base64Encode(str) {
+		const base64EncodeChars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+		let out = "";
+		let i = 0;
+		const len = str.length;
+		let c1, c2, c3;
+		
+		while (i < len) {
+			c1 = str.charCodeAt(i++) & 0xff;
+			if (i == len) {
+				out += base64EncodeChars.charAt(c1 >> 2);
+				out += base64EncodeChars.charAt((c1 & 0x3) << 4);
+				out += "==";
+				break;
+			}
+			c2 = str.charCodeAt(i++);
+			if (i == len) {
+				out += base64EncodeChars.charAt(c1 >> 2);
+				out += base64EncodeChars.charAt(((c1 & 0x3) << 4) | ((c2 & 0xF0) >> 4));
+				out += base64EncodeChars.charAt((c2 & 0xF) << 2);
+				out += "=";
+				break;
+			}
+			c3 = str.charCodeAt(i++);
+			out += base64EncodeChars.charAt(c1 >> 2);
+			out += base64EncodeChars.charAt(((c1 & 0x3) << 4) | ((c2 & 0xF0) >> 4));
+			out += base64EncodeChars.charAt(((c2 & 0xF) << 2) | ((c3 & 0xC0) >> 6));
+			out += base64EncodeChars.charAt(c3 & 0x3F);
+		}
+		return out;
 	}
 }
 
@@ -171,7 +208,7 @@ function request(url, data = {}, method = 'POST') {
 	});
 }
 
-// 不使用签名的请求方法（用于V3 API）
+// 不使用签名的请求方法（用于external_api等）
 function requestWithoutSign(url, data = {}, method = 'POST') {
 	return new Promise((resolve, reject) => {
 		// 准备请求数据
@@ -179,9 +216,10 @@ function requestWithoutSign(url, data = {}, method = 'POST') {
 			...data
 		};
 		
-		// 准备请求头（不添加认证头）
+		// 准备请求头，添加ApiKey
 		const headers = {
-			'Content-Type': 'application/json'
+			'Content-Type': 'application/json',
+			'ApiKey': config.clientSecret // external_api也需要ApiKey
 		};
 		
 		// 处理URL
@@ -191,11 +229,14 @@ function requestWithoutSign(url, data = {}, method = 'POST') {
 			fullUrl = config.baseUrl + '/api' + url;
 		}
 		
-		console.log('API请求(无签名):', {
+		console.log('API请求(无签名+ApiKey):', {
 			url: fullUrl,
 			method,
 			data: requestData,
-			headers
+			headers: {
+				...headers,
+				ApiKey: '***' // 隐藏真实ApiKey
+			}
 		});
 		
 		uni.request({
@@ -239,10 +280,11 @@ function requestWithToken(url, data = {}, method = 'POST') {
 			...data
 		};
 		
-		// 准备请求头，添加Token认证
+		// 准备请求头，添加Token认证和ApiKey
 		const headers = {
 			'Content-Type': 'application/json',
-			'Authorization': 'Basic ' + config.getToken()
+			'Authorization': 'Basic ' + config.getToken(),
+			'ApiKey': config.clientSecret // V3 API需要ApiKey
 		};
 		
 		// 处理URL
@@ -252,11 +294,14 @@ function requestWithToken(url, data = {}, method = 'POST') {
 			fullUrl = config.baseUrl + '/api' + url;
 		}
 		
-		console.log('API请求(Token):', {
+		console.log('API请求(Token+ApiKey):', {
 			url: fullUrl,
 			method,
 			data: requestData,
-			headers
+			headers: {
+				...headers,
+				ApiKey: '***' // 隐藏真实ApiKey
+			}
 		});
 		
 		uni.request({
@@ -308,9 +353,9 @@ export default {
 		return requestWithoutSign(`/external_api/printer_list?${queryString}`, {}, 'GET');
 	},
 	
-	// 获取打印机状态
+	// 获取打印机状态（V3 API）
 	getPrinterStatus(printerId) {
-		return request('/v3/printer/status', { printerId }, 'GET');
+		return requestWithToken('/v3/printer/status', { printerId }, 'GET');
 	},
 	
 	// 添加打印机
@@ -357,22 +402,18 @@ export default {
 			isPreview: printData.isPreview !== undefined ? printData.isPreview : 1 // 是否生成预览图 0=否 1=是
 		};
 		
-		// 优先尝试Token认证，如果失败再尝试无签名方式
-		return requestWithToken('/v3/print/submitTask', requestData, 'POST')
-			.catch(err => {
-				console.log('Token认证失败，尝试无签名方式...', err);
-				return requestWithoutSign('/v3/print/submitTask', requestData, 'POST');
-			});
+		// 使用Token+ApiKey认证
+		return requestWithToken('/v3/print/submitTask', requestData, 'POST');
 	},
 	
-	// 查询任务状态
+	// 查询任务状态（V3 API）
 	queryTaskStatus(taskId) {
-		return requestWithoutSign('/v3/print/queryTask', { task_id: taskId }, 'POST');
+		return requestWithToken('/v3/print/queryTask', { task_id: taskId }, 'POST');
 	},
 	
-	// 取消任务
+	// 取消任务（V3 API）
 	cancelTask(taskId) {
-		return requestWithoutSign('/v3/print/cancelTask', { task_id: taskId }, 'POST');
+		return requestWithToken('/v3/print/cancelTask', { task_id: taskId }, 'POST');
 	},
 	
 	// 文档打印（PDF、Word等）- 保留兼容

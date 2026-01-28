@@ -191,15 +191,32 @@ const _sfc_main = {
     },
     // 开始打印
     async startPrint() {
-      var _a, _b;
       if (!this.validatePrintData()) {
         return;
       }
+      if (!this.currentPrinter.password) {
+        common_vendor.index.showModal({
+          title: "提示",
+          content: "打印机缺少密码配置，是否继续？\n（可能导致打印失败）",
+          success: (res) => {
+            if (res.confirm) {
+              this.executePrint();
+            }
+          }
+        });
+        return;
+      }
+      this.executePrint();
+    },
+    // 执行打印
+    async executePrint() {
+      var _a, _b;
       common_vendor.index.showLoading({
         title: "正在打印..."
       });
       try {
         let result;
+        common_vendor.index.__f__("log", "at pages/print/print.vue:496", "当前打印机信息:", this.currentPrinter);
         const printData = {
           deviceId: this.currentPrinter.id,
           devicePassword: this.currentPrinter.password,
@@ -213,6 +230,7 @@ const _sfc_main = {
           isPreview: 1
           // 生成预览图
         };
+        common_vendor.index.__f__("log", "at pages/print/print.vue:512", "打印参数:", printData);
         if (this.currentType === "document") {
           if (this.inputType === "url") {
             result = await utils_printApi.printApi.submitPrintTask({
@@ -281,7 +299,7 @@ const _sfc_main = {
         this.clearForm();
       } catch (error) {
         common_vendor.index.hideLoading();
-        common_vendor.index.__f__("error", "at pages/print/print.vue:570", "打印失败:", error);
+        common_vendor.index.__f__("error", "at pages/print/print.vue:594", "打印失败:", error);
         common_vendor.index.showModal({
           title: "打印失败",
           content: error.message || error.msg || "未知错误",

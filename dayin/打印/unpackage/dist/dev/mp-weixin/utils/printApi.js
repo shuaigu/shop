@@ -3,13 +3,13 @@ const common_vendor = require("../common/vendor.js");
 const config = {
   // API配置 - 请从链科云打印管理后台获取
   clientId: "dImA9V2fbB556AFMYaK88eHtXyHpCCgH",
-  // 你的clientId
+  // 你的clientId（旧版API使用）
   clientSecret: "dImA9V2fbB556AFMYaK88eHtXyHpCCgH",
-  // 你的密钥
+  // 你的密钥（V3 API的ApiKey）
   baseUrl: "https://cloud.liankenet.com",
   // API基础地址（不包含/api）
   version: "v1",
-  // API版本
+  // API版本（旧版使用）
   // 默认设备信息（从 open.liankenet.com 获取）
   defaultDevice: {
     id: "lc01cc05708199",
@@ -24,7 +24,38 @@ const config = {
   // 生成Base64 Token
   getToken() {
     const tokenStr = `${this.defaultDevice.id}:${this.defaultDevice.password}`;
-    return common_vendor.index.base64Encode(tokenStr);
+    return this.base64Encode(tokenStr);
+  },
+  // Base64编码函数（支持中文）
+  base64Encode(str) {
+    const base64EncodeChars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+    let out = "";
+    let i = 0;
+    const len = str.length;
+    let c1, c2, c3;
+    while (i < len) {
+      c1 = str.charCodeAt(i++) & 255;
+      if (i == len) {
+        out += base64EncodeChars.charAt(c1 >> 2);
+        out += base64EncodeChars.charAt((c1 & 3) << 4);
+        out += "==";
+        break;
+      }
+      c2 = str.charCodeAt(i++);
+      if (i == len) {
+        out += base64EncodeChars.charAt(c1 >> 2);
+        out += base64EncodeChars.charAt((c1 & 3) << 4 | (c2 & 240) >> 4);
+        out += base64EncodeChars.charAt((c2 & 15) << 2);
+        out += "=";
+        break;
+      }
+      c3 = str.charCodeAt(i++);
+      out += base64EncodeChars.charAt(c1 >> 2);
+      out += base64EncodeChars.charAt((c1 & 3) << 4 | (c2 & 240) >> 4);
+      out += base64EncodeChars.charAt((c2 & 15) << 2 | (c3 & 192) >> 6);
+      out += base64EncodeChars.charAt(c3 & 63);
+    }
+    return out;
   }
 };
 function simpleMD5(string) {
@@ -106,7 +137,7 @@ function request(url, data = {}, method = "POST") {
     const headers = {
       "Content-Type": "application/json"
     };
-    {
+    if (config.clientSecret) {
       headers["X-Client-Id"] = config.clientId;
       headers["X-Timestamp"] = timestamp;
       headers["X-Sign"] = generateSign(data, timestamp);
@@ -117,7 +148,7 @@ function request(url, data = {}, method = "POST") {
     } else if (!url.startsWith("/api") && !config.baseUrl.endsWith("/api")) {
       fullUrl = config.baseUrl + "/api" + url;
     }
-    common_vendor.index.__f__("log", "at utils/printApi.js:141", "API请求:", {
+    common_vendor.index.__f__("log", "at utils/printApi.js:178", "API请求:", {
       url: fullUrl,
       method,
       data: requestData,
@@ -129,7 +160,7 @@ function request(url, data = {}, method = "POST") {
       data: requestData,
       header: headers,
       success: (res) => {
-        common_vendor.index.__f__("log", "at utils/printApi.js:154", "API响应:", res);
+        common_vendor.index.__f__("log", "at utils/printApi.js:191", "API响应:", res);
         if (res.statusCode === 200) {
           if (res.data.code === 0 || res.data.code === 200 || res.data.success) {
             resolve(res.data);
@@ -141,7 +172,7 @@ function request(url, data = {}, method = "POST") {
         }
       },
       fail: (err) => {
-        common_vendor.index.__f__("error", "at utils/printApi.js:167", "API错误:", err);
+        common_vendor.index.__f__("error", "at utils/printApi.js:204", "API错误:", err);
         reject({ message: err.errMsg || "网络请求失败" });
       }
     });
@@ -153,17 +184,23 @@ function requestWithoutSign(url, data = {}, method = "POST") {
       ...data
     };
     const headers = {
-      "Content-Type": "application/json"
+      "Content-Type": "application/json",
+      "ApiKey": config.clientSecret
+      // external_api也需要ApiKey
     };
     let fullUrl = config.baseUrl + url;
     if (!url.startsWith("/v3") && !url.startsWith("/api")) {
       fullUrl = config.baseUrl + "/api" + url;
     }
-    common_vendor.index.__f__("log", "at utils/printApi.js:194", "API请求(无签名):", {
+    common_vendor.index.__f__("log", "at utils/printApi.js:232", "API请求(无签名+ApiKey):", {
       url: fullUrl,
       method,
       data: requestData,
-      headers
+      headers: {
+        ...headers,
+        ApiKey: "***"
+        // 隐藏真实ApiKey
+      }
     });
     common_vendor.index.request({
       url: fullUrl,
@@ -171,8 +208,8 @@ function requestWithoutSign(url, data = {}, method = "POST") {
       data: requestData,
       header: headers,
       success: (res) => {
-        common_vendor.index.__f__("log", "at utils/printApi.js:207", "API响应:", res);
-        common_vendor.index.__f__("log", "at utils/printApi.js:208", "API响应数据:", JSON.stringify(res.data));
+        common_vendor.index.__f__("log", "at utils/printApi.js:248", "API响应:", res);
+        common_vendor.index.__f__("log", "at utils/printApi.js:249", "API响应数据:", JSON.stringify(res.data));
         if (res.statusCode === 200) {
           if (res.data.code === 0 || res.data.code === 200 || res.data.success) {
             resolve(res.data);
@@ -188,7 +225,7 @@ function requestWithoutSign(url, data = {}, method = "POST") {
         }
       },
       fail: (err) => {
-        common_vendor.index.__f__("error", "at utils/printApi.js:227", "API错误:", err);
+        common_vendor.index.__f__("error", "at utils/printApi.js:268", "API错误:", err);
         reject({ message: err.errMsg || "网络请求失败" });
       }
     });
@@ -201,17 +238,23 @@ function requestWithToken(url, data = {}, method = "POST") {
     };
     const headers = {
       "Content-Type": "application/json",
-      "Authorization": "Basic " + config.getToken()
+      "Authorization": "Basic " + config.getToken(),
+      "ApiKey": config.clientSecret
+      // V3 API需要ApiKey
     };
     let fullUrl = config.baseUrl + url;
     if (!url.startsWith("/v3") && !url.startsWith("/api")) {
       fullUrl = config.baseUrl + "/api" + url;
     }
-    common_vendor.index.__f__("log", "at utils/printApi.js:255", "API请求(Token):", {
+    common_vendor.index.__f__("log", "at utils/printApi.js:297", "API请求(Token+ApiKey):", {
       url: fullUrl,
       method,
       data: requestData,
-      headers
+      headers: {
+        ...headers,
+        ApiKey: "***"
+        // 隐藏真实ApiKey
+      }
     });
     common_vendor.index.request({
       url: fullUrl,
@@ -219,7 +262,7 @@ function requestWithToken(url, data = {}, method = "POST") {
       data: requestData,
       header: headers,
       success: (res) => {
-        common_vendor.index.__f__("log", "at utils/printApi.js:268", "API响应:", res);
+        common_vendor.index.__f__("log", "at utils/printApi.js:313", "API响应:", res);
         if (res.statusCode === 200) {
           if (res.data.code === 0 || res.data.code === 200 || res.data.success) {
             resolve(res.data);
@@ -231,7 +274,7 @@ function requestWithToken(url, data = {}, method = "POST") {
         }
       },
       fail: (err) => {
-        common_vendor.index.__f__("error", "at utils/printApi.js:281", "API错误:", err);
+        common_vendor.index.__f__("error", "at utils/printApi.js:326", "API错误:", err);
         reject({ message: err.errMsg || "网络请求失败" });
       }
     });
@@ -252,9 +295,9 @@ const printApi = {
     const queryString = Object.keys(params).map((key) => `${key}=${encodeURIComponent(params[key])}`).join("&");
     return requestWithoutSign(`/external_api/printer_list?${queryString}`, {}, "GET");
   },
-  // 获取打印机状态
+  // 获取打印机状态（V3 API）
   getPrinterStatus(printerId) {
-    return request("/v3/printer/status", { printerId }, "GET");
+    return requestWithToken("/v3/printer/status", { printerId }, "GET");
   },
   // 添加打印机
   addPrinter(printerData) {
@@ -267,7 +310,7 @@ const printApi = {
       content: printData.content,
       copies: printData.copies || 1
     };
-    common_vendor.index.__f__("log", "at utils/printApi.js:330", "打印请求数据:", requestData);
+    common_vendor.index.__f__("log", "at utils/printApi.js:375", "打印请求数据:", requestData);
     return request("/print/text", requestData, "POST");
   },
   // 图片打印
@@ -301,18 +344,15 @@ const printApi = {
       isPreview: printData.isPreview !== void 0 ? printData.isPreview : 1
       // 是否生成预览图 0=否 1=是
     };
-    return requestWithToken("/v3/print/submitTask", requestData, "POST").catch((err) => {
-      common_vendor.index.__f__("log", "at utils/printApi.js:363", "Token认证失败，尝试无签名方式...", err);
-      return requestWithoutSign("/v3/print/submitTask", requestData, "POST");
-    });
+    return requestWithToken("/v3/print/submitTask", requestData, "POST");
   },
-  // 查询任务状态
+  // 查询任务状态（V3 API）
   queryTaskStatus(taskId) {
-    return requestWithoutSign("/v3/print/queryTask", { task_id: taskId }, "POST");
+    return requestWithToken("/v3/print/queryTask", { task_id: taskId }, "POST");
   },
-  // 取消任务
+  // 取消任务（V3 API）
   cancelTask(taskId) {
-    return requestWithoutSign("/v3/print/cancelTask", { task_id: taskId }, "POST");
+    return requestWithToken("/v3/print/cancelTask", { task_id: taskId }, "POST");
   },
   // 文档打印（PDF、Word等）- 保留兼容
   printDocument(printData) {

@@ -192,35 +192,36 @@
 				});
 			},
 			
-			// 检查并添加默认设备
-			async checkAndAddDefaultDevice() {
-				const printers = uni.getStorageSync('printers') || [];
+		// 检查并添加默认设备
+		async checkAndAddDefaultDevice() {
+			const printers = uni.getStorageSync('printers') || [];
+			
+			// 如果没有打印机，自动添加默认设备
+			if (printers.length === 0) {
+				const defaultDevice = printApi.getDefaultDevice();
 				
-				// 如果没有打印机，自动添加默认设备
-				if (printers.length === 0) {
-					const defaultDevice = printApi.getDefaultDevice();
-					
-					const printer = {
-						id: defaultDevice.id,
-						name: '测试云盒 - ' + defaultDevice.name,
-						model: defaultDevice.model,
-						secret: defaultDevice.password,
-						status: 'online'
-					};
-					
-					printers.push(printer);
-					uni.setStorageSync('printers', printers);
-					uni.setStorageSync('selectedPrinter', printer);
-					
-					this.currentPrinter = printer;
-					
-					uni.showToast({
-						title: '已自动添加测试云盒',
-						icon: 'success',
-						duration: 2000
-					});
-				}
-			},
+				const printer = {
+					id: defaultDevice.id,
+					name: '测试云盒 - ' + defaultDevice.name,
+					model: defaultDevice.model,
+					password: defaultDevice.password,
+					driverName: defaultDevice.driverName,
+					status: 'online'
+				};
+				
+				printers.push(printer);
+				uni.setStorageSync('printers', printers);
+				uni.setStorageSync('selectedPrinter', printer);
+				
+				this.currentPrinter = printer;
+				
+				uni.showToast({
+					title: '已自动添加测试云盒',
+					icon: 'success',
+					duration: 2000
+				});
+			}
+		},
 			
 			// 跳转连接测试页面
 			goConnectionTest() {
@@ -229,85 +230,171 @@
 				});
 			},
 			
-			// 测试打印
-			async testPrint() {
-				if (!this.currentPrinter) {
-					uni.showToast({
-						title: '请先添加打印机',
-						icon: 'none'
-					});
-					return;
+		// 测试打印
+		async testPrint() {
+			if (!this.currentPrinter) {
+				uni.showToast({
+					title: '请先添加打印机',
+					icon: 'none'
+				});
+				return;
+			}
+			
+			// 先测试external_api连接
+			uni.showLoading({
+				title: '测试连接...'
+			});
+			
+			try {
+				console.log('🧪 测试external_api连接...');
+				
+				// 测试获取打印机列表
+				const printerListResult = await printApi.getDevicePrinterList(
+					this.currentPrinter.id,
+					this.currentPrinter.password
+				);
+				
+				console.log('✅ external_api可用！打印机列表:', printerListResult);
+				
+				uni.hideLoading();
+				
+				// 显示测试结果
+				let printerNames = '';
+				if (printerListResult.data && Array.isArray(printerListResult.data) && printerListResult.data.length > 0) {
+					printerNames = '\n\n可用打印机:\n' + printerListResult.data.map(p => `- ${p.name || p.printerName}`).join('\n');
 				}
 				
 				uni.showModal({
-					title: '测试打印',
-					content: '将打印一份测试文档到「' + this.currentPrinter.name + '」，是否继续？',
-					success: async (res) => {
-						if (res.confirm) {
-							uni.showLoading({
-								title: '正在打印...'
-							});
-							
-							try {
-								const testContent = '链科云打印测试\n\n设备ID: ' + this.currentPrinter.id + '\n设备型号: ' + this.currentPrinter.model + '\n测试时间: ' + new Date().toLocaleString() + '\n\n如果您看到这段文字，说明打印功能正常！';
-								
-								// 调用文本打印API
-								const result = await printApi.printText({
-									printerId: this.currentPrinter.id,
-									content: testContent,
-									copies: 1,
-									fontSize: 14,
-									paperSize: 'A4',
-									orientation: 'portrait'
+					title: '✅ 连接测试成功',
+					content: `设备连接正常！${printerNames}\n\n提示：V3 API暂时不可用(503错误)，建议联系技术支持开通V3权限或使用旧版API。`,
+					confirmText: '继续测试V3',
+					cancelText: '关闭',
+					success: async (modalRes) => {
+						if (modalRes.confirm) {
+							// 用户选择继续测试V3 API
+							this.testV3Print();
+						}
+					}
+				});
+				
+			} catch (error) {
+				uni.hideLoading();
+				console.error('❌ external_api测试失败:', error);
+				
+				uni.showModal({
+					title: '❌ 连接测试失败',
+					content: `无法连接到打印服务\n\n错误: ${error.message || error.msg || '网络请求失败'}\n\n请检查:\n1. 设备ID和密码是否正确\n2. 网络连接是否正常\n3. 链科云服务是否可用`,
+					showCancel: false
+				});
+			}
+		},
+		
+		// 测试V3 API打印
+		async testV3Print() {
+			uni.showLoading({
+				title: '正在打印...'
+			});
+			
+			try {
+				// 使用V3 API提交打印任务
+				// 使用测试PDF文件（公开可访问）
+				const result = await printApi.submitPrintTask({
+					deviceId: this.currentPrinter.id,
+					devicePassword: this.currentPrinter.password,
+					printerName: this.currentPrinter.model || this.currentPrinter.name,
+					driverName: this.currentPrinter.driverName || this.currentPrinter.model,
+					jobFileUrl: 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf',
+					dmPaperSize: 9, // A4
+					dmOrientation: 1, // 竖向
+					dmColor: 1, // 黑白
+					dmDuplex: 1, // 关闭双面
+					dmCopies: 1, // 1份
+					isPreview: 1 // 生成预览图
+				});
+				
+				// 保存测试记录
+				let history = uni.getStorageSync('printHistory') || [];
+				history.unshift({
+					id: result.data?.task_id || result.data?.jobId || Date.now(),
+					type: 'document',
+					printer: this.currentPrinter.name,
+					time: new Date().toISOString(),
+					status: 'pending'
+				});
+				uni.setStorageSync('printHistory', history);
+				
+				uni.hideLoading();
+				
+				// 显示任务ID
+				const taskId = result.data?.task_id || result.data?.jobId;
+				if (taskId) {
+					uni.showModal({
+						title: '✅ 测试打印已提交',
+						content: `任务ID: ${taskId}\n\n可在历史记录或测试页面查询任务状态`,
+						confirmText: '去测试页面',
+						cancelText: '关闭',
+						success: (modalRes) => {
+							if (modalRes.confirm) {
+								uni.navigateTo({
+									url: '/pages/test/test'
 								});
-								
-								// 保存测试记录
-								let history = uni.getStorageSync('printHistory') || [];
-								history.unshift({
-									id: result.data?.jobId || Date.now(),
-									type: 'text',
-									printer: this.currentPrinter.name,
-									time: new Date().toISOString(),
-									status: 'success'
-								});
-								uni.setStorageSync('printHistory', history);
-								
-								uni.hideLoading();
-								uni.showToast({
-									title: '测试打印成功',
-									icon: 'success'
-								});
-								
-								// 刷新数据
-								this.loadStats();
-								this.loadRecentPrints();
-								
-							} catch (error) {
-								// 即使错误也保存记录（模拟测试）
-								let history = uni.getStorageSync('printHistory') || [];
-								history.unshift({
-									id: Date.now(),
-									type: 'text',
-									printer: this.currentPrinter.name,
-									time: new Date().toISOString(),
-									status: 'success' // 模拟测试，显示成功
-								});
-								uni.setStorageSync('printHistory', history);
-								
-								uni.hideLoading();
-								uni.showToast({
-									title: '测试打印已发送（模拟）',
-									icon: 'success'
-								});
-								
-								// 刷新数据
-								this.loadStats();
-								this.loadRecentPrints();
 							}
+						}
+					});
+				} else {
+					uni.showToast({
+						title: '测试打印成功',
+						icon: 'success'
+					});
+				}
+				
+				// 刷新数据
+				this.loadStats();
+				this.loadRecentPrints();
+				
+			} catch (error) {
+				uni.hideLoading();
+				console.error('❌ V3 API测试打印失败:', error);
+				
+				// 检查是否是503错误
+				const is503 = error.message && error.message.includes('503');
+				
+				uni.showModal({
+					title: '❌ V3 API不可用',
+					content: is503 
+						? 'V3 API返回503错误，服务暂时不可用。\n\n建议:\n1. 联系技术支持确认V3权限\n2. 暂时使用管理后台打印\n\n要打开管理后台吗？'
+						: `错误: ${error.message || error.msg || '未知错误'}\n\n请联系技术支持`,
+					confirmText: '打开后台',
+					cancelText: '关闭',
+					success: (modalRes) => {
+						if (modalRes.confirm) {
+							// 打开管理后台
+							const url = printApi.getPrintManageUrl();
+							console.log('管理后台URL:', url);
+							// 在小程序中无法直接打开外部链接，提示用户
+							uni.showModal({
+								title: '管理后台地址',
+								content: url,
+								confirmText: '复制',
+								success: (res) => {
+									if (res.confirm) {
+										uni.setClipboardData({
+											data: url,
+											success: () => {
+												uni.showToast({
+													title: '已复制到剪贴板',
+													icon: 'success'
+												});
+											}
+										});
+									}
+								}
+							});
 						}
 					}
 				});
 			}
+		}
 		}
 	}
 </script>

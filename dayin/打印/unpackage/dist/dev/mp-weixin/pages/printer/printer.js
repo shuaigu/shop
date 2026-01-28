@@ -11,7 +11,8 @@ const _sfc_main = {
         name: "",
         model: "",
         id: "",
-        secret: ""
+        password: "",
+        driverName: ""
       }
     };
   },
@@ -68,7 +69,8 @@ const _sfc_main = {
         name: "",
         model: "",
         id: "",
-        secret: ""
+        password: "",
+        driverName: ""
       };
     },
     // 扫码
@@ -78,9 +80,10 @@ const _sfc_main = {
           try {
             const data = JSON.parse(res.result);
             this.newPrinter.id = data.deviceId || data.printerId || res.result;
-            this.newPrinter.secret = data.secret || data.password || "";
+            this.newPrinter.password = data.secret || data.password || "";
             this.newPrinter.name = data.name || this.newPrinter.name;
             this.newPrinter.model = data.model || this.newPrinter.model;
+            this.newPrinter.driverName = data.driverName || this.newPrinter.driverName;
           } catch (error) {
             this.newPrinter.id = res.result;
           }
@@ -93,7 +96,8 @@ const _sfc_main = {
       this.newPrinter.id = defaultDevice.id;
       this.newPrinter.name = "测试云盒 - " + defaultDevice.name;
       this.newPrinter.model = defaultDevice.model;
-      this.newPrinter.secret = defaultDevice.password;
+      this.newPrinter.password = defaultDevice.password;
+      this.newPrinter.driverName = defaultDevice.driverName;
       common_vendor.index.showToast({
         title: "已填充设备信息",
         icon: "success"
@@ -123,10 +127,14 @@ const _sfc_main = {
           name: this.newPrinter.name,
           model: this.newPrinter.model,
           printerId: this.newPrinter.id,
-          secret: this.newPrinter.secret
+          password: this.newPrinter.password
         });
         const printer = {
-          ...this.newPrinter,
+          id: this.newPrinter.id,
+          name: this.newPrinter.name,
+          model: this.newPrinter.model,
+          password: this.newPrinter.password,
+          driverName: this.newPrinter.driverName || this.newPrinter.model,
           status: "online"
         };
         this.printerList.push(printer);
@@ -192,20 +200,23 @@ function _sfc_render(_ctx, _cache, $props, $setup, $data, $options) {
     c: common_vendor.o((...args) => $options.showAddDialog && $options.showAddDialog(...args)),
     d: $data.showDialog
   }, $data.showDialog ? {
-    e: $data.newPrinter.name,
-    f: common_vendor.o(($event) => $data.newPrinter.name = $event.detail.value),
-    g: $data.newPrinter.model,
-    h: common_vendor.o(($event) => $data.newPrinter.model = $event.detail.value),
-    i: $data.newPrinter.id,
-    j: common_vendor.o(($event) => $data.newPrinter.id = $event.detail.value),
-    k: common_vendor.o((...args) => $options.scanCode && $options.scanCode(...args)),
-    l: $data.newPrinter.secret,
-    m: common_vendor.o(($event) => $data.newPrinter.secret = $event.detail.value),
-    n: common_vendor.o((...args) => $options.closeDialog && $options.closeDialog(...args)),
-    o: common_vendor.o((...args) => $options.addPrinter && $options.addPrinter(...args)),
-    p: common_vendor.o(() => {
+    e: common_vendor.o((...args) => $options.quickFillDevice && $options.quickFillDevice(...args)),
+    f: $data.newPrinter.name,
+    g: common_vendor.o(($event) => $data.newPrinter.name = $event.detail.value),
+    h: $data.newPrinter.model,
+    i: common_vendor.o(($event) => $data.newPrinter.model = $event.detail.value),
+    j: $data.newPrinter.id,
+    k: common_vendor.o(($event) => $data.newPrinter.id = $event.detail.value),
+    l: common_vendor.o((...args) => $options.scanCode && $options.scanCode(...args)),
+    m: $data.newPrinter.password,
+    n: common_vendor.o(($event) => $data.newPrinter.password = $event.detail.value),
+    o: $data.newPrinter.driverName,
+    p: common_vendor.o(($event) => $data.newPrinter.driverName = $event.detail.value),
+    q: common_vendor.o((...args) => $options.closeDialog && $options.closeDialog(...args)),
+    r: common_vendor.o((...args) => $options.addPrinter && $options.addPrinter(...args)),
+    s: common_vendor.o(() => {
     }),
-    q: common_vendor.o((...args) => $options.closeDialog && $options.closeDialog(...args))
+    t: common_vendor.o((...args) => $options.closeDialog && $options.closeDialog(...args))
   } : {});
 }
 const MiniProgramPage = /* @__PURE__ */ common_vendor._export_sfc(_sfc_main, [["render", _sfc_render], ["__scopeId", "data-v-4bff6566"]]);

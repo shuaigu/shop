@@ -465,14 +465,36 @@
 				if (!this.validatePrintData()) {
 					return;
 				}
-								
+							
+				// 检查打印机配置是否完整
+				if (!this.currentPrinter.password) {
+					uni.showModal({
+						title: '提示',
+						content: '打印机缺少密码配置，是否继续？\n（可能导致打印失败）',
+						success: (res) => {
+							if (res.confirm) {
+								this.executePrint();
+							}
+						}
+					});
+					return;
+				}
+				
+				this.executePrint();
+			},
+			
+			// 执行打印
+			async executePrint() {
 				uni.showLoading({
 					title: '正在打印...'
 				});
-								
+							
 				try {
 					let result;
-									
+					
+					// 打印调试信息
+					console.log('当前打印机信息:', this.currentPrinter);
+								
 					// 构建通用打印参数
 					const printData = {
 						deviceId: this.currentPrinter.id,
@@ -486,6 +508,8 @@
 						dmDuplex: this.duplexMode,
 						isPreview: 1 // 生成预览图
 					};
+					
+					console.log('打印参数:', printData);
 									
 					// 根据类型调用不同的打印接口
 					if (this.currentType === 'document') {
