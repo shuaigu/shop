@@ -23,7 +23,7 @@
     },
     "user_id": {
       "bsonType": "string",
-      "description": "买断用户ID",
+      "description": "购买用户ID（小组长）",
       "foreignKey": "user._id"
     },
     "initiator_id": {
@@ -33,7 +33,25 @@
     },
     "buyout_price": {
       "bsonType": "number",
-      "description": "买断价格（元）"
+      "description": "购买价格（元）原价"
+    },
+    "original_price": {
+      "bsonType": "number",
+      "description": "原价（元）"
+    },
+    "total_cashback": {
+      "bsonType": "number",
+      "description": "累计已返现金额（元）",
+      "defaultValue": 0
+    },
+    "cashback_limit": {
+      "bsonType": "number",
+      "description": "返现上限（元），通常等于原价"
+    },
+    "is_cashback_complete": {
+      "bsonType": "bool",
+      "description": "返现是否已达上限",
+      "defaultValue": false
     },
     "status": {
       "bsonType": "int",

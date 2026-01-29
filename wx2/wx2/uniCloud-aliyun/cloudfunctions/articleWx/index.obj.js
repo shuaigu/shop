@@ -3,6 +3,7 @@ const dbCmd = db.command
 const dbJQL = uniCloud.database( )
 const { fixTempAvatars } = require('./fix-temp-avatars.js')
 const { cleanAllTempAvatars } = require('./clean-temp-avatars.js')
+const { CashbackHandlerV3 } = require('./cashback-handler-v3.js')  // 使用V3版本
 
 module.exports = {
 	_before: function() {
@@ -1335,7 +1336,7 @@ module.exports = {
 	 */
 	async bargain(article_id, user_id, bargainStep, initialPrice, userInfo = {}, initiator_id = null, initiatorInfo = {}) {
 		try {
-			console.log('砍价操作参数:', { article_id, user_id, initiator_id, bargainStep, initialPrice });
+			console.log('砍价返现操作参数:', { article_id, user_id, initiator_id, bargainStep, initialPrice });
 			
 			// 参数验证
 			if (!article_id || !user_id) {
@@ -1345,13 +1346,19 @@ module.exports = {
 				};
 			}
 			
-			// 如果没有传入发起人ID，则当前用户就是发起人（自己砍价）
-			const actualInitiatorId = initiator_id || user_id;
-			const actualInitiatorInfo = initiator_id ? initiatorInfo : userInfo;
+			// 必须有发起人ID（小组长），不允许自己帮自己砍价
+			if (!initiator_id) {
+				return {
+					errCode: -1,
+					errMsg: '缺少发起人ID，无法进行返现'
+				};
+			}
 			
-			// 防止用户帮自己砍价（只在有明确的发起人时检查）
-			// 如果 initiator_id 和 user_id 都传入且相同，说明是自己想帮自己砍价
-			if (initiator_id && user_id === initiator_id) {
+			const actualInitiatorId = initiator_id;
+			const actualInitiatorInfo = initiatorInfo;
+			
+			// 防止用户帮自己砍价
+			if (user_id === initiator_id) {
 				return {
 					errCode: -1,
 					errMsg: '不能帮自己砍价，请分享给好友帮忙！'
@@ -1379,6 +1386,44 @@ module.exports = {
 			};
 			
 			console.log('砍价配置:', bargainConfig);
+			
+			// 检查发起人是否已购买（必须先原价购买才能获得返现）
+			const buyoutOrderCollection = this.db.collection('buyout_orders');
+			const orderRes = await buyoutOrderCollection
+				.where({
+					article_id: article_id,
+					user_id: actualInitiatorId,
+					status: 1  // 必须是已支付状态
+				})
+				.get();
+			
+			if (!orderRes.data || orderRes.data.length === 0) {
+				return {
+					errCode: -1,
+					errMsg: '小组长还未购买，无法获得返现'
+				};
+			}
+			
+			const order = orderRes.data[0];
+			
+			// 检查返现是否已达上限
+			if (order.is_cashback_complete) {
+				return {
+					errCode: -1,
+					errMsg: '返现已达上限，无法继续返现'
+				};
+			}
+			
+			const cashbackLimit = order.cashback_limit || order.buyout_price || initialPrice;
+			const totalCashback = order.total_cashback || 0;
+			const remainingCashback = cashbackLimit - totalCashback;
+			
+			if (remainingCashback <= 0) {
+				return {
+					errCode: -1,
+					errMsg: '返现已达上限'
+				};
+			}
 			
 			// 获取用户信息，检查是否为管理员
 			let isAdmin = false;
@@ -1443,169 +1488,163 @@ module.exports = {
 				}
 			}
 			
-			// 计算当前价格
-			let currentPrice = initialPrice;
-			if (initiatorRecords.data && initiatorRecords.data.length > 0) {
-				// 使用最后一次砍价后的价格
-				currentPrice = initiatorRecords.data[0].current_price;
-			}
-			
-			// 根据不同的砍价模式计算砍价金额
-			let actualBargainAmount = 0;
+			// 根据不同的砍价模式计算返现金额
+			let actualCashbackAmount = 0;
+			const bargainCount = initiatorRecords.data ? initiatorRecords.data.length : 0;
 			
 			switch(bargainMode) {
 				case 'fixed':
 					// 固定金额模式
-					actualBargainAmount = bargainConfig.fixed_amount;
-					console.log('固定金额模式:', actualBargainAmount);
+					actualCashbackAmount = bargainConfig.fixed_amount;
+					console.log('固定金额返现模式:', actualCashbackAmount);
 					break;
 					
 				case 'random':
 					// 随机金额模式
 					const minAmount = bargainConfig.min_amount;
 					const maxAmount = bargainConfig.max_amount;
-					actualBargainAmount = minAmount + Math.random() * (maxAmount - minAmount);
+					actualCashbackAmount = minAmount + Math.random() * (maxAmount - minAmount);
 					// 保留2位小数
-					actualBargainAmount = Math.round(actualBargainAmount * 100) / 100;
-					console.log('随机金额模式:', actualBargainAmount, '范围:', minAmount, '-', maxAmount);
+					actualCashbackAmount = Math.round(actualCashbackAmount * 100) / 100;
+					console.log('随机金额返现模式:', actualCashbackAmount, '范围:', minAmount, '-', maxAmount);
 					break;
 					
 				case 'percentage':
 					// 百分比模式（基于原价计算）
-					actualBargainAmount = initialPrice * (bargainConfig.percentage / 100);
+					actualCashbackAmount = initialPrice * (bargainConfig.percentage / 100);
 					// 保留2位小数
-					actualBargainAmount = Math.round(actualBargainAmount * 100) / 100;
-					console.log('百分比模式:', actualBargainAmount, '百分比:', bargainConfig.percentage + '%');
+					actualCashbackAmount = Math.round(actualCashbackAmount * 100) / 100;
+					console.log('百分比返现模式:', actualCashbackAmount, '百分比:', bargainConfig.percentage + '%');
 					break;
 					
 				case 'decrease':
 					// 递减随机模式（基于砍价次数递减，并在区间内随机）
-					const bargainCount = initiatorRecords.data ? initiatorRecords.data.length : 0;
 					// 计算递减后的基准金额
 					const baseAmount = bargainConfig.fixed_amount * Math.pow(bargainConfig.decrease_rate, bargainCount);
 					// 在基准金额的±30%范围内随机波动
 					const fluctuationRate = 0.3; // 30%波动范围
 					const decreaseMinAmount = baseAmount * (1 - fluctuationRate);
 					const decreaseMaxAmount = baseAmount * (1 + fluctuationRate);
-					actualBargainAmount = decreaseMinAmount + Math.random() * (decreaseMaxAmount - decreaseMinAmount);
-					// 设置最小砍价金额为0.01元，防止过小
-					actualBargainAmount = Math.max(0.01, actualBargainAmount);
+					actualCashbackAmount = decreaseMinAmount + Math.random() * (decreaseMaxAmount - decreaseMinAmount);
+					// 设置最小返现金额为0.01元，防止过小
+					actualCashbackAmount = Math.max(0.01, actualCashbackAmount);
 					// 保留2位小数
-					actualBargainAmount = Math.round(actualBargainAmount * 100) / 100;
-					console.log('递减随机模式:', actualBargainAmount, '基准:', baseAmount.toFixed(2), '范围:', decreaseMinAmount.toFixed(2), '-', decreaseMaxAmount.toFixed(2), '次数:', bargainCount);
+					actualCashbackAmount = Math.round(actualCashbackAmount * 100) / 100;
+					console.log('递减随机返现模式:', actualCashbackAmount, '基准:', baseAmount.toFixed(2), '范围:', decreaseMinAmount.toFixed(2), '-', decreaseMaxAmount.toFixed(2), '次数:', bargainCount);
 					break;
 					
 				default:
 					// 默认使用固定金额
-					actualBargainAmount = bargainStep || 10;
+					actualCashbackAmount = bargainStep || 10;
 					break;
 			}
 			
-			// 验证砍价金额
-			if (!actualBargainAmount || actualBargainAmount <= 0) {
+			// 验证返现金额
+			if (!actualCashbackAmount || actualCashbackAmount <= 0) {
 				return {
 					errCode: -1,
-					errMsg: '砍价金额必须大于0'
+					errMsg: '返现金额必须大于0'
 				};
 			}
 			
-			// 计算砍价后的新价格
-			const newPrice = Math.max(0, currentPrice - actualBargainAmount);
-			const isComplete = newPrice <= 0;
+			// 限制返现金额不超过剩余可返现额度
+			if (actualCashbackAmount > remainingCashback) {
+				actualCashbackAmount = remainingCashback;
+			}
+			actualCashbackAmount = Math.round(actualCashbackAmount * 100) / 100;
 			
-			// 计算奖励积分（砍价完成时发起人获得）
-			const rewardPoints = isComplete ? Math.floor(initialPrice) : 0; // 完成时奖励等于初始价格的整数部分
+			// 计算新的累计返现金额
+			const newTotalCashback = totalCashback + actualCashbackAmount;
+			const isComplete = newTotalCashback >= cashbackLimit;
 			
-			// 创建砍价记录
+			// 计算奖励积分（完成返现上限时发起人获得）
+			const rewardPoints = isComplete ? Math.floor(initialPrice) : 0;
+			
+			// 创建砍价返现记录
 			const recordData = {
 				article_id: article_id,
 				initiator_id: actualInitiatorId,
 				initiator_nickname: actualInitiatorInfo.nickName || '匿名发起人',
 				initiator_avatar: actualInitiatorInfo.avatarUrl || '/static/images/touxiang.png',
 				user_id: user_id,
-				bargain_amount: actualBargainAmount,
-				current_price: newPrice,
+				bargain_amount: actualCashbackAmount, // 本次返现金额
+				current_price: cashbackLimit - newTotalCashback, // 剩余可返现金额（保持兼容性）
 				is_complete: isComplete,
 				create_time: Date.now(),
 				nickname: userInfo.nickName || '匿名用户',
 				avatar: userInfo.avatarUrl || '/static/images/touxiang.png',
 				ip_address: userInfo.ip_address || '',
 				device_info: userInfo.device_info || {},
-				bargain_mode: bargainMode, // 记录使用的砍价模式
-				reward_points: rewardPoints // 奖励积分
+				bargain_mode: bargainMode,
+				reward_points: rewardPoints,
+				cashback_amount: actualCashbackAmount, // 本次返现金额
+				cashback_status: 0, // 0-待返现，1-已返现，2-返现失败
+				cashback_time: null,
+				transaction_id: null
 			};
 			
-			await this.bargainRecordCollection.add(recordData);
+			const addResult = await this.bargainRecordCollection.add(recordData);
+			const newRecordId = addResult.id;
 			
-			// 如果砍价完成，更新发起人的积分
+			// 更新订单的累计返现金额
+			await buyoutOrderCollection.doc(order._id).update({
+				total_cashback: newTotalCashback,
+				is_cashback_complete: isComplete,
+				update_time: Date.now()
+			});
+			
+		// 🆕 立即处理返现（异步执行，不阻塞砍价响应）
+		// 使用 Promise 异步处理，砍价立即返回，返现在后台进行
+		// 如果返现失败，记录会保持待返现状态，定时任务会重试
+		console.log('💰 触发立即返现，小组长将立即收到微信转账...');
+		
+		// 异步执行返现，不等待结果
+		this.processCashback(newRecordId, actualInitiatorId)
+			.then(result => {
+				if (result.errCode === 0) {
+					console.log('✅ 立即返现成功！小组长已收到 ¥' + actualCashbackAmount);
+				} else {
+					console.log('⚠️ 立即返现失败，将通过定时任务重试:', result.errMsg);
+				}
+			})
+			.catch(cashbackErr => {
+				console.error('⚠️ 立即返现异常，将通过定时任务重试:', cashbackErr);
+			});
+			
+			// 如果返现完成，更新发起人的积分
 			if (isComplete && rewardPoints > 0) {
 				try {
 					const _ = this.db.command;
 					await this.db.collection('user').doc(actualInitiatorId).update({
-						points: _.inc(rewardPoints) // 增加积分
+						points: _.inc(rewardPoints)
 					});
 					console.log('发起人积分已更新:', { initiator_id: actualInitiatorId, reward_points: rewardPoints });
 				} catch (err) {
 					console.error('更新发起人积分失败:', err);
 				}
-				
-				// 检查文章是否已经有人完成砍价，如果没有，则更新文章状态为已完成
-				try {
-					// 先检查文章当前状态
-					const articleCheck = await this.articleCollection.doc(article_id).get();
-					if (articleCheck.data && articleCheck.data.length > 0) {
-						const currentArticle = articleCheck.data[0];
-						// 如果文章还未标记为完成，则标记为完成（第一个完成的人是获胜者）
-						if (!currentArticle.bargain_completed) {
-							await this.articleCollection.doc(article_id).update({
-								bargain_completed: true,
-								bargain_completed_time: Date.now(),
-								bargain_winner_id: actualInitiatorId,
-								bargain_winner_nickname: actualInitiatorInfo.nickName || '匿名发起人'
-							});
-							console.log('文章砍价活动已标记为完成:', { 
-								article_id, 
-								winner_id: actualInitiatorId,
-								winner_nickname: actualInitiatorInfo.nickName 
-							});
-						}
-					}
-				} catch (err) {
-					console.error('更新文章砍价完成状态失败:', err);
-				}
 			}
 			
-			console.log('砍价成功:', {
-				current_price: newPrice,
+			console.log('砍价返现成功:', {
+				cashback_amount: actualCashbackAmount,
+				total_cashback: newTotalCashback,
+				cashback_limit: cashbackLimit,
 				is_complete: isComplete,
-				actualBargainAmount,
 				reward_points: rewardPoints
 			});
 			
-			// 检查文章是否已经有人完成砍价（用于提示用户）
-			let articleCompleted = false;
-			let winnerNickname = '';
-			try {
-				const articleCheck = await this.articleCollection.doc(article_id).get();
-				if (articleCheck.data && articleCheck.data.length > 0) {
-					const currentArticle = articleCheck.data[0];
-					articleCompleted = currentArticle.bargain_completed || false;
-					winnerNickname = currentArticle.bargain_winner_nickname || '';
-				}
-			} catch (err) {
-				console.error('检查文章砍价状态失败:', err);
-			}
-			
 			return {
 				errCode: 0,
-				errMsg: isComplete ? '砍价完成！发起人已获得奖励！' : '砍价成功',
-				current_price: newPrice,
+				errMsg: isComplete ? '恭喜！返现已达上限！' : '砍价成功，小组长将获得返现',
+				cashback_amount: actualCashbackAmount, // 本次返现金额
+				total_cashback: newTotalCashback, // 累计返现金额
+				cashback_limit: cashbackLimit, // 返现上限
+				remaining_cashback: cashbackLimit - newTotalCashback, // 剩余可返现金额
 				is_complete: isComplete,
-				bargain_amount: actualBargainAmount,
-				progress: ((initialPrice - newPrice) / initialPrice * 100).toFixed(2),
+				progress: (newTotalCashback / cashbackLimit * 100).toFixed(2), // 返现进度百分比
 				reward_points: rewardPoints,
-				article_completed: articleCompleted, // 文章是否已经有人完成砍价
-				winner_nickname: winnerNickname // 获胜者昵称
+				// 兼容旧字段
+				current_price: cashbackLimit - newTotalCashback,
+				bargain_amount: actualCashbackAmount
 			};
 			
 		} catch (err) {
@@ -2272,17 +2311,17 @@ module.exports = {
 	},
 	
 	/**
-	 * createBuyoutOrder 创建买断订单（用于支付前）
+	 * createBuyoutOrder 创建原价购买订单（用于支付前）
 	 * @param {string} article_id 文章ID
-	 * @param {string} user_id 买断用户ID
-	 * @param {number} buyoutPrice 买断价格
+	 * @param {string} user_id 购买用户ID
+	 * @param {number} buyoutPrice 购买价格（原价）
 	 * @param {object} userInfo 用户信息
 	 * @param {string} share_from_user_id 分享来源用户ID
 	 * @returns {object} 订单信息
 	 */
 	async createBuyoutOrder(article_id, user_id, buyoutPrice, userInfo = {}, share_from_user_id = null) {
 		try {
-			console.log('创建买断订单:', { article_id, user_id, buyoutPrice, share_from_user_id });
+			console.log('创建原价购买订单:', { article_id, user_id, buyoutPrice, share_from_user_id });
 			
 			// 参数验证
 			if (!article_id || !user_id || !buyoutPrice) {
@@ -2303,59 +2342,50 @@ module.exports = {
 			
 			const article = articleRes.data[0];
 			
-			// 检查砍价/买断功能是否开启
-			if (!article.enable_bargain || !article.enable_buyout) {
+			// 检查砍价功能是否开启
+			if (!article.enable_bargain) {
 				return {
 					errCode: -1,
-					errMsg: '买断功能未开启'
+					errMsg: '砍价返现功能未开启'
 				};
 			}
 			
-			// 检查是否是小组长（发起人）
-			const initiatorCheck = await this.bargainRecordCollection
-				.where({
-					article_id: article_id,
-					initiator_id: user_id
-				})
-				.limit(1)
-				.get();
-				
-			if (!initiatorCheck.data || initiatorCheck.data.length === 0) {
-				return {
-					errCode: -1,
-					errMsg: '只有砍价小组长（发起人）才能买断'
-				};
-			}
-			
-			// 检查用户是否已经买断过
-			const existingBuyout = await this.bargainRecordCollection
+			// 检查用户是否已经购买过（每人只能购买一次）
+			const buyoutOrderCollection = this.db.collection('buyout_orders');
+			const existingOrder = await buyoutOrderCollection
 				.where({
 					article_id: article_id,
 					user_id: user_id,
-					is_buyout: true
+					status: 1  // 已支付
 				})
 				.get();
 				
-			if (existingBuyout.data && existingBuyout.data.length > 0) {
+			if (existingOrder.data && existingOrder.data.length > 0) {
 				return {
 					errCode: -1,
-					errMsg: '您已经买断过该商品'
+					errMsg: '您已经购买过该商品'
 				};
 			}
 			
 			// 生成订单号
-			const orderNo = 'BUYOUT' + Date.now() + Math.random().toString(36).substr(2, 9).toUpperCase();
+			const orderNo = 'PURCHASE' + Date.now() + Math.random().toString(36).substr(2, 9).toUpperCase();
 			
-			// 创建买断订单记录（存储到数据库）
-			const buyoutOrderCollection = this.db.collection('buyout_orders');
-			const now = Date.now();
+		// 获取原价（应该使用文章的初始价格）
+		const originalPrice = article.bargain_initial_price || buyoutPrice;
+		
+		// 创建原价购买订单记录
+		const now = Date.now();
 			
 			const orderData = {
 				order_no: orderNo,
 				article_id: article_id,
 				user_id: user_id,
 				initiator_id: user_id,
-				buyout_price: buyoutPrice,
+				buyout_price: originalPrice, // 原价
+				original_price: originalPrice, // 原价
+				total_cashback: 0, // 累计返现金额，初始为0
+				cashback_limit: originalPrice, // 返现上限等于原价
+				is_cashback_complete: false, // 返现未完成
 				status: 0, // 0-待支付, 1-已支付, 2-已取消
 				user_info: {
 					nickname: userInfo.nickName || '匿名用户',
@@ -2372,7 +2402,7 @@ module.exports = {
 				throw new Error('订单创建失败');
 			}
 			
-			console.log('买断订单创建成功:', orderNo);
+			console.log('原价购买订单创建成功:', orderNo);
 			
 			return {
 				errCode: 0,
@@ -2380,7 +2410,7 @@ module.exports = {
 				data: {
 					order_no: orderNo,
 					buyout_id: insertRes.id,
-					amount: buyoutPrice
+					amount: originalPrice
 				}
 			};
 			
@@ -2394,14 +2424,14 @@ module.exports = {
 	},
 	
 	/**
-	 * completeBuyout 完成买断（支付成功后调用）
+	 * completeBuyout 完成原价购买（支付成功后调用）
 	 * @param {string} order_no 订单号
 	 * @param {string} user_id 用户ID
 	 * @returns {object} 完成结果
 	 */
 	async completeBuyout(order_no, user_id) {
 		try {
-			console.log('完成买断:', { order_no, user_id });
+			console.log('完成原价购买:', { order_no, user_id });
 			
 			// 参数验证
 			if (!order_no || !user_id) {
@@ -2432,15 +2462,15 @@ module.exports = {
 			// 检查订单状态 - 如果已完成，返回成功（幂等性）
 			if (order.status === 1) {
 				console.log('订单已完成，返回已有结果（幂等）');
-				const rewardPoints = Math.floor(order.buyout_price);
 				return {
 					errCode: 0,
-					errMsg: '买断已完成',
+					errMsg: '购买已完成',
 					data: {
 						buyout_price: order.buyout_price,
-						reward_points: rewardPoints,
+						total_cashback: order.total_cashback || 0,
+						cashback_limit: order.cashback_limit || order.buyout_price,
 						is_complete: true,
-						already_completed: true // 标记为已完成
+						already_completed: true
 					}
 				};
 			}
@@ -2464,96 +2494,176 @@ module.exports = {
 			const article = articleRes.data[0];
 			const now = Date.now();
 			
-			// 检查是否已存在买断记录（防止重复创建）
-			const existingBargainRes = await this.bargainRecordCollection
-				.where({
-					article_id: order.article_id,
-					initiator_id: user_id,
-					is_buyout: true
-				})
-				.get();
-			
-			// 只有在没有买断记录时才创建
-			if (!existingBargainRes.data || existingBargainRes.data.length === 0) {
-				// 创建买断记录（写入 bargainRecord 表）
-				const buyoutRecord = {
-					article_id: order.article_id,
-					initiator_id: user_id,
-					initiator_nickname: order.user_info.nickname,
-					initiator_avatar: order.user_info.avatar,
-					user_id: user_id,
-					nickname: order.user_info.nickname,
-					avatar: order.user_info.avatar,
-					bargain_amount: order.buyout_price,
-					current_price: 0,
-					buyout_price: order.buyout_price,
-					is_buyout: true,
-					is_complete: true,
-					create_time: now
-				};
-				
-				await this.bargainRecordCollection.add(buyoutRecord);
-				console.log('✅ 买断记录已创建');
-			} else {
-				console.log('⚠️ 买断记录已存在，跳过创建');
-			}
-			
-			// 更新文章状态 - 标记砍价活动完成并下架文章
-			await this.articleCollection.doc(order.article_id).update({
-				bargain_completed: true, // 标记砍价完成
-				bargain_winner_id: user_id, // 记录获胜者ID
-				bargain_winner_nickname: order.user_info.nickname || '匿名用户', // 记录获胜者昵称
-				bargain_buyout_price: order.buyout_price, // 记录买断价格
-				bargain_buyout_time: now, // 记录买断时间
-				state: 2, // 自动下架/锁定文章
-				enable_bargain: false // 关闭砍价功能，防止其他人继续参与
-			});
-			
-			// 更新订单状态
-			await buyoutOrderCollection.doc(order._id).update({
-				status: 1,
-				update_time: now,
-				complete_time: now
-			});
-			
-			// 计算奖励积分
-			const rewardPoints = Math.floor(order.buyout_price);
-			
-			// 更新用户积分（只在订单首次完成时奖励）
-			if (rewardPoints > 0) {
-				try {
-					const _ = this.db.command;
-					await this.db.collection('user').doc(user_id).update({
-						points: _.inc(rewardPoints)
-					});
-					console.log('✅ 用户积分已更新:', { user_id, reward_points: rewardPoints });
-				} catch (err) {
-					console.error('❌ 更新用户积分失败:', err);
-					// 积分更新失败不影响主流程
-				}
-			}
-			
-			console.log('🎉 买断完成:', {
-				order_no: order_no,
-				buyout_price: order.buyout_price,
-				reward_points: rewardPoints
-			});
-			
-			return {
-				errCode: 0,
-				errMsg: '买断完成',
-				data: {
-					buyout_price: order.buyout_price,
-					reward_points: rewardPoints,
-					is_complete: true
-				}
+		// 更新订单状态为已支付
+		await buyoutOrderCollection.doc(order._id).update({
+			status: 1,
+			update_time: now,
+			complete_time: now
+		});
+		
+		// 🆕 创建砍价小组的初始记录（发起人记录）
+		// 这样前端才能检测到用户已经发起了砍价小组
+		try {
+			const kanjiaColl = this.db.collection('kanjia');
+			const initialRecord = {
+				article_id: order.article_id,
+				user_id: user_id,
+				initiator_id: user_id, // 购买者就是发起人
+				initiator_nickname: order.user_info?.nickname || '匿名用户',
+				initiator_avatar: order.user_info?.avatar || '/static/images/touxiang.png',
+				nickname: order.user_info?.nickname || '匿名用户',
+				avatar: order.user_info?.avatar || '/static/images/touxiang.png',
+				bargain_amount: 0, // 初始砍价金额为0
+				cashback_amount: 0, // 初始返现金额为0
+				cashback_status: 1, // 1-已完成（这是购买记录，不需要返现）
+				is_initiator_record: true, // 标记为发起人的初始记录
+				create_time: now
 			};
+			
+			await kanjiaColl.add(initialRecord);
+			console.log('✅ 已创建砍价小组初始记录');
+		} catch (initErr) {
+			console.error('⚠️ 创建初始记录失败（不影响购买）:', initErr);
+		}
+		
+		console.log('🎉 原价购买完成，用户成为小组长，可以开始分享砍价获得返现:', {
+			order_no: order_no,
+			purchase_price: order.buyout_price,
+			user_id: user_id,
+			cashback_limit: order.cashback_limit || order.buyout_price
+		});
+		
+		return {
+			errCode: 0,
+			errMsg: '购买成功！现在可以分享给好友砍价，每砍一刀您都将获得返现！',
+			data: {
+				buyout_price: order.buyout_price,
+				total_cashback: 0,
+				cashback_limit: order.cashback_limit || order.buyout_price,
+				is_complete: true
+			}
+		};
 			
 		} catch (err) {
 			console.error('❌ 完成买断失败:', err);
 			return {
 				errCode: -1,
 				errMsg: '完成买断失败: ' + err.message
+			};
+		}
+	},
+	
+	/**
+	 * processCashback 处理单次返现
+	 * @param {string} bargain_record_id 砍价记录ID
+	 * @param {string} user_id 用户ID
+	 * @returns {object} 返现结果
+	 */
+	async processCashback(bargain_record_id, user_id) {
+		try {
+			console.log('处理返现:', { bargain_record_id, user_id });
+			
+			if (!bargain_record_id || !user_id) {
+				return {
+					errCode: -1,
+					errMsg: '参数不完整'
+				};
+			}
+			
+			// 查询砍价记录
+			const recordRes = await this.bargainRecordCollection.doc(bargain_record_id).get();
+			if (!recordRes.data || recordRes.data.length === 0) {
+				return {
+					errCode: -1,
+					errMsg: '砍价记录不存在'
+				};
+			}
+			
+			const record = recordRes.data[0];
+			
+			// 检查是否已返现
+			if (record.cashback_status === 1) {
+				return {
+					errCode: 0,
+					errMsg: '已返现',
+					data: {
+						already_processed: true
+					}
+				};
+			}
+			
+			// 获取用户openid
+			const userRes = await this.userCollection.doc(user_id)
+				.field({ wx_openid: true })
+				.get();
+				
+			if (!userRes.data || userRes.data.length === 0 || !userRes.data[0].wx_openid) {
+				return {
+					errCode: -1,
+					errMsg: '用户openid不存在，无法返现'
+				};
+			}
+			
+			const openid = userRes.data[0].wx_openid[0];
+			
+		// 调用返现处理器（V3版本）
+		const cashbackHandler = new CashbackHandlerV3();
+		const result = await cashbackHandler.processCashback({
+			bargain_record_id: bargain_record_id,
+			user_id: user_id,
+			openid: openid,
+			amount: record.cashback_amount,
+			desc: '砍价返现'
+		});
+			
+			if (result.success) {
+				return {
+					errCode: 0,
+					errMsg: '返现成功',
+					data: {
+						transaction_id: result.transaction_id,
+						amount: record.cashback_amount
+					}
+				};
+			} else {
+				return {
+					errCode: -1,
+					errMsg: '返现失败: ' + result.message
+				};
+			}
+			
+		} catch (err) {
+			console.error('处理返现失败:', err);
+			return {
+				errCode: -1,
+				errMsg: '处理返现失败: ' + err.message
+			};
+		}
+	},
+	
+	/**
+	 * batchProcessCashbacks 批量处理待返现记录
+	 * 可以通过定时任务或手动调用
+	 * @returns {object} 处理结果
+	 */
+	async batchProcessCashbacks() {
+		try {
+			console.log('开始批量处理返现...');
+			
+			const cashbackHandler = new CashbackHandlerV3();
+			const result = await cashbackHandler.processPendingCashbacks();
+			
+			return {
+				errCode: 0,
+				errMsg: '批量处理完成',
+				data: result
+			};
+			
+		} catch (err) {
+			console.error('批量处理返现失败:', err);
+			return {
+				errCode: -1,
+				errMsg: '批量处理失败: ' + err.message
 			};
 		}
 	},
@@ -2590,6 +2700,111 @@ module.exports = {
 		return {
 			code: -1,
 			message: '未找到对应的操作: ' + action
+		}
+	},
+	
+	/**
+	 * testCashbackTransfer 测试转账功能
+	 * @param {object} params - { amount: 金额, desc: 备注 }
+	 * @returns {object} 转账结果
+	 */
+	async testCashbackTransfer(params = {}) {
+		try {
+			const { amount = 0.3, desc = '砍价返现测试' } = params;
+			
+			console.log('🧪 开始测试转账:', { amount, desc });
+			
+			// 获取当前用户ID
+			const userId = this.getUniIdToken()?.uid;
+			if (!userId) {
+				return {
+					errCode: -1,
+					errMsg: '用户未登录，请先登录'
+				};
+			}
+			
+			// 验证金额
+			if (amount < 0.1 || amount > 500) {
+				return {
+					errCode: -1,
+					errMsg: '金额必须在 0.10-500 元之间'
+				};
+			}
+			
+			console.log('当前用户ID:', userId);
+			
+			// 获取用户openid
+			const userRes = await this.userCollection.doc(userId)
+				.field({ 
+					wx_openid: true,
+					nickname: true
+				})
+				.get();
+			
+			if (!userRes.data || userRes.data.length === 0) {
+				return {
+					errCode: -1,
+					errMsg: '用户信息不存在'
+				};
+			}
+			
+			const user = userRes.data[0];
+			
+			if (!user.wx_openid || !user.wx_openid[0]) {
+				return {
+					errCode: -1,
+					errMsg: '用户openid不存在，请重新授权登录'
+				};
+			}
+			
+			const openid = user.wx_openid[0];
+			console.log('用户openid:', openid);
+			console.log('用户昵称:', user.nickname);
+			
+			// 调用V3转账
+			const cashbackHandler = new CashbackHandlerV3();
+			const startTime = Date.now();
+			
+			const result = await cashbackHandler.transferToBalance({
+				openid: openid,
+				amount: amount,
+				desc: desc,
+				user_name: null // 测试时不校验姓名
+			});
+			
+			const processTime = Date.now() - startTime;
+			
+			if (result.success) {
+				console.log('✅ 测试转账成功!', {
+					transaction_id: result.transaction_id,
+					amount: amount,
+					process_time: processTime + 'ms'
+				});
+				
+				return {
+					errCode: 0,
+					errMsg: '测试转账成功',
+					data: {
+						transaction_id: result.transaction_id,
+						amount: amount,
+						process_time: processTime + 'ms',
+						openid: openid.substr(0, 8) + '***' // 脱敏
+					}
+				};
+			} else {
+				console.error('❌ 测试转账失败:', result.error);
+				return {
+					errCode: -1,
+					errMsg: '转账失败: ' + result.error
+				};
+			}
+			
+		} catch (err) {
+			console.error('❌ 测试转账异常:', err);
+			return {
+				errCode: -1,
+				errMsg: '转账异常: ' + err.message
+			};
 		}
 	}
 }

@@ -367,28 +367,31 @@
 	
 	// 检查当前用户是否是某个砍价小组的发起人（小组长）
 	const isCurrentUserInitiator = computed(() => {
-		// 必须同时满足以下条件才显示买断按钮：
-		// 1. 用户有自己发起的砍价小组
-		// 2. 小组未完成、未买断
-		// 3. 小组至少有1个参与者（即用户自己已经砍了一刀）
-		// 4. 已砍金额大于0（确保真的发起了砍价）
-		if (userOwnGroup.value) {
-			const hasParticipants = userOwnGroup.value.total_participants > 0
-			const hasBargained = userOwnGroup.value.total_bargained_amount > 0
-			const isActive = !userOwnGroup.value.is_complete && !userOwnGroup.value.is_buyout
-			
-			console.log('🔍 检查买断按钮显示条件:', {
-				hasParticipants,
-				hasBargained,
-				isActive,
-				total_participants: userOwnGroup.value.total_participants,
-				total_bargained_amount: userOwnGroup.value.total_bargained_amount
-			})
-			
-			// 只有当小组有参与者、有砍价金额、且小组活跃时，才显示买断按钮
-			return hasParticipants && hasBargained && isActive
+		// 🆕 新逻辑：判断是否显示"立即购买"按钮
+		// 规则：
+		// 1. 如果用户还没购买（没有 userOwnGroup），显示购买按钮（返回 true）
+		// 2. 如果用户已购买但未完成返现，也显示（实际不会显示，因为其他条件会阻止）
+		// 3. 如果用户已购买且已完成，不显示（返回 false）
+		
+		if (!userOwnGroup.value) {
+			// 用户还没购买，显示"立即购买"按钮
+			console.log('🔍 检查购买按钮显示条件: 用户未购买，显示购买按钮');
+			return true;
 		}
-		return false
+		
+		// 用户已购买
+		const isAlreadyPurchased = userOwnGroup.value.is_buyout || userOwnGroup.value.is_complete;
+		
+		console.log('🔍 检查购买按钮显示条件:', {
+			hasUserGroup: !!userOwnGroup.value,
+			is_buyout: userOwnGroup.value.is_buyout,
+			is_complete: userOwnGroup.value.is_complete,
+			isAlreadyPurchased,
+			shouldShowButton: !isAlreadyPurchased
+		});
+		
+		// 如果已购买，不显示购买按钮
+		return !isAlreadyPurchased;
 	})
 	
 	// 检查整个砍价活动是否完成（只有买断才算整个活动完成）
@@ -498,54 +501,46 @@
 				return
 			}
 			
-			// 检查用户登录状态
-			const isLoggedIn = await testLogin()
-			if (!isLoggedIn || !userStore.userInfo?.uid) {
-				console.log('❌ 阻止原因: 用户未登录');
-				return
-			}
-			
-			// 检查用户是否有自己发起的砍价小组
-			if (!userOwnGroup.value) {
-				console.log('❌ 阻止原因: 用户没有发起砍价小组');
-				uni.showModal({
-					title: '暂无砍价小组',
-					content: '您还没有发起砍价小组，请先点击"帮砍一刀"参与砍价活动。',
-					showCancel: false,
-					confirmText: '我知道了'
-				})
-				return
-			}
-			
-			// 检查小组是否已完成或已买断
-			if (userOwnGroup.value.is_complete || userOwnGroup.value.is_buyout) {
-				console.log('❌ 阻止原因: 小组已完成或已买断');
-				uni.showModal({
-					title: '无法买断',
-					content: '您的砍价小组已完成或已买断。',
-					showCancel: false,
-					confirmText: '我知道了'
-				})
-				return
-			}
-			
-			console.log('✅ 所有检查通过，准备显示确认弹窗');
-			
-			// 使用用户自己小组的发起人ID（即用户自己的uid）
-			const sharerId = userOwnGroup.value.initiator_id || userStore.userInfo.uid
-			console.log('📝 sharerId:', sharerId);
-			console.log('📝 买断价格:', computedBuyoutPrice.value);
-			
-			// 确认买断
-			console.log('🔔 准备调用 uni.showModal...');
-			
-			// 使用 setTimeout 确保在下一个事件循环中执行，避免被阻塞
-			setTimeout(() => {
+		// 检查用户登录状态
+		const isLoggedIn = await testLogin()
+		if (!isLoggedIn || !userStore.userInfo?.uid) {
+			console.log('❌ 阻止原因: 用户未登录');
+			return
+		}
+		
+		// 🆕 新逻辑：检查用户是否已经购买过
+		// 用户可以直接购买，不需要先有砍价小组
+		// 购买后会自动创建砍价小组，成为小组长
+		
+		// 检查是否已经购买过（通过 userOwnGroup 判断）
+		if (userOwnGroup.value && (userOwnGroup.value.is_buyout || userOwnGroup.value.is_complete)) {
+			console.log('❌ 阻止原因: 已经购买过此商品');
 			uni.showModal({
-				title: '确认买断',
-				content: `您将以 ￥${computedBuyoutPrice.value.toFixed(2)} 的价格直接买断此商品，买断后将完成您的砍价活动。\n\n是否继续？`,
-				confirmText: '确认支付',
-				cancelText: '再想想',
+				title: '您已购买',
+				content: '您已经购买过此商品，现在可以分享给好友砍价，获得返现！',
+				showCancel: false,
+				confirmText: '我知道了'
+			})
+			return
+		}
+		
+		console.log('✅ 所有检查通过，准备显示确认弹窗');
+		
+		// 使用当前用户的 uid 作为 sharerId（购买者就是发起人）
+		const sharerId = userStore.userInfo.uid
+		console.log('📝 sharerId:', sharerId);
+		console.log('📝 购买价格:', computedBuyoutPrice.value);
+		
+		// 确认购买
+		console.log('🔔 准备调用 uni.showModal...');
+		
+		// 使用 setTimeout 确保在下一个事件循环中执行，避免被阻塞
+		setTimeout(() => {
+		uni.showModal({
+			title: '确认购买',
+			content: `您将以 ￥${computedBuyoutPrice.value.toFixed(2)} 的原价购买此商品。\n\n购买后您将成为小组长，分享给好友帮砍，每砍一刀您都将获得返现！\n\n是否继续？`,
+			confirmText: '确认支付',
+			cancelText: '再想想',
 					success: async (res) => {
 						console.log('🔔 showModal success 回调被触发，用户选择:', res);
 						if (res.confirm) {
@@ -4612,19 +4607,19 @@
 					}}</view>
 				</view>
 				
-				<!-- 买断按钮 - 只对小组长显示 -->
-				<view 
-					v-if="articleDetail.enable_buyout && isCurrentUserInitiator && computedBuyoutPrice > 0 && !isBargainComplete && !isCurrentUserGroupComplete"
-					class="buyout-btn" 
-					:class="{ 'disabled': isBuyoutProcessing || isBargainExpired }"
-					@click="handleBuyout"
-				>
-					<uni-icons type="wallet-filled" size="20" color="#fff"></uni-icons>
-					<view class="buyout-text">
-						<text class="buyout-label">买断</text>
-						<text class="buyout-price">¥{{ computedBuyoutPrice.toFixed(2) }}</text>
-					</view>
+			<!-- 立即购买按钮 - 任何人都可以购买 -->
+			<view 
+				v-if="articleDetail.enable_buyout && isCurrentUserInitiator && computedBuyoutPrice > 0 && !isBargainComplete && !isCurrentUserGroupComplete"
+				class="buyout-btn" 
+				:class="{ 'disabled': isBuyoutProcessing || isBargainExpired }"
+				@click="handleBuyout"
+			>
+				<uni-icons type="cart-filled" size="20" color="#fff"></uni-icons>
+				<view class="buyout-text">
+					<text class="buyout-label">{{ userOwnGroup ? '继续返现' : '立即购买' }}</text>
+					<text class="buyout-price">¥{{ computedBuyoutPrice.toFixed(2) }}</text>
 				</view>
+			</view>
 			</view>
 		</view>
 		

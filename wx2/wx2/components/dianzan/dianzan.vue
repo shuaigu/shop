@@ -41,19 +41,19 @@
 				<text class="countdown-text" :class="{ 'expired': isBargainExpired }">{{ remainingTime || '计算中...' }}</text>
 			</view> -->
 			
-			<!-- 第一行：原价 + 已砍金额（独立一行） -->
+			<!-- 第一行：原价 + 已返现金额（独立一行） -->
 			<view class="price-first-row" v-if="!isBargainComplete">
 				<view class="original-price">
 					原价: <text class="price-text">¥{{ initialPrice.toFixed(2) }}</text>
 				</view>
 				<view class="bargained-amount" v-if="totalBargained > 0 && bargainStats && bargainStats.total_bargained_amount !== null && bargainStats.total_bargained_amount !== undefined">
-					已砍: <text class="amount-text">¥{{ bargainStats.total_bargained_amount.toFixed(2) }}</text>
+					已返现: <text class="amount-text">¥{{ bargainStats.total_bargained_amount.toFixed(2) }}</text>
 				</view>
 			</view>
 			
-			<!-- 第二行：砍价主内容区（当前价格 + 按钮） -->
+			<!-- 第二行：砍价主内容区（剩余可返现金额 + 按钮） -->
 			<view class="bargain-main-content">
-				<!-- 当前价格（砍价图标 + 价格） -->
+				<!-- 剩余可返现金额（砍价图标 + 金额） -->
 				<view class="current-price-wrapper">
 					<image 
 						class="bargain-icon"
@@ -61,18 +61,18 @@
 						mode="aspectFit"
 					></image>
 					<view class="bargain-price" :style="{ color: isBargainComplete ? bargainCompleteColor : likedColor, fontSize: (fontSize + 4) + 'rpx' }">
-						¥{{ displayPrice }}
+						剩余: ¥{{ displayPrice }}
 					</view>
 				</view>
 				
-			<!-- 买断按钮（紧凑版，在价格后面）- 只有小组长才能看到 -->
+			<!-- 购买按钮（紧凑版，在价格后面）- 未购买的用户可以看到 -->
 			<view 
-				v-if="enableBuyout && isInitiator && !isBargainComplete && !isBargainExpired && currentPrice > 0"
+				v-if="enableBuyout && !isInitiator && !isBargainComplete && !isBargainExpired"
 				class="buyout-button-compact"
 				:class="{ 'buyout-clicking': isBuyoutClicking }"
 				@click="handleBuyoutClick"
 			>
-				<text>买断</text>
+				<text>立即购买</text>
 			</view>
 				
 				<!-- 右侧按钮 - 添加点击事件和动画类 -->
@@ -89,9 +89,9 @@
 				</view>
 			</view>
 			
-			<!-- 飘红动画（砍价成功后显示） -->
+			<!-- 飘红动画（砍价成功后显示返现金额） -->
 			<view class="bargain-float-text" v-if="showFloatText" :class="{ 'float-animation': showFloatText }">
-				-¥{{ lastBargainAmount.toFixed(2) }}
+				+¥{{ lastBargainAmount.toFixed(2) }}
 			</view>
 			
 			<!-- 底部进度条区域（最底部，带红色边框标注） -->
@@ -234,7 +234,7 @@ const props = defineProps({
 	// 砍价完成文字
 	bargainCompleteText: {
 		type: String,
-		default: '砍价成功'
+		default: '返现完成'
 	},
 	// 砍价按钮文字
 	bargainText: {
@@ -250,7 +250,7 @@ const props = defineProps({
 	// 砍价成功话术（支持自定义）
 	bargainSuccessMessage: {
 		type: String,
-		default: ''
+		default: '恭喜！小组长获得返现！'
 	},
 	// 是否显示砍价成功弹窗
 	showBargainPopup: {
@@ -703,10 +703,10 @@ const handleBargain = async () => {
 			return
 		}
 		
-		// 如果已经砍价完成，不允许继续砍价
+		// 如果已经返现完成，不允许继续砍价
 		if (isBargainComplete.value) {
 			uni.showToast({
-				title: '砍价已完成',
+				title: '返现已达上限',
 				icon: 'success'
 			})
 			return
@@ -735,7 +735,7 @@ const handleBargain = async () => {
 		if (sharerId && sharerId === userStore.userInfo.uid) {
 			// 扫自己的码，作为发起人查看状态，不能点击砍价
 			uni.showToast({
-				title: '这是您自己的砍价活动，请分享给好友帮忙！',
+				title: '这是您自己的返现活动，请分享给好友帮砍！',
 				icon: 'none',
 				duration: 2500
 			})
@@ -872,22 +872,22 @@ const handleBargain = async () => {
 							})
 						}, 1000) // 飘红动画进行到1秒后弹出
 					} else {
-						// 不显示弹窗时，显示原有的Toast提示
-						if (isBargainComplete.value) {
-							// 砍价完成 - 使用图标提示
-							uni.showToast({
-								title: result.errMsg || props.bargainCompleteText,
-								image: '/static/images/砍价.png',
-								duration: 3000 // 延长到3秒
-							})
-						} else {
-							// 砍价成功 - 使用图标提示
-							uni.showToast({
-								title: `砍掉¥${result.bargain_amount.toFixed(2)}`,
-								image: '/static/images/砍价3.png',
-								duration: 4000 // 延长到4秒
-							})
-						}
+					// 不显示弹窗时，显示原有的Toast提示
+					if (isBargainComplete.value) {
+						// 返现完成 - 使用图标提示
+						uni.showToast({
+							title: result.errMsg || props.bargainCompleteText,
+							image: '/static/images/砍价.png',
+							duration: 3000 // 延长到3秒
+						})
+					} else {
+						// 砍价成功，小组长获得返现 - 使用图标提示
+						uni.showToast({
+							title: `小组长返现¥${result.bargain_amount.toFixed(2)}`,
+							image: '/static/images/砍价3.png',
+							duration: 4000 // 延长到4秒
+						})
+					}
 					}
 					
 					// 触发砍价完成事件

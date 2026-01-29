@@ -26,14 +26,14 @@ module.exports = async ( obj ) => {
 	// 此处写你自己的支付成功逻辑开始-----------------------------------------------------------
 
 	try {
-		// 检查是否是买断订单（通过 custom 参数判断）
+		// 检查是否是原价购买订单（通过 custom 参数判断）
 		if (custom && custom.buyout_id) {
-			console.log('检测到买断订单，开始处理买断逻辑...', custom);
+			console.log('检测到原价购买订单，开始处理购买逻辑...', custom);
 			
 			const db = uniCloud.database();
 			const dbCmd = db.command;
 			
-			// 1. 验证买断订单金额
+			// 1. 验证购买订单金额
 			const buyoutOrderRes = await db.collection('buyout_orders')
 				.where({
 					order_no: order_no
@@ -41,7 +41,7 @@ module.exports = async ( obj ) => {
 				.get();
 			
 			if (!buyoutOrderRes.data || buyoutOrderRes.data.length === 0) {
-				console.error('买断订单不存在:', order_no);
+				console.error('购买订单不存在:', order_no);
 				return false;
 			}
 			
@@ -70,77 +70,45 @@ module.exports = async ( obj ) => {
 			
 			console.log('开始更新订单状态...');
 			
-			// 3. 更新买断订单状态为已支付
-			const now = Date.now();
-			await db.collection('buyout_orders').doc(buyoutOrder._id).update({
-				status: 1, // 已支付
-				update_time: now,
-				complete_time: now
-			});
+		// 3. 更新购买订单状态为已支付
+		const now = Date.now();
+		await db.collection('buyout_orders').doc(buyoutOrder._id).update({
+			status: 1, // 已支付
+			update_time: now,
+			complete_time: now
+		});
+		
+		console.log('✅ 购买订单状态已更新为已支付');
+		
+		// 4. 🆕 创建砍价小组的初始记录（发起人记录）
+		// 这样前端才能检测到用户已经发起了砍价小组
+		try {
+			const kanjiaColl = db.collection('kanjia');
+			const initialRecord = {
+				article_id: buyoutOrder.article_id,
+				user_id: buyoutOrder.user_id,
+				initiator_id: buyoutOrder.user_id, // 购买者就是发起人
+				initiator_nickname: buyoutOrder.user_info?.nickname || '匿名用户',
+				initiator_avatar: buyoutOrder.user_info?.avatar || '/static/images/touxiang.png',
+				nickname: buyoutOrder.user_info?.nickname || '匿名用户',
+				avatar: buyoutOrder.user_info?.avatar || '/static/images/touxiang.png',
+				bargain_amount: 0, // 初始砍价金额为0
+				cashback_amount: 0, // 初始返现金额为0
+				cashback_status: 1, // 1-已完成（这是购买记录，不需要返现）
+				is_initiator_record: true, // 标记为发起人的初始记录
+				create_time: now
+			};
 			
-			console.log('✅ 买断订单状态已更新为已支付');
-			
-			// 4. 检查是否已存在买断记录（防止重复创建）
-			const existingBargainRes = await db.collection('kanjia')
-				.where({
-					article_id: buyoutOrder.article_id,
-					initiator_id: buyoutOrder.user_id,
-					is_buyout: true
-				})
-				.get();
-			
-			if (!existingBargainRes.data || existingBargainRes.data.length === 0) {
-				// 5. 创建买断记录
-				const bargainRecord = {
-					article_id: buyoutOrder.article_id,
-					initiator_id: buyoutOrder.user_id,
-					initiator_nickname: buyoutOrder.user_info.nickname,
-					initiator_avatar: buyoutOrder.user_info.avatar,
-					user_id: buyoutOrder.user_id,
-					nickname: buyoutOrder.user_info.nickname,
-					avatar: buyoutOrder.user_info.avatar,
-					bargain_amount: buyoutOrder.buyout_price,
-					current_price: 0,
-					buyout_price: buyoutOrder.buyout_price,
-					is_buyout: true,
-					is_complete: true,
-					create_time: now
-				};
-				
-				await db.collection('kanjia').add(bargainRecord);
-				console.log('✅ 买断记录已创建');
-			} else {
-				console.log('⚠️ 买断记录已存在，跳过创建');
-			}
-			
-			// 6. 更新文章状态 - 标记砍价活动完成并下架文章
-			await db.collection('articleList').doc(buyoutOrder.article_id).update({
-				bargain_completed: true, // 标记砍价完成
-				bargain_winner_id: buyoutOrder.user_id, // 记录获胜者ID
-				bargain_winner_nickname: buyoutOrder.user_info.nickname || '匿名用户', // 记录获胜者昵称
-				bargain_buyout_price: buyoutOrder.buyout_price, // 记录买断价格
-				bargain_buyout_time: now, // 记录买断时间
-				state: 2, // 下架文章，防止其他人继续砍价
-				enable_bargain: false // 关闭砍价功能
-			});
-			console.log('✅ 文章状态已更新，砍价活动已结束，文章已下架');
-			
-			// 7. 更新用户积分（只在第一次处理时奖励）
-			const rewardPoints = Math.floor(buyoutOrder.buyout_price);
-			if (rewardPoints > 0 && !isAlreadyProcessed) {
-				try {
-					await db.collection('user').doc(buyoutOrder.user_id).update({
-						points: dbCmd.inc(rewardPoints)
-					});
-					console.log('✅ 用户积分已更新，奖励:', rewardPoints);
-				} catch (err) {
-					console.error('更新用户积分失败:', err);
-					// 积分更新失败不影响主流程
-				}
-			}
-			
-			console.log('🎉 买断支付回调处理完成！');
-			user_order_success = true;
+			await kanjiaColl.add(initialRecord);
+			console.log('✅ 已创建砍价小组初始记录');
+		} catch (initErr) {
+			console.error('⚠️ 创建初始记录失败（不影响购买）:', initErr);
+		}
+		
+		console.log('🎉 用户已成为小组长，可以开始分享砍价获得返现！');
+		console.log('📝 返现上限:', buyoutOrder.cashback_limit || buyoutOrder.buyout_price, '元');
+		
+		user_order_success = true;
 			
 		} else {
 			// 非买断订单，可以添加其他类型的订单处理逻辑

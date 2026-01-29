@@ -100,6 +100,14 @@
 			"style": {
 				"navigationBarTitleText": "添加推荐备忘录"
 			}
+		},
+		{
+			"path": "pages/test/testCashback",
+			"style": {
+				"navigationBarTitleText": "转账测试",
+				"navigationBarBackgroundColor": "#667eea",
+				"navigationBarTextStyle": "white"
+			}
 		}
 	],
 	"subPackages": [ {
