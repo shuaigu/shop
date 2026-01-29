@@ -2715,13 +2715,14 @@ module.exports = {
 			console.log('🧪 开始测试转账:', { amount, desc });
 			
 			// 获取当前用户ID
-			const userId = this.getUniIdToken()?.uid;
-			if (!userId) {
+			if (!this.ctx.auth || !this.ctx.auth.uid) {
 				return {
 					errCode: -1,
 					errMsg: '用户未登录，请先登录'
 				};
 			}
+			
+			const userId = this.ctx.auth.uid;
 			
 			// 验证金额
 			if (amount < 0.1 || amount > 500) {

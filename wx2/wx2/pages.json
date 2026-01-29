@@ -102,7 +102,7 @@
 			}
 		},
 		{
-			"path": "pages/test/testCashback",
+			"path": "pages/article/testCashback",
 			"style": {
 				"navigationBarTitleText": "转账测试",
 				"navigationBarBackgroundColor": "#667eea",

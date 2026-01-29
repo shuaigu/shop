@@ -472,6 +472,14 @@
 	}
 	
 	// 处理买断操作
+	// 测试转账按钮处理
+	const handleTestCashback = () => {
+		console.log('跳转到测试转账页面');
+		uni.navigateTo({
+			url: '/pages/article/testCashback'
+		});
+	};
+	
 	const handleBuyout = async () => {
 		try {
 			// ========== 调试日志开始 ==========
@@ -4579,15 +4587,23 @@
 					</view>
 				</view>
 				
-				<!-- 转发按钮 -->
-				<button open-type="share" class="action-item" :class="{'disabled': !isPosterReady}" :disabled="!isPosterReady">
-					<uni-icons custom-prefix="icon" type="lishuai-zhuanfa" size="24" :color="isPosterReady ? '#444444' : '#cccccc'"></uni-icons>
-					<view class="text" :style="{color: isPosterReady ? '#444444' : '#cccccc'}">
-						转发
-					</view>
-				</button>
-				
-				<!-- 帮砍一刀按钮 -->
+			<!-- 转发按钮 -->
+			<button open-type="share" class="action-item" :class="{'disabled': !isPosterReady}" :disabled="!isPosterReady">
+				<uni-icons custom-prefix="icon" type="lishuai-zhuanfa" size="24" :color="isPosterReady ? '#444444' : '#cccccc'"></uni-icons>
+				<view class="text" :style="{color: isPosterReady ? '#444444' : '#cccccc'}">
+					转发
+				</view>
+			</button>
+			
+			<!-- 测试转账按钮 -->
+			<view class="action-item" @click="handleTestCashback">
+				<uni-icons type="wallet" size="24" color="#667eea"></uni-icons>
+				<view class="text" style="color: #667eea;">
+					测试
+				</view>
+			</view>
+			
+			<!-- 帮砍一刀按钮 -->
 				<view 
 					class="call-btn" 
 					:class="{ 
