@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>用户ID调试工具</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 30px;
+            font-size: 28px;
+        }
+        
+        .section {
+            margin-bottom: 30px;
+        }
+        
+        .section-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+        
+        .code-block {
+            background: #2d3748;
+            color: #a0aec0;
+            padding: 20px;
+            border-radius: 10px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            line-height: 1.6;
+            overflow-x: auto;
+            margin-bottom: 15px;
+        }
+        
+        .code-block .comment {
+            color: #68d391;
+        }
+        
+        .code-block .string {
+            color: #f6ad55;
+        }
+        
+        .step {
+            background: #f7fafc;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            border-left: 4px solid #667eea;
+        }
+        
+        .step-number {
+            display: inline-block;
+            width: 30px;
+            height: 30px;
+            background: #667eea;
+            color: white;
+            border-radius: 50%;
+            text-align: center;
+            line-height: 30px;
+            margin-right: 10px;
+            font-weight: bold;
+        }
+        
+        .result-box {
+            background: #fff5f5;
+            border: 2px solid #fc8181;
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+        
+        .result-box.success {
+            background: #f0fff4;
+            border-color: #68d391;
+        }
+        
+        .highlight {
+            background: #fef5e7;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            color: #d35400;
+        }
+        
+        .important {
+            color: #e53e3e;
+            font-weight: bold;
+        }
+        
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 25px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+        
+        .copy-btn {
+            background: #48bb78;
+            padding: 8px 20px;
+            font-size: 14px;
+            margin-left: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 用户ID调试工具</h1>
+        
+        <div class="section">
+            <div class="section-title">📋 当前情况</div>
+            <div class="step">
+                <p><strong>问题：</strong>前端userInfo的ID与数据库_id不匹配</p>
+                <p style="margin-top: 10px;">
+                    前端显示：<span class="highlight">67b0b5993f1a473bba2a16789</span> (第3位是<span class="important">b</span>)<br>
+                    数据库_id：<span class="highlight">67d0b5993f1a473bba2a16789</span> (第3位是<span class="important">d</span>)
+                </p>
+            </div>
+        </div>
+        
+        <div class="section">
+            <div class="section-title">🚀 步骤1：在微信开发者工具Console执行</div>
+            <div class="code-block">
+<span class="comment">// 复制以下代码到Console执行</span>
+const userInfo = uni.getStorageSync('userInfo')
+console.log('=== 完整userInfo ===')
+console.log(JSON.stringify(userInfo, null, 2))
+console.log('\n=== 各字段值 ===')
+console.log('_id:', userInfo._id)
+console.log('uid:', userInfo.uid)
+console.log('dcloud_appid:', userInfo.dcloud_appid)
+            </div>
+            <button class="copy-btn" onclick="copyCode(this.previousElementSibling.innerText)">复制代码</button>
+            
+            <div class="result-box">
+                <strong>📝 记录输出结果</strong>
+                <p style="margin-top: 10px;">找到这些ID值，下一步会用到：</p>
+                <ul style="margin-left: 20px; margin-top: 10px;">
+                    <li><code>_id</code> 的值</li>
+                    <li><code>uid</code> 的值</li>
+                    <li><code>dcloud_appid</code> 的值（如果是数组，看第一个元素）</li>
+                </ul>
+            </div>
+        </div>
+        
+        <div class="section">
+            <div class="section-title">🔍 步骤2：调用调试云函数</div>
+            <div class="code-block">
+<span class="comment">// 在Console执行，测试哪个ID能查到用户</span>
+const api = uniCloud.importObject('articleWx')
+const result = await api.debugUserId({
+  test_ids: [
+    <span class="string">'67b0b5993f1a473bba2a16789'</span>,  <span class="comment">// userInfo.uid</span>
+    <span class="string">'67d0b5993f1a473bba2a16789'</span>,  <span class="comment">// 数据库_id</span>
+    <span class="comment">// 如果还有其他可能的ID，也加进来</span>
+  ]
+})
+console.log('调试结果:', result)
+            </div>
+            <button class="copy-btn" onclick="copyCode(this.previousElementSibling.innerText)">复制代码</button>
+            
+            <div class="result-box success">
+                <strong>✅ 看哪个ID的查询结果显示"找到"</strong>
+                <p style="margin-top: 10px;">
+                    云函数会尝试3种查询方式：<br>
+                    1. <code>doc(id)</code> - 最标准的查询<br>
+                    2. <code>where({_id})</code> - 条件查询<br>
+                    3. <code>where({dcloud_appid})</code> - 数组字段查询
+                </p>
+            </div>
+        </div>
+        
+        <div class="section">
+            <div class="section-title">🎯 步骤3：使用正确的ID测试转账</div>
+            <div class="code-block">
+<span class="comment">// 用能查到用户的那个ID进行转账测试</span>
+const api = uniCloud.importObject('articleWx')
+const result = await api.testCashbackTransfer({
+  user_id: <span class="string">'正确的ID'</span>,  <span class="comment">// 替换为步骤2找到的正确ID</span>
+  amount: 0.3,
+  desc: <span class="string">'测试转账'</span>
+})
+console.log('转账结果:', result)
+            </div>
+            <button class="copy-btn" onclick="copyCode(this.previousElementSibling.innerText)">复制代码</button>
+        </div>
+        
+        <div class="section">
+            <div class="section-title">🔧 步骤4：修复前端代码</div>
+            <p style="margin-bottom: 15px;">根据步骤2的结果，修改 <code>testCashback.vue</code>：</p>
+            
+            <div class="code-block">
+<span class="comment">// 如果 dcloud_appid[0] 能查到，使用：</span>
+const finalUserId = userInfo.dcloud_appid?.[0] || userInfo._id
+
+<span class="comment">// 或者如果其他字段能查到，使用对应的字段</span>
+const finalUserId = userInfo.正确的字段名
+            </div>
+        </div>
+        
+        <div class="section">
+            <div class="section-title">📊 可能的结果</div>
+            
+            <div class="step">
+                <span class="step-number">A</span>
+                <strong>如果 67d0b... 能查到</strong>
+                <p style="margin-top: 10px; margin-left: 40px;">
+                    说明数据库_id是正确的，需要找到userInfo中哪个字段存储的是这个值。<br>
+                    检查 <code>dcloud_appid</code> 数组中是否包含这个值。
+                </p>
+            </div>
+            
+            <div class="step">
+                <span class="step-number">B</span>
+                <strong>如果 67b0b... 能查到</strong>
+                <p style="margin-top: 10px; margin-left: 40px;">
+                    说明数据库中确实有这条记录，直接使用 <code>userInfo.uid</code> 即可。
+                </p>
+            </div>
+            
+            <div class="step">
+                <span class="step-number">C</span>
+                <strong>如果都查不到</strong>
+                <p style="margin-top: 10px; margin-left: 40px;">
+                    说明需要重新登录，或者检查数据库中是否真的存在该用户。
+                </p>
+            </div>
+        </div>
+        
+        <div class="result-box">
+            <strong>⚠️ 重要提示</strong>
+            <p style="margin-top: 10px;">
+                1. 必须先<span class="important">上传云函数</span>（包含新增的debugUserId方法）<br>
+                2. 记录下能查到用户的那个ID<br>
+                3. 用正确的ID进行转账测试<br>
+                4. 修复前端代码，使用正确的字段获取用户ID
+            </p>
+        </div>
+    </div>
+    
+    <script>
+        function copyCode(text) {
+            const textarea = document.createElement('textarea');
+            textarea.value = text;
+            document.body.appendChild(textarea);
+            textarea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textarea);
+            alert('代码已复制到剪贴板！');
+        }
+    </script>
+</body>
+</html>

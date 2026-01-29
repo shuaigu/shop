@@ -2704,25 +2704,135 @@ module.exports = {
 	},
 	
 	/**
+	 * debugUserId 调试用户ID - 找出正确的数据库ID
+	 * @param {object} params - { test_ids: [id1, id2, ...] }
+	 * @returns {object} 各种ID的查询结果
+	 */
+	async debugUserId(params = {}) {
+		try {
+			const { test_ids = [] } = params;
+			
+			console.log('🔍 开始调试用户ID:', test_ids);
+			
+			const results = [];
+			
+			for (const testId of test_ids) {
+				console.log('\n--- 测试ID:', testId);
+				
+				const idResult = {
+					test_id: testId,
+					queries: []
+				};
+				
+				// 尝试1: 通过 doc() 查询（最标准）
+				try {
+					console.log('  尝试1: doc()');
+					const res1 = await this.userCollection.doc(testId).get();
+					const found = res1.data && res1.data.length > 0;
+					idResult.queries.push({
+						method: 'doc(id)',
+						success: found,
+						data: found ? {
+							_id: res1.data[0]._id,
+							nickname: res1.data[0].nickname,
+							wx_openid: res1.data[0].wx_openid?.[0]?.substr(0, 10) + '***'
+						} : null
+					});
+					console.log('    结果:', found ? '✓ 找到' : '✗ 未找到');
+				} catch (err) {
+					idResult.queries.push({
+						method: 'doc(id)',
+						success: false,
+						error: err.message
+					});
+					console.log('    结果: ✗ 错误 -', err.message);
+				}
+				
+				// 尝试2: 通过 where({_id}) 查询
+				try {
+					console.log('  尝试2: where({_id})');
+					const res2 = await this.userCollection.where({ _id: testId }).get();
+					const found = res2.data && res2.data.length > 0;
+					idResult.queries.push({
+						method: 'where({_id})',
+						success: found,
+						count: res2.data ? res2.data.length : 0
+					});
+					console.log('    结果:', found ? `✓ 找到${res2.data.length}条` : '✗ 未找到');
+				} catch (err) {
+					idResult.queries.push({
+						method: 'where({_id})',
+						success: false,
+						error: err.message
+					});
+					console.log('    结果: ✗ 错误 -', err.message);
+				}
+				
+				// 尝试3: 通过 dcloud_appid 数组查询
+				try {
+					console.log('  尝试3: where({dcloud_appid: elemMatch})');
+					const res3 = await this.userCollection
+						.where({
+							dcloud_appid: this.dbCmd.elemMatch(this.dbCmd.eq(testId))
+						})
+						.get();
+					const found = res3.data && res3.data.length > 0;
+					idResult.queries.push({
+						method: 'where({dcloud_appid})',
+						success: found,
+						count: res3.data ? res3.data.length : 0,
+						real_id: found ? res3.data[0]._id : null
+					});
+					console.log('    结果:', found ? `✓ 找到${res3.data.length}条，真实_id: ${res3.data[0]._id}` : '✗ 未找到');
+				} catch (err) {
+					idResult.queries.push({
+						method: 'where({dcloud_appid})',
+						success: false,
+						error: err.message
+					});
+					console.log('    结果: ✗ 错误 -', err.message);
+				}
+				
+				results.push(idResult);
+			}
+			
+			console.log('\n✅ 调试完成');
+			
+			return {
+				errCode: 0,
+				errMsg: '调试完成',
+				data: results
+			};
+			
+		} catch (err) {
+			console.error('❌ 调试异常:', err);
+			return {
+				errCode: -1,
+				errMsg: '调试失败: ' + err.message
+			};
+		}
+	},
+	
+	/**
 	 * testCashbackTransfer 测试转账功能
-	 * @param {object} params - { amount: 金额, desc: 备注 }
+	 * @param {object} params - { user_id: 用户ID, amount: 金额, desc: 备注 }
 	 * @returns {object} 转账结果
 	 */
 	async testCashbackTransfer(params = {}) {
 		try {
-			const { amount = 0.3, desc = '砍价返现测试' } = params;
+			const { user_id, amount = 0.3, desc = '砍价返现测试' } = params;
 			
-			console.log('🧪 开始测试转账:', { amount, desc });
+			console.log('🧪 开始测试转账:', { user_id, amount, desc });
 			
-			// 获取当前用户ID
-			if (!this.ctx.auth || !this.ctx.auth.uid) {
+			// 验证用户ID
+			if (!user_id) {
 				return {
 					errCode: -1,
-					errMsg: '用户未登录，请先登录'
+					errMsg: '用户ID不能为空'
 				};
 			}
 			
-			const userId = this.ctx.auth.uid;
+			const userId = user_id;
 			
 			// 验证金额
 			if (amount < 0.1 || amount > 500) {
@@ -2734,20 +2844,59 @@ module.exports = {
 			
 			console.log('当前用户ID:', userId);
 			
-			// 获取用户openid
-			const userRes = await this.userCollection.doc(userId)
+			// 获取用户openid - 智能查询策略
+			console.log('→ 查询用户信息...');
+			
+			// 尝试1: 直接通过_id查询（最常见）
+			console.log('  尝试1: doc(' + userId + ')');
+			let userRes = await this.userCollection.doc(userId)
 				.field({ 
 					wx_openid: true,
-					nickname: true
+					nickname: true,
+					_id: true
 				})
 				.get();
 			
+			console.log('  结果1: ' + (userRes.data && userRes.data.length > 0 ? '找到' : '未找到'));
+			
+			// 尝试2: 如果查不到，尝试where条件模糊匹配
 			if (!userRes.data || userRes.data.length === 0) {
+				console.log('  尝试2: where({$or: [{_id}, {dcloud_appid}]})');
+				
+				// 尝试多种可能的字段
+				const dbCmd = this.db.command;
+				userRes = await this.userCollection
+					.where(dbCmd.or([
+						{ _id: userId },
+						{ dcloud_appid: dbCmd.elemMatch(dbCmd.eq(userId)) }
+					]))
+					.field({ 
+						wx_openid: true,
+						nickname: true,
+						_id: true
+					})
+					.limit(1)
+					.get();
+				
+				console.log('  结果2: ' + (userRes.data && userRes.data.length > 0 ? '找到' : '未找到'));
+			}
+			
+			// 最终检查
+			if (!userRes.data || userRes.data.length === 0) {
+				console.error('❌ 所有查询方式都未找到用户');
+				console.error('   userId:', userId);
+				console.error('   请检查：');
+				console.error('   1. userId 是否正确');
+				console.error('   2. 数据库中是否存在该用户');
+				console.error('   3. userInfo 中的字段是否对应数据库_id');
+				
 				return {
 					errCode: -1,
-					errMsg: '用户信息不存在'
+					errMsg: '用户信息不存在。请重新登录或联系管理员。(ID: ' + userId.substr(0, 10) + '...)'
 				};
 			}
+			
+			console.log('✓ 找到用户信息');
 			
 			const user = userRes.data[0];
 			
