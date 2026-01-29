@@ -1,0 +1,158 @@
+{layout name="layout1" /}
+<style>
+  .layui-table-cell {
+    height: auto;
+  }
+</style>
+<div class="wrapper">
+  <div style="padding-bottom: 10px;padding-top: 20px;" class="add">
+    <button class="layui-btn layuiadmin-btn-desk layui-btn-sm layuiadmin-btn-goods layui-btn-normal" data-type="add">新增</button>
+    <button class="layui-btn layuiadmin-btn-desk layui-btn-sm layuiadmin-btn-goods layui-btn-normal" data-type="addMore">批量新增</button>
+    <button class="layui-btn layuiadmin-btn-desk layui-btn-sm layuiadmin-btn-goods layui-btn-primary" data-type="download">批量下载桌贴</button>
+  </div>
+
+  <table id="like-table-lists" lay-filter="like-table-lists"></table>
+
+  <script type="text/html" id="table-operation">
+    <a class="layui-btn layui-btn-normal layui-btn-sm" lay-event="edit">编辑</a>
+    <a class="layui-btn layui-btn-normal layui-btn-sm" lay-event="qrcode">二维码</a>
+    <a class="layui-btn layui-btn-danger layui-btn-sm" lay-event="del">删除</a>
+  </script>
+</div>
+
+<script>
+  layui.use(['table', 'form', 'element'], function(){
+    var $ = layui.$
+            ,form = layui.form
+            ,table = layui.table
+            ,element = layui.element;
+
+    // 监听行工具栏按钮
+    $('.layui-btn.layuiadmin-btn-desk').on('click', function(){
+      var type = $(this).data('type');
+      active[type] ? active[type].call(this) : '';
+    });
+
+    //获取列表
+    getList(); // 初始加载
+    function getList() {
+      like.tableLists('#like-table-lists', '{:url("desk/lists")}', [
+        {type: 'checkbox'}
+        ,{field: 'number', title: '桌号'}
+        ,{field: 'remarks', title: '备注'}
+        ,{field: 'create_time', title: '创建时间'}
+        ,{fixed: 'right', title: '操作', align: 'center', toolbar: '#table-operation', width: 220}
+      ]);
+    }
+
+    //事件
+    var active = {
+      //新增
+      add: function(){
+        layer.open({
+          type: 2
+          ,title: '新增'
+          ,content: '{:url("desk/add")}'
+          ,area: ['460px', '300px']
+        });
+      },
+      //批量新增
+      addMore: function(){
+        layer.open({
+          type: 2
+          ,title: '批量新增'
+          ,content: '{:url("desk/addMore")}'
+          ,area: ['534px', '300px']
+        });
+      },
+      //批量下载桌贴
+      download: function(){
+        // var loadIndex = layui.layer.load(2);
+        var checkStatus = table.checkStatus('like-table-lists');
+        var checkData = checkStatus.data;
+        var ids = [];
+        // 取出选中的行ID
+        checkData.forEach(function (item) {
+          ids.push(parseInt(item['id']));
+        });
+        if (ids.length <= 0) {
+          // layui.layer.close(loadIndex)
+          layui.layer.msg('未选择', {time: 1000});
+          return false;
+        }
+        // 提交数据
+        like.ajax({
+          url:'{:url("desk/stickerZip")}',
+          data:{"ids":ids},
+          type:"post",
+          timeout: 300000,
+          success:function(res) {
+            if(res.code === 1) {
+              window.open(res.data.url, '_blank', '');
+              layui.layer.msg(res.msg, {offset:'15px', icon:1 ,time: 1000});
+            } else {
+              layui.layer.msg(res.msg, {offset:'15px', icon:2 ,time: 1000});
+            }
+          },
+          error : function (res) {
+            layui.layer.msg(res.statusText, {icon: 2});
+          },
+          complete : function () {
+            // layui.layer.close(loadIndex)
+          },
+        });
+
+      },
+    };
+
+    //监听工具条
+    table.on('tool(like-table-lists)', function(obj){
+      var id = obj.data.id;
+      var number = obj.data.number;
+
+      //编辑
+      if(obj.event === 'edit') {
+        layer.open({
+          type: 2
+          ,title: '编辑'
+          ,content: '{:url("desk/edit")}?id='+id
+          ,area: ['460px', '300px']
+        });
+      }
+      //删除
+      if(obj.event === 'del') {
+        layer.confirm('确定删除桌号：'+'<span style="color: red">'+number+'</span>', function(index){
+          like.ajax({
+            url:'{:url("desk/del")}',
+            data:{id:id},
+            type:"post",
+            success:function(res)
+            {
+              if(res.code == 1)
+              {
+                layui.layer.msg(res.msg, {
+                  offset: '15px'
+                  , icon: 1
+                  , time: 1000
+                });
+                layer.close(index); //关闭弹层
+                table.reload('like-table-lists'); //数据刷新
+              }
+            }
+          });
+          layer.close(index);
+        })
+      }
+      //二维码
+      if(obj.event === 'qrcode') {
+        layer.open({
+          type: 2
+          ,title: '二维码'
+          ,content: '{:url("desk/qrcode")}?id='+id
+          ,area: ['700px', '450px']
+        });
+      }
+    });
+
+  });
+</script>
