@@ -61,6 +61,14 @@
 			>
 				{{ testing ? '转账中...' : '🚀 开始测试转账' }}
 			</button>
+			
+			<button 
+				class="btn get-ip-btn" 
+				@click="getCloudIP"
+				style="margin-top: 20rpx; background: #48bb78;"
+			>
+				🌐 获取云函数出口IP
+			</button>
 		</view>
 		
 		<!-- 转账结果 -->
@@ -345,6 +353,45 @@ const doTest = async () => {
 	} finally {
 		testing.value = false
 		log('=== 测试结束 ===')
+	}
+}
+
+// 获取云函数出口IP
+const getCloudIP = async () => {
+	try {
+		log('=== 获取云函数出口IP ===')
+		uni.showLoading({ title: '获取中...' })
+		
+		const api = uniCloud.importObject('articleWx')
+		const res = await api.getCloudFunctionIP()
+		
+		uni.hideLoading()
+		
+		if (res.errCode === 0) {
+			const ip = res.data.ip
+			log('✓ 云函数出口IP: ' + ip)
+			
+			result.value = `🌐 云函数出口IP\n\nIP地址: ${ip}\n\n请将此IP添加到微信支付商户平台的IP白名单中：\n\n1. 登录 pay.weixin.qq.com\n2. 账户中心 → API安全 → IP白名单\n3. 添加上述IP地址`
+			resultSuccess.value = true
+			resultClass.value = 'success'
+			
+			// 复制IP到剪贴板
+			uni.setClipboardData({
+				data: ip,
+				success: () => {
+					uni.showToast({ title: 'IP已复制', icon: 'success' })
+				}
+			})
+		} else {
+			log('✗ 获取失败: ' + res.errMsg)
+			result.value = '获取IP失败: ' + res.errMsg
+			resultClass.value = 'error'
+		}
+	} catch (err) {
+		uni.hideLoading()
+		log('✗ 异常: ' + err.message)
+		result.value = '获取IP异常: ' + err.message
+		resultClass.value = 'error'
 	}
 }
 

@@ -10,7 +10,7 @@ module.exports = {
 		// 初始化数据库连接
 		this.db = uniCloud.database()
 		this.dbCmd = this.db.command
-		this.userCollection = this.db.collection('uni-id-users')
+		this.userCollection = this.db.collection('user')  // 修正：表名是user而不是uni-id-users
 		this.articleCollection = this.db.collection('articleList')
 		this.commentCollection = this.db.collection('commentList')
 		this.viewRecordCollection = this.db.collection('viewRecord')
@@ -2704,6 +2704,57 @@ module.exports = {
 	},
 	
 	/**
+	 * getCloudFunctionIP 获取云函数出口IP地址
+	 * @returns {object} IP信息
+	 */
+	async getCloudFunctionIP() {
+		try {
+			console.log('🔍 获取云函数出口IP...');
+			
+			// 方法1：调用外部API获取IP
+			const result = await uniCloud.httpclient.request('https://api.ipify.org?format=json', {
+				method: 'GET',
+				dataType: 'json'
+			});
+			
+			console.log('云函数出口IP:', result.data);
+			
+			return {
+				errCode: 0,
+				errMsg: '获取成功',
+				data: {
+					ip: result.data.ip,
+					message: '请将此IP添加到微信支付商户平台的IP白名单中'
+				}
+			};
+		} catch (err) {
+			console.error('获取IP失败:', err);
+			
+			// 方法2：尝试另一个API
+			try {
+				const result2 = await uniCloud.httpclient.request('https://httpbin.org/ip', {
+					method: 'GET',
+					dataType: 'json'
+				});
+				
+				return {
+					errCode: 0,
+					errMsg: '获取成功',
+					data: {
+						ip: result2.data.origin,
+						message: '请将此IP添加到微信支付商户平台的IP白名单中'
+					}
+				};
+			} catch (err2) {
+				return {
+					errCode: -1,
+					errMsg: '获取IP失败: ' + err2.message
+				};
+			}
+		}
+	},
+	
+	/**
 	 * debugUserId 调试用户ID - 找出正确的数据库ID
 	 * @param {object} params - { test_ids: [id1, id2, ...] }
 	 * @returns {object} 各种ID的查询结果
@@ -2852,6 +2903,7 @@ module.exports = {
 			let userRes = await this.userCollection.doc(userId)
 				.field({ 
 					wx_openid: true,
+					openid_wx: true,  // 兼容：有的表用openid_wx
 					nickname: true,
 					_id: true
 				})
@@ -2872,6 +2924,7 @@ module.exports = {
 					]))
 					.field({ 
 						wx_openid: true,
+						openid_wx: true,  // 兼容：有的表用openid_wx
 						nickname: true,
 						_id: true
 					})
@@ -2899,15 +2952,29 @@ module.exports = {
 			console.log('✓ 找到用户信息');
 			
 			const user = userRes.data[0];
+			console.log('用户数据:', JSON.stringify(user));
 			
-			if (!user.wx_openid || !user.wx_openid[0]) {
+			// 兼容两种openid字段名：wx_openid 或 openid_wx
+			let openid = null;
+			if (user.wx_openid && user.wx_openid[0]) {
+				openid = user.wx_openid[0];
+				console.log('使用字段: wx_openid');
+			} else if (user.openid_wx) {
+				// openid_wx 可能是字符串或数组
+				openid = Array.isArray(user.openid_wx) ? user.openid_wx[0] : user.openid_wx;
+				console.log('使用字段: openid_wx');
+			}
+			
+			if (!openid) {
+				console.error('❌ 用户没有openid');
+				console.error('   wx_openid:', user.wx_openid);
+				console.error('   openid_wx:', user.openid_wx);
 				return {
 					errCode: -1,
 					errMsg: '用户openid不存在，请重新授权登录'
 				};
 			}
 			
-			const openid = user.wx_openid[0];
 			console.log('用户openid:', openid);
 			console.log('用户昵称:', user.nickname);
 			
@@ -2915,19 +2982,26 @@ module.exports = {
 			const cashbackHandler = new CashbackHandlerV3();
 			const startTime = Date.now();
 			
+			// 🔑 重要：金额需要转换为分（amount是元，乘以100）
+			const amountInFen = Math.round(amount * 100);
+			console.log('转账金额:', amount + '元 = ' + amountInFen + '分');
+			
 			const result = await cashbackHandler.transferToBalance({
 				openid: openid,
-				amount: amount,
+				amount: amountInFen,  // 传入分
 				desc: desc,
 				user_name: null // 测试时不校验姓名
 			});
+			
+			console.log('转账API返回:', JSON.stringify(result));
 			
 			const processTime = Date.now() - startTime;
 			
 			if (result.success) {
 				console.log('✅ 测试转账成功!', {
-					transaction_id: result.transaction_id,
-					amount: amount,
+					batch_id: result.batch_id,
+					out_batch_no: result.out_batch_no,
+					amount: amount + '元',
 					process_time: processTime + 'ms'
 				});
 				
@@ -2935,17 +3009,23 @@ module.exports = {
 					errCode: 0,
 					errMsg: '测试转账成功',
 					data: {
-						transaction_id: result.transaction_id,
+						transaction_id: result.batch_id || result.out_batch_no,
+						batch_id: result.batch_id,
+						out_batch_no: result.out_batch_no,
 						amount: amount,
 						process_time: processTime + 'ms',
 						openid: openid.substr(0, 8) + '***' // 脱敏
 					}
 				};
 			} else {
-				console.error('❌ 测试转账失败:', result.error);
+				console.error('❌ 测试转账失败:', result.message);
 				return {
 					errCode: -1,
-					errMsg: '转账失败: ' + result.error
+					errMsg: '转账失败: ' + (result.message || result.error || '未知错误'),
+					data: {
+						code: result.code,
+						message: result.message
+					}
 				};
 			}
 			
