@@ -71,7 +71,11 @@ class PayLogic extends Logic
                     $data = self::wechatPay($order->id, $post['from'],$client_id);
                     break;
                 case PayEnum::BALANCE_PAY://余额支付
-                    self::balancePay($order->id);
+                    if ($post['from'] == 'marketing_chat') {
+                        self::marketingChatBalancePay($order->id);
+                    } else {
+                        self::balancePay($order->id);
+                    }
                     break;
                 case PayEnum::ALI_PAY://支付宝支付
                     $data = self::aliPay($order->id, $post['from'],$client_id);
@@ -155,6 +159,49 @@ class PayLogic extends Logic
         ]);
 
         return true;
+    }
+
+    /**
+     * @notes 营销聊天订单余额支付
+     * @param $order_id
+     * @throws Exception
+     * @author AI Assistant
+     * @date 2026/1/30
+     */
+    public static function marketingChatBalancePay($order_id)
+    {
+        $order = MarketingChatOrder::where([
+            ['id', '=', $order_id]
+        ])->find();
+
+        if (empty($order)) {
+            throw new Exception('订单不存在');
+        }
+        if (PayEnum::ISPAID == $order->pay_status) {
+            throw new Exception('订单已支付');
+        }
+        
+        $user_balance = User::where(['id' => $order->user_id])->value('user_money');
+        if ($user_balance < $order->order_amount) {
+            throw new Exception('余额不足');
+        }
+        
+        //修改用户余额
+        $user = User::find($order->user_id);
+        $user->user_money = ['dec', $order->order_amount];
+        $user->save();
+        
+        //记录余额变动
+        AccountLogLogic::AccountRecord($order->user_id, $order->order_amount, 2, AccountLog::balance_pay_order);
+        
+        //更新订单状态
+        MarketingChatOrder::where(['id' => $order_id])
+            ->update([
+                'pay_status'    => PayEnum::ISPAID,
+                'pay_way'       => PayEnum::BALANCE_PAY,
+                'pay_time'      => time(),
+                'update_time'   => time()
+            ]);
     }
 
     /**

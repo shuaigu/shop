@@ -1,4 +1,10 @@
--- 营销聊天订单表
+-- =============================================
+-- 营销聊天订单表创建脚本
+-- 表名前缀：ls_ （根据你的实际数据库配置）
+-- 执行此脚本创建营销聊天订单表
+-- =============================================
+
+-- 创建营销聊天订单表
 CREATE TABLE IF NOT EXISTS `ls_marketing_chat_order` (
   `id` int(11) unsigned NOT NULL AUTO_INCREMENT COMMENT '订单ID',
   `order_sn` varchar(64) NOT NULL DEFAULT '' COMMENT '订单编号',
@@ -17,3 +23,6 @@ CREATE TABLE IF NOT EXISTS `ls_marketing_chat_order` (
   KEY `user_id` (`user_id`),
   KEY `pay_status` (`pay_status`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='营销聊天订单表';
+
+-- 验证表是否创建成功
+SELECT '✓ 表创建成功！' AS message, COUNT(*) AS row_count FROM `ls_marketing_chat_order`;
