@@ -61,6 +61,33 @@
                     <view class="xs muted">{{ menuList[1].describe }}</view>
                 </view>
             </view>
+            <!-- 推荐商品 -->
+            <view class="product-section" v-if="shopData && Object.keys(shopData).length">
+                <view class="section-title">
+                    <view class="title-text">今日推荐</view>
+                    <view class="title-desc">为您精选优质商品</view>
+                </view>
+                
+                <view class="product-card" v-if="recommendProduct" @click="goToProductDetail(recommendProduct.shop_goods_id)">
+                    <image class="product-image" :src="recommendProduct.image" mode="aspectFill"></image>
+                    <view class="product-info">
+                        <view class="product-name">{{ recommendProduct.name }}</view>
+                        <view class="product-desc">{{ recommendProduct.remark || '新鲜美味，值得品尝' }}</view>
+                        <view class="product-footer">
+                            <view class="product-price">
+                                <text class="price-symbol">¥</text>
+                                <text class="price-value">{{ recommendProduct.price }}</text>
+                            </view>
+                            <view class="order-btn">立即下单</view>
+                        </view>
+                    </view>
+                </view>
+
+                <view class="product-empty" v-else>
+                    <text class="muted">暂无推荐商品</text>
+                </view>
+            </view>
+
             <view class="activity" v-if="shopData && Object.keys(shopData).length">
                 <swipers height="380rpx" :pid="3"></swipers>
                 <div class="m-t-30">
@@ -92,8 +119,8 @@
 
 <script>
 import MescrollMixin from '@/components/mescroll-uni/mescroll-mixins'
-import { mapActions, mapMutations, mapGetters } from 'vuex'
-import { getMenu } from '@/api/store'
+import { mapGetters } from 'vuex'
+import { getMenu, getShopGoodsList } from '@/api/store'
 import { menuJump } from '@/utils/tools'
 export default {
     mixins: [MescrollMixin],
@@ -106,13 +133,15 @@ export default {
                 {
                     image: ''
                 }
-            ]
+            ],
+            recommendProduct: null
         }
     },
 
     methods: {
         async downCallback() {
             await this.getMenuFun()
+            await this.getRecommendProduct()
             this.mescroll.endSuccess(0, false)
         },
 
@@ -145,6 +174,35 @@ export default {
             }
         },
 
+        // 获取推荐商品
+        async getRecommendProduct() {
+            if (!this.shopData || !this.shopData.id) return
+            try {
+                const { data, code } = await getShopGoodsList({
+                    shop_id: this.shopData.id,
+                    page_no: 1,
+                    page_size: 1
+                })
+                if (code == 1 && Array.isArray(data)) {
+                    const firstCategory = data.find((item) => item.goods && item.goods.length > 0)
+                    this.recommendProduct = firstCategory ? firstCategory.goods[0] : null
+                } else {
+                    this.recommendProduct = null
+                }
+            } catch (error) {
+                console.log('获取推荐商品失败', error)
+                this.recommendProduct = null
+            }
+        },
+
+        // 跳转到商品详情页
+        goToProductDetail(id) {
+            if (!id) return
+            uni.navigateTo({
+                url: `/pages/goods_detail/goods_detail?id=${id}`
+            })
+        },
+
         menuJump(item) {
             menuJump(item)
         },
@@ -163,8 +221,18 @@ export default {
         ...mapGetters(['userInfo', 'shopData', 'appConfig'])
     },
     onShow() {
-        // uni.hideTabBar()
-        // this.getCartNum()
+        this.getMenuFun()
+        this.getRecommendProduct()
+    },
+    watch: {
+        shopData: {
+            handler(val) {
+                if (val && val.id) {
+                    this.getRecommendProduct()
+                }
+            },
+            immediate: true
+        }
     }
 }
 </script>
@@ -206,6 +274,95 @@ page {
 
 .activity {
     margin: 30rpx 24rpx;
+}
+
+.product-section {
+    margin: 30rpx 24rpx;
+    padding: 30rpx 24rpx;
+    background: #fff;
+    border-radius: 20rpx;
+}
+
+.section-title {
+    margin-bottom: 20rpx;
+
+    .title-text {
+        font-size: 34rpx;
+        font-weight: 600;
+        color: #222222;
+    }
+
+    .title-desc {
+        margin-top: 8rpx;
+        font-size: 24rpx;
+        color: #999999;
+    }
+}
+
+.product-card {
+    display: flex;
+    background: #fafafa;
+    border-radius: 16rpx;
+    padding: 20rpx;
+}
+
+.product-image {
+    width: 160rpx;
+    height: 160rpx;
+    border-radius: 12rpx;
+    background: #f0f0f0;
+}
+
+.product-info {
+    flex: 1;
+    margin-left: 20rpx;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+.product-name {
+    font-size: 30rpx;
+    font-weight: 500;
+    color: #222222;
+}
+
+.product-desc {
+    margin-top: 10rpx;
+    font-size: 24rpx;
+    color: #999999;
+    line-height: 1.4;
+}
+
+.product-footer {
+    margin-top: 14rpx;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.product-price {
+    color: #e64340;
+    font-weight: 600;
+    font-size: 30rpx;
+
+    .price-symbol {
+        font-size: 22rpx;
+        margin-right: 4rpx;
+    }
+}
+
+.order-btn {
+    padding: 10rpx 24rpx;
+    border-radius: 999rpx;
+    background: #ff4d4f;
+    color: #ffffff;
+    font-size: 24rpx;
+}
+
+.product-empty {
+    padding: 30rpx 0;
+    text-align: center;
 }
 
 .hd-wrap {
