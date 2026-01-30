@@ -6,8 +6,8 @@
                 <text class="close-icon">×</text>
             </view>
             <view class="banner-text">
-                <text class="banner-title">我们帮您把业务/产品推广出去</text>
-                <text class="banner-subtitle">您只需要等着客户主动找上门</text>
+                <text class="banner-title">{{ bannerTitle }}</text>
+                <text class="banner-subtitle">{{ bannerSubtitle }}</text>
             </view>
             <view class="banner-arrow">
                 <text class="arrow-icon">∨</text>
@@ -74,7 +74,7 @@
 
         <!-- 底部备案信息 -->
         <view class="footer-info">
-            <text class="footer-text">页面信息及服务由XXX企业管理有限公司提供</text>
+            <text class="footer-text">{{ footerText }}</text>
         </view>
     </view>
 </template>
@@ -86,71 +86,59 @@ export default {
             scrollTop: 0,
             isTyping: false,
             currentStep: 0,
-            // 客服头像 - 可以替换为实际的客服头像图片
             serviceAvatar: 'https://img.yzcdn.cn/vant/cat.jpeg',
             userAvatar: '/static/images/portrait_empty.png',
             visibleMessages: [],
-            // 对话流程定义
-            chatFlow: [
-                {
-                    type: 'service',
-                    content: '我们是做全行业获客的专业团队，能够帮助您精准获取客户；意向客户会主动添加您，全行业均可做；若您有需求，请认真回答以下问题。',
-                    delay: 500
-                },
-                {
-                    type: 'service',
-                    content: '您是否整面临获客难、成本高的问题？',
-                    delay: 1000,
-                    waitForResponse: true,
-                    responseKey: 'hasCustomerProblem',
-                    buttons: [
-                        { text: '是', value: true },
-                        { text: '否', value: false }
-                    ]
-                },
-                {
-                    type: 'service',
-                    content: '您想要获取哪里的客户？',
-                    delay: 800,
-                    waitForResponse: true,
-                    responseKey: 'customerLocation',
-                    buttons: [
-                        { text: '本地客户', value: 'local' },
-                        { text: '全国客户', value: 'national' }
-                    ]
-                },
-                {
-                    type: 'service',
-                    content: '我们提供精准客户，您是否接受1000-3000/年的合作费用？',
-                    delay: 800,
-                    waitForResponse: true,
-                    responseKey: 'acceptPrice',
-                    buttons: [
-                        { text: '是', value: true, type: 'primary' },
-                        { text: '否', value: false, type: 'warning' }
-                    ]
-                },
-                {
-                    type: 'service',
-                    content: '太棒了！请留下您的联系方式，我们的专业顾问将在24小时内与您联系。',
-                    delay: 800,
-                    condition: { key: 'acceptPrice', value: true }
-                },
-                {
-                    type: 'service',
-                    content: '感谢您的关注！如果以后有需要，随时欢迎咨询我们。',
-                    delay: 800,
-                    condition: { key: 'acceptPrice', value: false }
-                }
-            ],
-            userResponses: {}
+            chatFlow: [],
+            userResponses: {},
+            bannerTitle: '我们帮您把业务/产品推广出去',
+            bannerSubtitle: '您只需要等着客户主动找上门',
+            footerText: '页面信息及服务由XXX企业管理有限公司提供',
+            isLoading: true
         }
     },
-    onLoad() {
+    async onLoad() {
+        // 加载配置
+        await this.loadConfig()
         // 开始对话
         this.startChat()
     },
     methods: {
+        async loadConfig() {
+            try {
+                uni.showLoading({ title: '加载中...' })
+                const { data, code } = await getMarketingChatConfig()
+                if (code === 1 && data) {
+                    // 更新配置
+                    this.chatFlow = data.chat_flow || []
+                    this.serviceAvatar = data.service_avatar || this.serviceAvatar
+                    this.bannerTitle = data.banner_title || this.bannerTitle
+                    this.bannerSubtitle = data.banner_subtitle || this.bannerSubtitle
+                    this.footerText = data.footer_text || this.footerText
+                }
+                this.isLoading = false
+            } catch (error) {
+                console.error('加载配置失败', error)
+                uni.showToast({ title: '加载失败', icon: 'none' })
+                // 使用默认配置
+                this.chatFlow = this.getDefaultChatFlow()
+                this.isLoading = false
+            } finally {
+                uni.hideLoading()
+            }
+        },
+
+        getDefaultChatFlow() {
+            // 默认配置，防止接口失败
+            return [
+                {
+                    type: 'service',
+                    content: '您好，请问有什么可以帮助您的吗？',
+                    delay: 500
+                }
+            ]
+        },
+
         goBack() {
             uni.navigateBack({
                 delta: 1,

@@ -114,3 +114,8 @@ export function apiMyCouponList(params) {
 export function apiShopNoticeDetail(params) {
   return request.get("shop/announcementDetail", { params });
 }
+
+// 获取营销聊天配置
+export function getMarketingChatConfig() {
+  return request.get("setting/getMarketingChatConfig");
+}

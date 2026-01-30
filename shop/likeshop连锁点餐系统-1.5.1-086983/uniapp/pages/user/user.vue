@@ -91,6 +91,10 @@
                             <image class="nav-icon" src="/static/images/coupon.png"></image>
                             <view class="sm nav-name">打款测试</view>
                         </view>
+                        <view class="item flex-col col-center m-b-20" style="width: 25%" @tap="goMarketingChat">
+                            <image class="nav-icon" src="/static/images/icon_wechat.png"></image>
+                            <view class="sm nav-name">在线咨询</view>
+                        </view>
                         <button
                             v-for="(item, index) in menuList"
                             :key="index"
@@ -189,6 +193,12 @@ export default {
             // 联系客服
             if (item.link_type == 2) return
             menuJump(item)
+        },
+
+        goMarketingChat() {
+            uni.navigateTo({
+                url: '/pages/marketing_chat/marketing_chat'
+            })
         }
     },
     computed: {
