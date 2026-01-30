@@ -80,6 +80,8 @@
 </template>
 
 <script>
+import { getMarketingChatConfig } from '@/api/store'
+
 export default {
     data() {
         return {
