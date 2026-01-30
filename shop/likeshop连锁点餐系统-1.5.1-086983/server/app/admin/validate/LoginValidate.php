@@ -91,6 +91,10 @@ class LoginValidate extends Validate
      */
     protected function safe($add = false)
     {
+        // 已禁用登录次数限制
+        return true;
+        
+        /*
         $cache_name = 'admin_login_error_count' . request()->ip();
         if ($add) {
             $admin_login_error_count = Cache::get($cache_name);
@@ -102,6 +106,7 @@ class LoginValidate extends Validate
             return false;
         }
         return true;
+        */
     }
 
 }
