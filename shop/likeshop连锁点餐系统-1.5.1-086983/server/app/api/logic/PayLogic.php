@@ -12,6 +12,7 @@ use app\common\{basics\Logic,
     model\order\Order,
     model\Pay,
     model\RechargeOrder,
+    model\MarketingChatOrder,
     model\shop\ShopGoods,
     model\user\User,
     server\AliPayServer,
@@ -55,6 +56,12 @@ class PayLogic extends Logic
             }
             if ($post['from'] == 'recharge') {
                 $order = RechargeOrder::findOrEmpty($post['order_id']);
+                $order->pay_way = $post['pay_way'];
+                $order->save();
+            }
+            if ($post['from'] == 'marketing_chat') {
+                // 营销聊天订单
+                $order = MarketingChatOrder::findOrEmpty($post['order_id']);
                 $order->pay_way = $post['pay_way'];
                 $order->save();
             }
@@ -179,6 +186,11 @@ class PayLogic extends Logic
                     ['id', '=', $order_id]
                 ])->find();
                 break;
+            case "marketing_chat":
+                $order = MarketingChatOrder::where([
+                    ['id', '=', $order_id]
+                ])->find();
+                break;
         }
         if (empty($order)) {
             throw new Exception('订单不存在');
@@ -223,6 +235,11 @@ class PayLogic extends Logic
                 break;
             case "recharge":
                 $order = RechargeOrder::where([
+                    ['id', '=', $order_id]
+                ])->find();
+                break;
+            case "marketing_chat":
+                $order = MarketingChatOrder::where([
                     ['id', '=', $order_id]
                 ])->find();
                 break;
@@ -331,13 +348,15 @@ class PayLogic extends Logic
 
         if($params['from'] == 'order') {
             $order = Order::findOrEmpty($params['order_id']);
+        } elseif($params['from'] == 'marketing_chat') {
+            $order = MarketingChatOrder::findOrEmpty($params['order_id']);
         } else {
             $order = RechargeOrder::findOrEmpty($params['order_id']);
         }
         return [
             'pay_way' => $payway,
             'order_amount' => $order['order_amount'],
-            'cancel_time' => $order['cancel_time'],
+            'cancel_time' => $order['cancel_time'] ?? 0,
         ];
     }
 

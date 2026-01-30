@@ -9,6 +9,7 @@ use app\api\
 use app\common\{
     basics\Api,
     model\Client_,
+    model\MarketingChatOrder,
     server\JsonServer,
     server\WeChatServer,
     server\AliPayServer,
@@ -132,5 +133,53 @@ class Pay extends Api
 
         $data = $this->request->post();
         return (new AliPayServer())->verifyNotify($data);
+    }
+
+    /**
+     * @notes 创建营销聊天订单
+     * @return \think\response\Json
+     * @throws \think\db\exception\DbException
+     */
+    public function createMarketingChatOrder()
+    {
+        $amount = $this->request->post('amount', 0);
+        $remark = $this->request->post('remark', '营销聊天诚意金');
+        
+        // 验证金额
+        if (!$amount || $amount <= 0) {
+            return JsonServer::error('请输入正确的金额');
+        }
+
+        // 验证用户登录
+        if (!$this->user_id) {
+            return JsonServer::error('用户未登录，请先登录');
+        }
+
+        try {
+            // 创建订单
+            $order = new MarketingChatOrder();
+            $order->order_sn = MarketingChatOrder::generateOrderSn();
+            $order->user_id = $this->user_id;
+            $order->order_amount = $amount;
+            $order->pay_status = 0; // 未支付
+            $order->remark = $remark;
+            $order->create_time = time();
+            $order->update_time = time();
+            $order->save();
+
+            return JsonServer::success('订单创建成功', [
+                'order_id' => $order->id,
+                'order_sn' => $order->order_sn,
+                'order_amount' => $order->order_amount
+            ]);
+        } catch (\Exception $e) {
+            // 返回详细错误信息（开发环境）
+            $errorMsg = '创建订单失败';
+            // if (config('app.app_debug')) {
+            //     $errorMsg .= ': ' . $e->getMessage();
+            // }
+            $errorMsg .= ': ' . $e->getMessage(); // 临时显示详细错误
+            return JsonServer::error($errorMsg);
+        }
     }
 }

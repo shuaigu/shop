@@ -30,6 +30,7 @@ use app\common\{enum\NoticeEnum,
     model\order\Order,
     enum\OrderLogEnum,
     model\RechargeOrder,
+    model\MarketingChatOrder,
     model\order\OrderLog,
     server\ConfigServer};
 use think\{
@@ -199,6 +200,45 @@ class PayNotifyLogic
 //        $total_integral > 0 && AccountLogLogic::AccountRecord($user->id, $total_integral, 1, AccountLog::recharge_give_integral);
         //记录成长值
 //        $order['give_growth'] > 0 && AccountLogLogic::AccountRecord($user->id, $order['give_growth'], 1, AccountLog::recharge_give_growth);
+    }
+
+    /**
+     * @notes 营销聊天订单回调
+     * @param $order_sn
+     * @param array $extra
+     * @throws \think\db\exception\DataNotFoundException
+     * @throws \think\db\exception\DbException
+     * @throws \think\db\exception\ModelNotFoundException
+     * @author system
+     * @date 2026/01/30
+     */
+    private static function marketing_chat($order_sn, $extra = [])
+    {
+        $now = time();
+        $order = MarketingChatOrder::where('order_sn', $order_sn)->find();
+        
+        if (!$order) {
+            throw new Exception('订单不存在');
+        }
+        
+        // 更新订单状态
+        $data = [
+            'pay_status' => PayEnum::ISPAID,
+            'pay_time' => $now,
+            'update_time' => $now
+        ];
+        
+        // 如果返回了第三方流水号
+        if (isset($extra['transaction_id'])) {
+            $data['transaction_id'] = $extra['transaction_id'];
+        }
+        
+        MarketingChatOrder::update($data, ['id' => $order['id']]);
+        
+        // 可以在这里添加后续处理逻辑，比如：
+        // - 记录用户付款记录
+        // - 发送支付成功通知
+        // - 其他业务逻辑
     }
 
 }

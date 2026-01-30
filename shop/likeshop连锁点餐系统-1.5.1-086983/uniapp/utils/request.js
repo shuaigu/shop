@@ -89,12 +89,26 @@ service.interceptors.response.use(
 		return Promise.resolve(response.data)
 	},
 	error => {
-		uni.showToast({
-			title: "系统错误",
-			icon: "none"
-		})
-		console.log(error)
+		let errorMsg = "系统错误"
+		
+		// 尝试从响应中获取详细错误信息
+		if (error.response && error.response.data) {
+			const { msg, message } = error.response.data
+			errorMsg = msg || message || errorMsg
+		} else if (error.message) {
+			errorMsg = error.message
+		}
+		
+		console.log('请求错误:', error)
+		console.log('错误详情:', error.response)
 		console.log('err' + error) // for debug
+		
+		uni.showToast({
+			title: errorMsg,
+			icon: "none",
+			duration: 3000
+		})
+		
 		return Promise.reject(error)
 	}
 )

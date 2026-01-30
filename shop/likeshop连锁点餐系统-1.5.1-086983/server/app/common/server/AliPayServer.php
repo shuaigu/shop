@@ -200,6 +200,13 @@ class AliPayServer
                     }
                     PayNotifyLogic::handle('recharge', $data['out_trade_no'], $extra);
                     break;
+                case 'marketing_chat':
+                    $order = Db::name('marketing_chat_order')->where(['order_sn' => $data['out_trade_no']])->find();
+                    if (!$order || $order['pay_status'] >= PayEnum::ISPAID) {
+                        return true;
+                    }
+                    PayNotifyLogic::handle('marketing_chat', $data['out_trade_no'], $extra);
+                    break;
             }
 
             return true;

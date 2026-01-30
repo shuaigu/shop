@@ -327,17 +327,34 @@ export default {
         // 创建付款订单
         async createPayOrder(amount) {
             try {
-                const { data, code, msg } = await createMarketingPayOrder({ 
+                const response = await createMarketingPayOrder({ 
                     amount: amount,
                     remark: '营销聊天诚意金'
                 })
+                
+                console.log('创建订单响应:', response)
+                
+                const { data, code, msg } = response
                 if (code === 1) {
                     return { data }
                 } else {
-                    throw new Error(msg || '创建订单失败')
+                    const errorMsg = msg || '创建订单失败'
+                    console.error('创建订单失败，错误信息:', errorMsg)
+                    uni.showToast({
+                        title: errorMsg,
+                        icon: 'none',
+                        duration: 3000
+                    })
+                    throw new Error(errorMsg)
                 }
             } catch (error) {
-                console.error('创建订单失败', error)
+                console.error('创建订单异常:', error)
+                const errorMsg = error.message || error.msg || error.errMsg || '创建订单失败'
+                uni.showToast({
+                    title: errorMsg,
+                    icon: 'none',
+                    duration: 3000
+                })
                 throw error
             }
         },

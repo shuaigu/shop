@@ -210,6 +210,16 @@ class WeChatPayServer
                     'attach'        => 'recharge'
                 ];
                 break;
+            case 'marketing_chat':
+                $attributes = [
+                    'trade_type'    => 'JSAPI',
+                    'body'          => '营销聊天诚意金',
+                    'total_fee'     => $order['order_amount'] * 100, // 单位：分
+                    'notify_url'    => $notify_url,
+                    'openid'        => $auth['openid'],
+                    'attach'        => 'marketing_chat'
+                ];
+                break;
         }
 
         //app支付类型
@@ -331,6 +341,13 @@ class WeChatPayServer
                             return true;
                         }
                         PayNotifyLogic::handle('recharge', $message['out_trade_no'], $extra);
+                        break;
+                    case 'marketing_chat':
+                        $order = Db::name('marketing_chat_order')->where(['order_sn' => $message['out_trade_no']])->find();
+                        if (!$order || $order['pay_status'] >= PayEnum::ISPAID) {
+                            return true;
+                        }
+                        PayNotifyLogic::handle('marketing_chat', $message['out_trade_no'], $extra);
                         break;
                 }
             } elseif ($message['result_code'] === 'FAIL') {
