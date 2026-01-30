@@ -61,11 +61,11 @@
                     <view class="xs muted">{{ menuList[1].describe }}</view>
                 </view>
             </view>
-            <view class="activity" v-if="Object.keys(shopData).length">
+            <view class="activity" v-if="shopData && Object.keys(shopData).length">
                 <swipers height="380rpx" :pid="3"></swipers>
                 <div class="m-t-30">
                     <div class="flex" @click="onSelectStore">
-                        <u-icon name="map-fill"></u-icon>
+                        <u-icon name="map-fill" color="#333"></u-icon>
                         <div>
                             <text class="font-primary">{{ shopData.name }}</text>
                             <text class="muted m-l-10"> | {{ shopData.distance }}</text>
@@ -73,7 +73,7 @@
                     </div>
                     <div class="muted m-t-10 xs" @click="menuJump(menuList[0])">
                         <text>带你发掘更多线下门店</text>
-                        <u-icon name="arrow-right"></u-icon>
+                        <u-icon name="arrow-right" color="#999"></u-icon>
                     </div>
                 </div>
             </view>
@@ -160,7 +160,7 @@ export default {
         }
     },
     computed: {
-        ...mapGetters(['userInfo', 'shopData,appConfig'])
+        ...mapGetters(['userInfo', 'shopData', 'appConfig'])
     },
     onShow() {
         // uni.hideTabBar()

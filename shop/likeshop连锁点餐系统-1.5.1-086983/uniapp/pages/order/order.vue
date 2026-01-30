@@ -19,7 +19,7 @@
                                 <view class="bold line-1 lg normal" v-if="shopData.name">{{
                                     shopData.name || '暂未选择店铺'
                                 }}</view>
-                                <u-icon name="arrow-right" size="28"></u-icon>
+                                <u-icon name="arrow-right" size="28" color="#333"></u-icon>
                             </view>
                             <view class="muted xxs line-1"
                                 >距离您 {{ shopData.distance || '0m' }}
@@ -559,7 +559,7 @@ export default {
         setTimeout(() => {
             // 获取公告组件数据
             this.$refs?.notice?.getNoticeFun()
-            if (Object.keys(this.shopData).length) {
+            if (this.shopData && Object.keys(this.shopData).length) {
                 this.$nextTick(() => {
                     this.getShopGoodsListFun() //获取商品数据
                     this.getCartListFun() //获取购物车

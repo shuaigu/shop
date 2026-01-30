@@ -15,6 +15,8 @@
 </template>
 
 <script>
+    import { mapGetters } from 'vuex'
+    
     export default {
         name: "number-box",
         props: {
@@ -54,6 +56,10 @@
                 // },
                 isFistVal: true
             }
+        },
+        
+        computed: {
+            ...mapGetters(['themeColor', 'themeName', 'isLogin'])
         },
 
         watch: {

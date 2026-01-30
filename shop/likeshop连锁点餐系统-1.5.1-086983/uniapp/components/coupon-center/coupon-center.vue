@@ -15,7 +15,6 @@
         </view>
 
         <u-popup
-            class="popup"
             v-model="show"
             mode="bottom"
             height="1000rpx"
@@ -23,9 +22,9 @@
             :closeable="true"
             border-radius="20"
         >
-            <view class="title normal bold">领券</view>
+            <view class="popup-title normal bold">领券</view>
 
-            <scroll-view scroll-y="true" class="content bg-body">
+            <scroll-view scroll-y="true" class="popup-content bg-body">
                 <view>
                     <text class="mini-tag plain">优惠</text>
                     <text>{{
@@ -80,25 +79,22 @@ export default {
     .coupon-header {
         padding: 20rpx;
         border-top: $-solid-border;
-
-        &--scroll-view {
-            width: 500rpx;
-            height: 46rpx;
-            white-space: nowrap;
-        }
+    }
+    
+    .coupon-header--scroll-view {
+        width: 500rpx;
+        height: 46rpx;
+        white-space: nowrap;
     }
 
-    .popup {
-        .title {
-            padding: 30rpx 20rpx;
-        }
+    .popup-title {
+        padding: 30rpx 20rpx;
+    }
 
-        .content {
-            padding: 20rpx;
-            box-sizing: border-box;
-            height: 75%;
-            // height: calc(100vh - 385rpx - env(safe-area-inset-bottom));
-        }
+    .popup-content {
+        padding: 20rpx;
+        box-sizing: border-box;
+        height: 75%;
     }
 
     // 标签
