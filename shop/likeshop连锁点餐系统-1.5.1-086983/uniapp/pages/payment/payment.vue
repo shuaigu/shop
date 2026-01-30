@@ -226,10 +226,12 @@ export default {
 
   onLoad(options) {
     const order_id = options?.order_id || 1054;
+    const from = options?.from || 'order';
 
     try {
       if (!order_id) throw new Error("页面参数有误");
       this.order_id = order_id;
+      this.from = from;  // 支持 marketing_chat 来源
       this.initPageData();
     } catch (err) {
       this.$Router.back();

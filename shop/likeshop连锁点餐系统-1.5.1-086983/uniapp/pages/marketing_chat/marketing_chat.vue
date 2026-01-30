@@ -81,7 +81,7 @@
 
 <script>
 import { getMarketingChatConfig } from '@/api/store'
-import { prepay, getPayway, createMarketingPayOrder } from '@/api/app'
+import { createMarketingPayOrder } from '@/api/app'
 
 export default {
     data() {
@@ -98,16 +98,26 @@ export default {
             bannerSubtitle: '您只需要等着客户主动找上门',
             footerText: '页面信息及服务由XXX企业管理有限公司提供',
             isLoading: true,
-            isPaying: false  // 支付状态标记
+            isPaying: false,  // 支付状态标记
+            pendingPaymentMsg: null,  // 待支付的消息
+            pendingPaymentBtn: null   // 待支付的按钮
         }
     },
     async onLoad() {
+        // 监听支付结果（在页面加载时就设置监听）
+        uni.$on('payment', this.handlePaymentResult)
         // 加载配置
         await this.loadConfig()
         // 开始对话
         this.startChat()
     },
+    
+    onUnload() {
+        // 页面卸载时移除监听
+        uni.$off('payment', this.handlePaymentResult)
+    },
     methods: {
+        
         async loadConfig() {
             try {
                 uni.showLoading({ title: '加载中...' })
@@ -229,99 +239,65 @@ export default {
             }, 500)
         },
 
-        // 处理支付流程
+        // 处理支付流程 - 跳转到统一支付页面
         async handlePayment(msg, btn) {
             if (this.isPaying) return
             this.isPaying = true
 
             try {
-                uni.showLoading({ title: '正在发起支付...' })
+                uni.showLoading({ title: '正在创建订单...' })
                 
                 const amount = btn.amount || 0.4  // 默认0.4元
                 
-                // 调用支付接口（这里需要根据实际支付接口调整）
-                // #ifdef MP-WEIXIN
-                // 微信小程序支付
-                const payRes = await this.wxPay(amount)
-                if (payRes.success) {
-                    this.onPaymentSuccess(msg, btn)
-                } else {
-                    this.onPaymentFail(msg, payRes.message || '支付取消')
+                // 1. 创建订单
+                const orderRes = await this.createPayOrder(amount)
+                if (!orderRes || !orderRes.data) {
+                    throw new Error('创建订单失败')
                 }
-                // #endif
                 
-                // #ifdef H5
-                // H5支付提示
-                uni.showModal({
-                    title: '支付提示',
-                    content: `请支付 ¥${amount}`,
-                    confirmText: '模拟支付成功',
-                    cancelText: '取消',
-                    success: (res) => {
-                        if (res.confirm) {
-                            this.onPaymentSuccess(msg, btn)
-                        } else {
-                            this.onPaymentFail(msg, '支付取消')
-                        }
-                    }
+                const orderId = orderRes.data.order_id
+                
+                uni.hideLoading()
+                
+                // 2. 保存当前支付上下文，用于支付回调处理
+                this.pendingPaymentMsg = msg
+                this.pendingPaymentBtn = btn
+                
+                // 3. 跳转到统一支付页面（和购买商品一样的支付流程）
+                uni.navigateTo({
+                    url: `/pages/payment/payment?from=marketing_chat&order_id=${orderId}`
                 })
-                // #endif
 
             } catch (error) {
                 console.error('支付失败', error)
-                this.onPaymentFail(msg, error.message || '支付失败')
-            } finally {
                 uni.hideLoading()
+                this.onPaymentFail(msg, error.message || '创建订单失败')
+            } finally {
                 this.isPaying = false
             }
         },
-
-        // 微信小程序支付
-        async wxPay(amount) {
-            return new Promise(async (resolve) => {
-                try {
-                    // 1. 创建订单
-                    const orderRes = await this.createPayOrder(amount)
-                    if (!orderRes || !orderRes.data) {
-                        resolve({ success: false, message: '创建订单失败' })
-                        return
-                    }
-                    
-                    const orderId = orderRes.data.order_id
-                    
-                    // 2. 发起支付
-                    const payRes = await prepay({
-                        order_id: orderId,
-                        from: 'marketing_chat',
-                        pay_way: 1  // 1=微信支付
-                    })
-                    
-                    if (payRes.code !== 1 || !payRes.data) {
-                        resolve({ success: false, message: payRes.msg || '发起支付失败' })
-                        return
-                    }
-                    
-                    const payParams = payRes.data
-                    
-                    // 3. 调用微信支付
-                    uni.requestPayment({
-                        provider: 'wxpay',
-                        timeStamp: payParams.timeStamp,
-                        nonceStr: payParams.nonceStr,
-                        package: payParams.package,
-                        signType: payParams.signType || 'MD5',
-                        paySign: payParams.paySign,
-                        success: () => {
-                            resolve({ success: true })
-                        },
-                        fail: (err) => {
-                            resolve({ success: false, message: err.errMsg || '支付失败' })
-                        }
-                    })
-                } catch (error) {
-                    resolve({ success: false, message: error.message || '支付异常' })
-                }
-            })
+        
+        // 处理支付结果回调（从支付页面返回时触发）
+        handlePaymentResult(result) {
+            console.log('收到支付结果:', result)
+            
+            // 检查是否有待处理的支付
+            if (!this.pendingPaymentMsg || !this.pendingPaymentBtn) {
+                console.warn('没有待处理的支付消息')
+                return
+            }
+            
+            if (result.result) {
+                // 支付成功
+                this.onPaymentSuccess(this.pendingPaymentMsg, this.pendingPaymentBtn)
+            } else {
+                // 支付失败或取消
+                this.onPaymentFail(this.pendingPaymentMsg, '支付取消')
+            }
+            
+            // 清除待支付状态
+            this.pendingPaymentMsg = null
+            this.pendingPaymentBtn = null
         },
 
         // 创建付款订单
@@ -550,12 +526,18 @@ export default {
         color: #fff;
     }
     
+    &.payment {
+        background: #ff9800;
+        color: #fff;
+        font-weight: 600;
+    }
+    
     &.warning {
         background: #ffc107;
         color: #fff;
     }
     
-    &:not(.primary):not(.warning) {
+    &:not(.primary):not(.warning):not(.payment) {
         background: #f5f5f5;
         color: #333;
         border: 1rpx solid #e0e0e0;
