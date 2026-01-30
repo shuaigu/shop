@@ -12,6 +12,12 @@ use app\common\enum\PayEnum;
 class MarketingChatOrder extends Models
 {
     /**
+     * 数据表名称
+     * @var string
+     */
+    protected $name = 'marketing_chat_order';
+
+    /**
      * 生成订单号
      * @return string
      */
