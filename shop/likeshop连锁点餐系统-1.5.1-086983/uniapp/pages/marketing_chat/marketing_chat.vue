@@ -81,6 +81,7 @@
 
 <script>
 import { getMarketingChatConfig } from '@/api/store'
+import { prepay, getPayway, createMarketingPayOrder } from '@/api/app'
 
 export default {
     data() {
@@ -96,7 +97,8 @@ export default {
             bannerTitle: '我们帮您把业务/产品推广出去',
             bannerSubtitle: '您只需要等着客户主动找上门',
             footerText: '页面信息及服务由XXX企业管理有限公司提供',
-            isLoading: true
+            isLoading: true,
+            isPaying: false  // 支付状态标记
         }
     },
     async onLoad() {
@@ -199,6 +201,12 @@ export default {
         },
 
         handleButtonClick(msg, btn) {
+            // 如果是支付类型按钮，先处理支付
+            if (btn.type === 'payment' && btn.amount) {
+                this.handlePayment(msg, btn)
+                return
+            }
+
             // 隐藏当前消息的按钮
             msg.showButtons = false
 
@@ -219,6 +227,158 @@ export default {
             setTimeout(() => {
                 this.processNextMessage()
             }, 500)
+        },
+
+        // 处理支付流程
+        async handlePayment(msg, btn) {
+            if (this.isPaying) return
+            this.isPaying = true
+
+            try {
+                uni.showLoading({ title: '正在发起支付...' })
+                
+                const amount = btn.amount || 0.4  // 默认0.4元
+                
+                // 调用支付接口（这里需要根据实际支付接口调整）
+                // #ifdef MP-WEIXIN
+                // 微信小程序支付
+                const payRes = await this.wxPay(amount)
+                if (payRes.success) {
+                    this.onPaymentSuccess(msg, btn)
+                } else {
+                    this.onPaymentFail(msg, payRes.message || '支付取消')
+                }
+                // #endif
+                
+                // #ifdef H5
+                // H5支付提示
+                uni.showModal({
+                    title: '支付提示',
+                    content: `请支付 ¥${amount}`,
+                    confirmText: '模拟支付成功',
+                    cancelText: '取消',
+                    success: (res) => {
+                        if (res.confirm) {
+                            this.onPaymentSuccess(msg, btn)
+                        } else {
+                            this.onPaymentFail(msg, '支付取消')
+                        }
+                    }
+                })
+                // #endif
+
+            } catch (error) {
+                console.error('支付失败', error)
+                this.onPaymentFail(msg, error.message || '支付失败')
+            } finally {
+                uni.hideLoading()
+                this.isPaying = false
+            }
+        },
+
+        // 微信小程序支付
+        async wxPay(amount) {
+            return new Promise(async (resolve) => {
+                try {
+                    // 1. 创建订单
+                    const orderRes = await this.createPayOrder(amount)
+                    if (!orderRes || !orderRes.data) {
+                        resolve({ success: false, message: '创建订单失败' })
+                        return
+                    }
+                    
+                    const orderId = orderRes.data.order_id
+                    
+                    // 2. 发起支付
+                    const payRes = await prepay({
+                        order_id: orderId,
+                        from: 'marketing_chat',
+                        pay_way: 1  // 1=微信支付
+                    })
+                    
+                    if (payRes.code !== 1 || !payRes.data) {
+                        resolve({ success: false, message: payRes.msg || '发起支付失败' })
+                        return
+                    }
+                    
+                    const payParams = payRes.data
+                    
+                    // 3. 调用微信支付
+                    uni.requestPayment({
+                        provider: 'wxpay',
+                        timeStamp: payParams.timeStamp,
+                        nonceStr: payParams.nonceStr,
+                        package: payParams.package,
+                        signType: payParams.signType || 'MD5',
+                        paySign: payParams.paySign,
+                        success: () => {
+                            resolve({ success: true })
+                        },
+                        fail: (err) => {
+                            resolve({ success: false, message: err.errMsg || '支付失败' })
+                        }
+                    })
+                } catch (error) {
+                    resolve({ success: false, message: error.message || '支付异常' })
+                }
+            })
+        },
+
+        // 创建付款订单
+        async createPayOrder(amount) {
+            try {
+                const { data, code, msg } = await createMarketingPayOrder({ 
+                    amount: amount,
+                    remark: '营销聊天诚意金'
+                })
+                if (code === 1) {
+                    return { data }
+                } else {
+                    throw new Error(msg || '创建订单失败')
+                }
+            } catch (error) {
+                console.error('创建订单失败', error)
+                throw error
+            }
+        },
+
+        // 支付成功处理
+        onPaymentSuccess(msg, btn) {
+            // 隐藏按钮
+            msg.showButtons = false
+            
+            // 保存支付状态
+            if (msg.responseKey) {
+                this.userResponses[msg.responseKey] = 'paid'
+            }
+            
+            // 添加用户消息
+            this.visibleMessages.push({
+                type: 'user',
+                content: '已支付 ' + btn.text
+            })
+            
+            // 添加系统确认消息
+            this.visibleMessages.push({
+                type: 'service',
+                content: '✓ 支付成功！感谢您的信任。'
+            })
+            this.scrollToBottom()
+            
+            // 继续下一步
+            this.currentStep++
+            setTimeout(() => {
+                this.processNextMessage()
+            }, 1000)
+        },
+
+        // 支付失败处理
+        onPaymentFail(msg, errorMsg) {
+            uni.showToast({
+                title: errorMsg,
+                icon: 'none'
+            })
+            // 不隐藏按钮，允许用户重试
         },
 
         scrollToBottom() {

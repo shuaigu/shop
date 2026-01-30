@@ -112,3 +112,8 @@ export function apiResetPassword(data) {
 export function changeUserMobile(data) {
     return request.post('user/changeMobile', { ...data })
 }
+
+// 创建营销聊天订单
+export function createMarketingPayOrder(data) {
+    return request.post('pay/createMarketingChatOrder', { ...data })
+}
