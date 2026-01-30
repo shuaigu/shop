@@ -1,14 +1,13 @@
 -- =====================================================
--- 营销聊天功能 - 一键完整部署
+-- 营销聊天功能 - 修正版一键部署
 -- =====================================================
--- 本脚本包含：
--- 1. 数据库配置（对话流程、横幅等）
--- 2. 后台菜单（在左侧底部显示）
--- 3. 权限配置（管理员可访问）
+-- 表前缀：ls_
+-- 菜单表：ls_dev_auth
+-- 配置表：ls_config
 -- =====================================================
 -- 使用方法：
--- 1. 根据你的表前缀修改表名（默认 la_）
--- 2. 在数据库工具中执行整个脚本
+-- 1. 在phpMyAdmin中选择shop数据库
+-- 2. 在SQL标签页中执行整个脚本
 -- 3. 清除后台缓存
 -- 4. 重新登录后台查看
 -- =====================================================
@@ -37,7 +36,7 @@ INSERT INTO `ls_config` (`type`, `name`, `value`, `describe`) VALUES
   },
   {
     "type": "service",
-    "content": "您是否整面临获客难、成本高的问题？",
+    "content": "您是否面临获客难、成本高的问题？",
     "delay": 1000,
     "waitForResponse": true,
     "responseKey": "hasCustomerProblem",
@@ -95,21 +94,25 @@ INSERT INTO `ls_config` (`type`, `name`, `value`, `describe`) VALUES
 ('marketing_chat', 'footer_text', '页面信息及服务由湖北客聚多企业管理有限公司提供', '底部信息');
 
 -- 5. 客服头像
-INSERT INTO `la_config` (`type`, `name`, `value`, `describe`) VALUES 
-('marketing_chat', 'service_avatar', 'https://img.yzcdn.cn/vant/cat.jpeg', '客服头像');
+INSERT INTO `ls_config` (`type`, `name`, `value`, `describe`) VALUES 
+('marketing_chat', 'service_avatar', '', '客服头像');
 
 -- =====================================================
 -- 第三部分：添加后台菜单
 -- =====================================================
 
+-- 查看现有菜单的最大sort值
+SELECT MAX(sort) as max_sort FROM `ls_dev_auth` WHERE `pid` = 0;
+
 -- 添加营销聊天菜单（一级菜单，显示在底部）
-INSERT INTO `la_auth` (
+INSERT INTO `ls_dev_auth` (
     `pid`, 
     `name`, 
     `uri`, 
     `type`, 
     `sort`, 
-    `is_show`, 
+    `del`,
+    `disable`,
     `create_time`, 
     `update_time`
 ) VALUES (
@@ -118,7 +121,8 @@ INSERT INTO `la_auth` (
     'marketing_chat/index',     -- 路由地址
     1,                          -- type=1 表示菜单
     999,                        -- sort=999 显示在最下方
-    1,                          -- is_show=1 显示
+    0,                          -- del=0 未删除
+    0,                          -- disable=0 未禁用
     UNIX_TIMESTAMP(),           -- 创建时间
     UNIX_TIMESTAMP()            -- 更新时间
 );
@@ -127,21 +131,13 @@ INSERT INTO `la_auth` (
 SET @menu_id = LAST_INSERT_ID();
 
 -- =====================================================
--- 第四部分：配置权限（可选）
--- =====================================================
-
--- 给管理员角色（ID=1）添加权限
--- 如果系统有角色权限表，取消下面的注释
--- INSERT INTO `la_role_auth` (`role_id`, `auth_id`) VALUES (1, @menu_id);
-
--- =====================================================
--- 第五部分：验证结果
+-- 第四部分：验证结果
 -- =====================================================
 
 -- 查看配置是否添加成功
 SELECT '=== 营销聊天配置 ===' as title;
-SELECT type, name, SUBSTRING(value, 1, 50) as value_preview, `describe` 
-FROM `la_config` 
+SELECT type, name, LEFT(`value`, 50) as value_preview, `describe` 
+FROM `ls_config` 
 WHERE `type` = 'marketing_chat';
 
 -- 查看菜单是否添加成功
@@ -153,9 +149,10 @@ SELECT
     uri,
     type,
     sort,
-    is_show,
+    del,
+    disable,
     FROM_UNIXTIME(create_time) as created_at
-FROM `la_auth` 
+FROM `ls_dev_auth` 
 WHERE name = '营销聊天';
 
 -- =====================================================
@@ -168,24 +165,21 @@ SELECT '2. 退出后台管理系统' as step_2;
 SELECT '3. 重新登录后台' as step_3;
 SELECT '4. 在左侧菜单底部找到"营销聊天"菜单' as step_4;
 SELECT '5. 点击打开配置页面进行设置' as step_5;
-SELECT '6. 前端访问：/pages/marketing_chat/marketing_chat' as step_6;
 
 -- =====================================================
 -- 如果需要删除（回滚）
 -- =====================================================
 -- 取消下面的注释来删除所有配置
 /*
-DELETE FROM `la_config` WHERE `type` = 'marketing_chat';
-DELETE FROM `la_auth` WHERE `name` = '营销聊天';
--- DELETE FROM `la_role_auth` WHERE `auth_id` = @menu_id;
+DELETE FROM `ls_config` WHERE `type` = 'marketing_chat';
+DELETE FROM `ls_dev_auth` WHERE `name` = '营销聊天';
 SELECT '已删除所有营销聊天配置' as message;
 */
 
 -- =====================================================
 -- 注意事项
 -- =====================================================
--- 1. 如果表前缀不是 la_，请全局替换
--- 2. 某些系统可能没有 la_role_auth 表，可以忽略权限配置
--- 3. 字段名可能不同，请根据实际表结构调整
--- 4. 执行后必须清除缓存才能生效
+-- 1. 执行后必须清除缓存才能生效
+-- 2. 需要重新登录后台才能看到菜单
+-- 3. 如果看不到菜单，检查是否有权限限制
 -- =====================================================

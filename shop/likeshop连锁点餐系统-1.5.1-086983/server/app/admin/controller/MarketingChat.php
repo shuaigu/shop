@@ -105,7 +105,7 @@ class MarketingChat extends AdminBase
             ],
             [
                 'type' => 'service',
-                'content' => '您是否整面临获客难、成本高的问题？',
+                'content' => '您是否面临获客难、成本高的问题？',
                 'delay' => 1000,
                 'waitForResponse' => true,
                 'responseKey' => 'hasCustomerProblem',
