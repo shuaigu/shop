@@ -1387,7 +1387,7 @@ module.exports = {
 			
 			console.log('砍价配置:', bargainConfig);
 			
-			// 检查发起人是否已购买（必须先原价购买才能获得返现）
+			// 检查发起人是否已购买（如果购买了，使用订单金额作为返现上限）
 			const buyoutOrderCollection = this.db.collection('buyout_orders');
 			const orderRes = await buyoutOrderCollection
 				.where({
@@ -1397,25 +1397,36 @@ module.exports = {
 				})
 				.get();
 			
-			if (!orderRes.data || orderRes.data.length === 0) {
-				return {
-					errCode: -1,
-					errMsg: '小组长还未购买，无法获得返现'
-				};
+			let cashbackLimit;
+			let totalCashback = 0;
+			let isCashbackComplete = false;
+			
+			if (orderRes.data && orderRes.data.length > 0) {
+				// 如果小组长已购买，使用订单数据
+				const order = orderRes.data[0];
+				
+				// 检查返现是否已达上限
+				if (order.is_cashback_complete) {
+					return {
+						errCode: -1,
+						errMsg: '返现已达上限，无法继续返现'
+					};
+				}
+				
+				cashbackLimit = order.cashback_limit || order.buyout_price || initialPrice;
+				totalCashback = order.total_cashback || 0;
+				isCashbackComplete = order.is_cashback_complete || false;
+				
+				console.log('✅ 小组长已购买，使用订单返现上限:', cashbackLimit);
+			} else {
+				// 如果小组长还未购买，使用文章的初始价格作为返现上限
+				cashbackLimit = initialPrice;
+				totalCashback = 0;
+				isCashbackComplete = false;
+				
+				console.log('⚠️ 小组长还未购买，使用初始价格作为返现上限:', cashbackLimit);
 			}
 			
-			const order = orderRes.data[0];
-			
-			// 检查返现是否已达上限
-			if (order.is_cashback_complete) {
-				return {
-					errCode: -1,
-					errMsg: '返现已达上限，无法继续返现'
-				};
-			}
-			
-			const cashbackLimit = order.cashback_limit || order.buyout_price || initialPrice;
-			const totalCashback = order.total_cashback || 0;
 			const remainingCashback = cashbackLimit - totalCashback;
 			
 			if (remainingCashback <= 0) {
@@ -1586,12 +1597,22 @@ module.exports = {
 			const addResult = await this.bargainRecordCollection.add(recordData);
 			const newRecordId = addResult.id;
 			
-			// 更新订单的累计返现金额
-			await buyoutOrderCollection.doc(order._id).update({
-				total_cashback: newTotalCashback,
-				is_cashback_complete: isComplete,
-				update_time: Date.now()
-			});
+			// 更新订单的累计返现金额（如果小组长已购买）
+			if (orderRes.data && orderRes.data.length > 0) {
+				const order = orderRes.data[0];
+				await buyoutOrderCollection.doc(order._id).update({
+					total_cashback: newTotalCashback,
+					is_cashback_complete: isComplete,
+					update_time: Date.now()
+				});
+				console.log('✅ 已更新订单返现数据:', {
+					order_id: order._id,
+					total_cashback: newTotalCashback,
+					is_complete: isComplete
+				});
+			} else {
+				console.log('⚠️ 小组长还未购买，不需要更新订单');
+			}
 			
 		// 🆕 立即处理返现（异步执行，不阻塞砍价响应）
 		// 使用 Promise 异步处理，砍价立即返回，返现在后台进行
