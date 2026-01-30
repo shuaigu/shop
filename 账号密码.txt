@@ -1,0 +1,17 @@
+微信小程序信息及商户号参数总结
+
+1. 微信小程序基本信息
+AppID: wxf7ee79349bd957b8
+AppSecret: 725f689abdc2c51a36330a813c1b7215
+
+2. 微信支付商户信息
+商户号 (mchId): 1545803671
+API密钥 (key/partner_key): lishuai4323811lishuai4323811lish
+APIv3密钥 (apiv3_key): lishuai4323811lishuai4323811lish
+
+3. 微信支付证书信息
+证书序列号 (serial_no): 7282272EC446E827251B9FBAC2757DE1897026D3
+
+
+网址：https://shop.jingle0350.cn/
+ip：115.159.35.33

@@ -1,0 +1,96 @@
+{
+  "bsonType": "object",
+  "required": ["article_id", "user_id", "order_no", "buyout_price"],
+  "permission": {
+    "read": "doc.user_id == auth.uid",
+    "create": "auth.uid != null",
+    "update": false,
+    "delete": false
+  },
+  "properties": {
+    "_id": {
+      "description": "ID，系统自动生成"
+    },
+    "order_no": {
+      "bsonType": "string",
+      "description": "订单号",
+      "unique": true
+    },
+    "article_id": {
+      "bsonType": "string",
+      "description": "文章ID",
+      "foreignKey": "articleList._id"
+    },
+    "user_id": {
+      "bsonType": "string",
+      "description": "购买用户ID（小组长）",
+      "foreignKey": "user._id"
+    },
+    "initiator_id": {
+      "bsonType": "string",
+      "description": "发起人ID（通常与user_id相同）",
+      "foreignKey": "user._id"
+    },
+    "buyout_price": {
+      "bsonType": "number",
+      "description": "购买价格（元）原价"
+    },
+    "original_price": {
+      "bsonType": "number",
+      "description": "原价（元）"
+    },
+    "total_cashback": {
+      "bsonType": "number",
+      "description": "累计已返现金额（元）",
+      "defaultValue": 0
+    },
+    "cashback_limit": {
+      "bsonType": "number",
+      "description": "返现上限（元），通常等于原价"
+    },
+    "is_cashback_complete": {
+      "bsonType": "bool",
+      "description": "返现是否已达上限",
+      "defaultValue": false
+    },
+    "status": {
+      "bsonType": "int",
+      "description": "订单状态：0-待支付，1-已支付，2-已取消",
+      "default": 0,
+      "enum": [0, 1, 2]
+    },
+    "user_info": {
+      "bsonType": "object",
+      "description": "用户信息",
+      "properties": {
+        "nickname": {
+          "bsonType": "string",
+          "description": "用户昵称"
+        },
+        "avatar": {
+          "bsonType": "string",
+          "description": "用户头像"
+        }
+      }
+    },
+    "share_from_user_id": {
+      "bsonType": "string",
+      "description": "分享来源用户ID"
+    },
+    "create_time": {
+      "bsonType": "timestamp",
+      "description": "创建时间",
+      "forceDefaultValue": {
+        "$env": "now"
+      }
+    },
+    "update_time": {
+      "bsonType": "timestamp",
+      "description": "更新时间"
+    },
+    "complete_time": {
+      "bsonType": "timestamp",
+      "description": "完成时间"
+    }
+  }
+}

@@ -1,0 +1,7 @@
+{
+  "name": "generatePoster",
+  "version": "1.0.0",
+  "description": "服务端生成多功能海报",
+  "main": "index.obj.js",
+  "dependencies": {}
+}
