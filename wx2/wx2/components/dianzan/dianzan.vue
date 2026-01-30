@@ -883,7 +883,7 @@ const handleBargain = async () => {
 					} else {
 						// 砍价成功，小组长获得返现 - 使用图标提示
 						uni.showToast({
-							title: `小组长返现¥${result.bargain_amount.toFixed(2)}`,
+							title: `返现成功¥${result.bargain_amount.toFixed(2)}`,
 							image: '/static/images/砍价3.png',
 							duration: 4000 // 延长到4秒
 						})

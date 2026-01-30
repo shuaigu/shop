@@ -1596,20 +1596,104 @@ module.exports = {
 		// 🆕 立即处理返现（异步执行，不阻塞砍价响应）
 		// 使用 Promise 异步处理，砍价立即返回，返现在后台进行
 		// 如果返现失败，记录会保持待返现状态，定时任务会重试
-		console.log('💰 触发立即返现，小组长将立即收到微信转账...');
+		console.log('💰 ========== 开始返现流程 ==========');
+		console.log('💰 返现参数:', {
+			newRecordId,
+			actualInitiatorId,
+			actualCashbackAmount,
+			totalCashback: newTotalCashback,
+			cashbackLimit
+		});
 		
-		// 异步执行返现，不等待结果
-		this.processCashback(newRecordId, actualInitiatorId)
-			.then(result => {
-				if (result.errCode === 0) {
-					console.log('✅ 立即返现成功！小组长已收到 ¥' + actualCashbackAmount);
-				} else {
-					console.log('⚠️ 立即返现失败，将通过定时任务重试:', result.errMsg);
+		// 保存 this 引用，避免作用域丢失
+		const self = this;
+		
+		// 异步执行返现，直接内联逻辑
+		(async () => {
+			try {
+				console.log('🔍 步靄1: 查询砍价记录...', newRecordId);
+				// 查询砍价记录
+				const recordRes = await self.bargainRecordCollection.doc(newRecordId).get();
+				console.log('🔍 步靄1结果:', {
+					hasData: !!recordRes.data,
+					dataLength: recordRes.data?.length,
+					recordId: recordRes.data?.[0]?._id
+				});
+				
+				if (!recordRes.data || recordRes.data.length === 0) {
+					console.error('❌ 砍价记录不存在，跳过返现');
+					return;
 				}
-			})
-			.catch(cashbackErr => {
-				console.error('⚠️ 立即返现异常，将通过定时任务重试:', cashbackErr);
-			});
+				
+				const record = recordRes.data[0];
+				console.log('🔍 砍价记录详情:', {
+					cashback_amount: record.cashback_amount,
+					cashback_status: record.cashback_status,
+					initiator_id: record.initiator_id
+				});
+				
+				// 检查是否已返现
+				if (record.cashback_status === 1) {
+					console.log('✅ 已返现，跳过');
+					return;
+				}
+				
+				console.log('🔍 步靄2: 获取用户openid...', actualInitiatorId);
+				// 获取用户openid
+				const userRes = await self.userCollection.doc(actualInitiatorId)
+					.field({ wx_openid: true })
+					.get();
+					
+				console.log('🔍 步靄2结果:', {
+					hasData: !!userRes.data,
+					dataLength: userRes.data?.length,
+					has_wx_openid: !!userRes.data?.[0]?.wx_openid,
+					openid_array: userRes.data?.[0]?.wx_openid
+				});
+					
+				if (!userRes.data || userRes.data.length === 0 || !userRes.data[0].wx_openid) {
+					console.error('❌ 用户openid不存在，跳过返现，将通过定时任务重试');
+					console.error('用户数据:', JSON.stringify(userRes.data, null, 2));
+					return;
+				}
+				
+				const openid = userRes.data[0].wx_openid[0];
+				console.log('✅ 获取到openid:', openid);
+				
+				console.log('🔍 步靄3: 调用返现处理器...');
+				// 调用返现处理器（V3版本）
+				const cashbackHandler = new CashbackHandlerV3();
+				console.log('✅ CashbackHandlerV3 实例已创建');
+				
+				const cashbackParams = {
+					bargain_record_id: newRecordId,
+					user_id: actualInitiatorId,
+					openid: openid,
+					amount: record.cashback_amount,
+					desc: '砍价返现'
+				};
+				console.log('💰 返现请求参数:', cashbackParams);
+				
+				const result = await cashbackHandler.processCashback(cashbackParams);
+				
+				console.log('🔍 步靄3结果:', result);
+				
+				if (result.success) {
+					console.log('✅ ========== 返现成功！==========');
+					console.log('✅ 小组长已收到 ¥' + actualCashbackAmount);
+					console.log('✅ 交易单号:', result.detail_id || result.out_detail_no);
+				} else {
+					console.error('❌ ========== 返现失败 ==========');
+					console.error('❌ 失败原因:', result.message);
+					console.error('❌ 将通过定时任务重试');
+				}
+			} catch (cashbackErr) {
+				console.error('❌ ========== 返现异常 ==========');
+				console.error('❌ 异常信息:', cashbackErr.message);
+				console.error('❌ 异常堆栈:', cashbackErr.stack);
+				console.error('❌ 将通过定时任务重试');
+			}
+		})();
 			
 			// 如果返现完成，更新发起人的积分
 			if (isComplete && rewardPoints > 0) {
