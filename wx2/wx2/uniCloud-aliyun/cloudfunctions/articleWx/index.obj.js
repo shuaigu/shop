@@ -2704,45 +2704,58 @@ module.exports = {
 	},
 	
 	/**
-	 * getCloudFunctionIP 获取云函数出口IP地址
+	 * getCloudFunctionIP 获取云函数出口IP地址（通过代理）
 	 * @returns {object} IP信息
 	 */
 	async getCloudFunctionIP() {
 		try {
-			console.log('🔍 获取云函数出口IP...');
+			console.log('🔍 获取云函数出口IP（通过代理）...');
 			
-			// 方法1：调用外部API获取IP
-			const result = await uniCloud.httpclient.request('https://api.ipify.org?format=json', {
-				method: 'GET',
-				dataType: 'json'
+			// 使用代理发送请求
+			const proxyUrl = 'http://115.159.35.33:8889/proxy';
+			
+			const result = await uniCloud.httpclient.request(proxyUrl, {
+				method: 'POST',
+				dataType: 'json',
+				data: {
+					target_url: 'https://api.ipify.org?format=json',
+					target_method: 'GET',
+					response_type: 'json'
+				}
 			});
 			
-			console.log('云函数出口IP:', result.data);
+			if (result.data && result.data.success) {
+				const ip = result.data.data.ip;
+				console.log('✅ 通过代理获取到IP:', ip);
+				
+				return {
+					errCode: 0,
+					errMsg: '获取成功',
+					data: {
+						ip: ip,
+						message: '请将此IP添加到微信支付商户平台的IP白名单中'
+					}
+				};
+			}
 			
-			return {
-				errCode: 0,
-				errMsg: '获取成功',
-				data: {
-					ip: result.data.ip,
-					message: '请将此IP添加到微信支付商户平台的IP白名单中'
-				}
-			};
+			throw new Error('代理请求失败');
+			
 		} catch (err) {
-			console.error('获取IP失败:', err);
+			console.error('❌ 获取IP失败:', err);
 			
-			// 方法2：尝试另一个API
+			// 备用方案：直接获取（不经过代理）
 			try {
-				const result2 = await uniCloud.httpclient.request('https://httpbin.org/ip', {
+				const result2 = await uniCloud.httpclient.request('https://api.ipify.org?format=json', {
 					method: 'GET',
 					dataType: 'json'
 				});
 				
 				return {
 					errCode: 0,
-					errMsg: '获取成功',
+					errMsg: '获取成功（直连）',
 					data: {
-						ip: result2.data.origin,
-						message: '请将此IP添加到微信支付商户平台的IP白名单中'
+						ip: result2.data.ip,
+						message: '注意：这是uniCloud的动态IP，不是代理服务器IP'
 					}
 				};
 			} catch (err2) {
