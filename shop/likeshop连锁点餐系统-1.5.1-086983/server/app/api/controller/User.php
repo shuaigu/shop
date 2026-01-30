@@ -103,7 +103,7 @@ class User extends Api
     }
 
     /**
-     * @notes 商家打款测试
+     * @notes 商家打款测试（微信支付 V3 接口）
      */
     public function transferTest()
     {
@@ -112,8 +112,6 @@ class User extends Api
             return JsonServer::error('金额必须大于0');
         }
         
-        // 调用商家打款逻辑（此处需要根据实际项目中的 WeChatPayServer 或类似服务实现）
-        // 这是一个示例实现，具体取决于你的 EasyWeChat 版本和配置
         try {
             $user_auth = \think\facade\Db::name('user_auth')
                 ->where(['user_id' => $this->user_id, 'client' => \app\common\model\Client_::mnp])
@@ -123,26 +121,145 @@ class User extends Api
                 return JsonServer::error('未找到小程序授权信息');
             }
 
-            $config = \app\common\server\WeChatServer::getPayConfig(\app\common\model\Client_::mnp);
-            $app = \EasyWeChat\Factory::payment($config);
-
-            $partner_trade_no = 'TEST' . date('YmdHis') . rand(1000, 9999);
+            // ========================================
+            // !!!  请在下方填写您的 V3 接口参数  !!!
+            // ========================================
             
-            // 注意：这里使用的是旧版企业付款到零钱接口，如果是新版商家转账到零钱，接口名不同
-            // 如果是新版商家转账到零钱，请参考 EasyWeChat 文档
-            $result = $app->transfer->toBalance([
-                'partner_trade_no' => $partner_trade_no,
-                'openid' => $user_auth['openid'],
-                'check_name' => 'NO_CHECK',
-                'amount' => $amount * 100, // 分
-                'desc' => '商家打款测试',
-            ]);
+            // 1. 商户号
+            $mchId = '1545803671';
+            
+            // 2. 小程序 AppID
+            $appId = 'wxf7ee79349bd957b8';
+            
+            // 3. APIV3 密钥（32位字符串，在商户平台-账户中心-API安全中设置）
+            // 示例：'abcdef1234567890abcdef1234567890'
+            $apiV3Key = 'YOUR_API_V3_KEY_32_CHARACTERS_HERE';
+            
+            // 4. 证书文件路径（证书文件夹的绝对路径）
+            // 本地测试路径
+            // $certPath = 'c:/Users/10205/Pictures/1545803671_20250301_cert';
+            
+            // 服务器路径（证书文件已上传到 controller 目录）
+            $certPath = __DIR__;
+            
+            // ========================================
+            //    填写 apiV3Key 后，保存文件即可测试
+            // ========================================
 
-            if ($result['return_code'] == 'SUCCESS' && $result['result_code'] == 'SUCCESS') {
-                return JsonServer::success('打款成功', $result);
-            } else {
-                return JsonServer::error('打款失败：' . ($result['err_code_des'] ?? $result['return_msg'] ?? '未知错误'), $result);
+            // 检查参数是否已填写
+            if ($apiV3Key === 'lishuai4323811lishuai4323811lish') {
+                return JsonServer::error('请先在 User.php 的 transferTest 方法中填写 APIV3 密钥（第150行）');
             }
+            
+            // 自动读取证书文件
+            $privateKeyPath = $certPath . '/apiclient_key.pem';
+            $certFilePath = $certPath . '/apiclient_cert.pem';
+            
+            if (!file_exists($privateKeyPath)) {
+                return JsonServer::error("私钥文件不存在: $privateKeyPath");
+            }
+            if (!file_exists($certFilePath)) {
+                return JsonServer::error("证书文件不存在: $certFilePath");
+            }
+            
+            // 证书序列号（从商户平台获取）
+            $certSerialNo = '7282272EC446E827251B9FBAC2757DE1897026D3';
+
+            // V3 接口地址
+            $url = 'https://api.mch.weixin.qq.com/v3/transfer/batches';
+            $outBatchNo = 'BATCH' . date('YmdHis') . rand(1000, 9999);
+            
+            // 构造请求数据
+            $data = [
+                'appid' => $appId,
+                'out_batch_no' => $outBatchNo,
+                'batch_name' => '商家打款测试',
+                'batch_remark' => '商家打款测试',
+                'total_amount' => (int)($amount * 100),
+                'total_num' => 1,
+                'transfer_detail_list' => [
+                    [
+                        'out_detail_no' => 'DETAIL' . date('YmdHis') . rand(1000, 9999),
+                        'transfer_amount' => (int)($amount * 100),
+                        'transfer_remark' => '商家打款测试',
+                        'openid' => $user_auth['openid'],
+                    ]
+                ]
+            ];
+
+            $jsonBody = json_encode($data, JSON_UNESCAPED_UNICODE);
+            $timestamp = time();
+            $nonce = strtoupper(bin2hex(random_bytes(16)));
+            $method = 'POST';
+            $apiUrl = '/v3/transfer/batches';
+            
+            // 构造签名串
+            $message = "$method\n$apiUrl\n$timestamp\n$nonce\n$jsonBody\n";
+            
+            // 加载私钥进行签名
+            $privateKeyContent = file_get_contents($privateKeyPath);
+            $privateKey = openssl_get_privatekey($privateKeyContent);
+            if (!$privateKey) {
+                return JsonServer::error('私钥加载失败，请检查私钥文件格式是否正确');
+            }
+            
+            openssl_sign($message, $signature, $privateKey, 'sha256WithRSAEncryption');
+            $sign = base64_encode($signature);
+            
+            // 构造 Authorization 头
+            $authorization = sprintf(
+                'WECHATPAY2-SHA256-RSA2048 mchid="%s",nonce_str="%s",signature="%s",timestamp="%d",serial_no="%s"',
+                $mchId,
+                $nonce,
+                $sign,
+                $timestamp,
+                $certSerialNo
+            );
+
+            // 发起 HTTP 请求
+            $ch = curl_init();
+            curl_setopt($ch, CURLOPT_URL, $url);
+            curl_setopt($ch, CURLOPT_POST, true);
+            curl_setopt($ch, CURLOPT_POSTFIELDS, $jsonBody);
+            curl_setopt($ch, CURLOPT_HTTPHEADER, [
+                "Authorization: $authorization",
+                "Content-Type: application/json",
+                "Accept: application/json",
+                "User-Agent: Likeshop-Transfer-Test"
+            ]);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+            
+            $response = curl_exec($ch);
+            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            $curlError = curl_error($ch);
+            curl_close($ch);
+
+            if ($curlError) {
+                return JsonServer::error('网络请求失败：' . $curlError);
+            }
+
+            $result = json_decode($response, true);
+            
+            if ($httpCode == 200 || $httpCode == 202) {
+                return JsonServer::success('转账批次已提交成功！', [
+                    'http_code' => $httpCode,
+                    'out_batch_no' => $outBatchNo,
+                    'result' => $result
+                ]);
+            } else {
+                return JsonServer::error(
+                    'V3转账失败 (HTTP ' . $httpCode . ')', 
+                    [
+                        'http_code' => $httpCode,
+                        'error_msg' => $result['message'] ?? '未知错误',
+                        'error_code' => $result['code'] ?? '',
+                        'detail' => $result
+                    ]
+                );
+            }
+
         } catch (\Exception $e) {
             return JsonServer::error('异常：' . $e->getMessage());
         }
