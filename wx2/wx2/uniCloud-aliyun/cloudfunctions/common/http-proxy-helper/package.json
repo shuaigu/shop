@@ -1,0 +1,6 @@
+{
+  "name": "http-proxy-helper",
+  "version": "1.0.0",
+  "description": "HTTP 代理请求助手，用于通过固定 IP 服务器转发请求",
+  "main": "index.js"
+}

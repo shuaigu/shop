@@ -7,7 +7,7 @@ const crypto = require('crypto');
 const configData = require('./cashback-config.js');
 
 class CashbackHandlerV3 {
-	constructor() {
+	constructor(useProxy = true, proxyConfig = null) {
 		// 微信支付V3配置（从配置文件加载）
 		this.config = {
 			appid: configData.appid,
@@ -21,10 +21,21 @@ class CashbackHandlerV3 {
 		// 平台证书（从配置文件加载）
 		this.platform_cert = configData.platform_cert;
 		
+		// 代理配置
+		this.useProxy = useProxy;
+		this.proxyConfig = proxyConfig || {
+			host: '115.159.35.33',
+			port: 8889,
+			protocol: 'http'
+		};
+		
 		console.log('✅ 商家转账V3配置已加载');
 		console.log('   商户号:', this.config.mchid);
 		console.log('   证书序列号:', this.config.serial_no);
 		console.log('   转账场景:', this.config.transfer_scene_id);
+		if (this.useProxy) {
+			console.log('   使用代理: ' + this.proxyConfig.protocol + '://' + this.proxyConfig.host + ':' + this.proxyConfig.port);
+		}
 	}
 
 	/**
@@ -237,22 +248,81 @@ class CashbackHandlerV3 {
 			signature
 		);
 
-		// 发送请求
-		const result = await uniCloud.httpclient.request(url, {
-			method: method,
-			data: body,
-			contentType: 'application/json',
-			dataType: 'json',
-			headers: {
-				'Authorization': authorization,
-				'Accept': 'application/json',
-				'Content-Type': 'application/json',
-				'User-Agent': 'uniCloud-CashbackSystem/1.0'
-			},
-			sslVerify: true
-		});
+		const headers = {
+			'Authorization': authorization,
+			'Accept': 'application/json',
+			'Content-Type': 'application/json',
+			'User-Agent': 'uniCloud-CashbackSystem/1.0'
+		};
 
-		return result.data;
+		// 根据配置决定是否使用代理
+		if (this.useProxy) {
+			console.log('🔄 通过代理服务器发送请求:', url);
+			return await this.makeProxyRequest(url, method, body, headers);
+		} else {
+			// 直接发送请求
+			const result = await uniCloud.httpclient.request(url, {
+				method: method,
+				data: body,
+				contentType: 'application/json',
+				dataType: 'json',
+				headers: headers,
+				sslVerify: true
+			});
+
+			return result.data;
+		}
+	}
+
+	/**
+	 * 通过代理服务器发送请求
+	 * @param {string} url 目标URL
+	 * @param {string} method 请求方法
+	 * @param {string} body 请求体
+	 * @param {Object} headers 请求头
+	 * @returns {Object} 响应内容
+	 */
+	async makeProxyRequest(url, method, body, headers) {
+		try {
+			const proxyUrl = `${this.proxyConfig.protocol}://${this.proxyConfig.host}:${this.proxyConfig.port}/proxy`;
+			
+			console.log('代理请求配置:', {
+				proxy: proxyUrl,
+				target: url,
+				method: method
+			});
+
+			const proxyRequestData = {
+				target_url: url,
+				target_method: method,
+				target_headers: headers,
+				target_data: body,
+				response_type: 'json'
+			};
+
+			const result = await uniCloud.httpclient.request(proxyUrl, {
+				method: 'POST',
+				data: proxyRequestData,
+				contentType: 'application/json',
+				dataType: 'json',
+				headers: {
+					'Content-Type': 'application/json'
+				}
+			});
+
+			if (result.data && result.data.success) {
+				console.log('✅ 代理请求成功');
+				return result.data.data;
+			} else {
+				const errorMsg = result.data?.error || '代理请求失败';
+				console.error('❌ 代理请求失败:', errorMsg);
+				throw new Error(errorMsg);
+			}
+
+		} catch (err) {
+			console.error('代理请求异常:', err);
+			throw err;
+		}
 	}
 
 	/**
@@ -268,7 +338,12 @@ class CashbackHandlerV3 {
 		const urlObj = new URL(url);
 		const canonical_url = urlObj.pathname + urlObj.search;
 		
-		return `${method}\n${canonical_url}\n${timestamp}\n${nonce_str}\n${body}\n`;
+		return `${method}
+${canonical_url}
+${timestamp}
+${nonce_str}
+${body}
+`;
 	}
 
 	/**

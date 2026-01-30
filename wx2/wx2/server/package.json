@@ -1,0 +1,30 @@
+{
+  "name": "unicloud-proxy-server",
+  "version": "1.0.0",
+  "description": "固定 IP 代理服务器，用于转发 uniCloud 请求",
+  "main": "proxy-server.js",
+  "scripts": {
+    "start": "node proxy-server.js",
+    "dev": "nodemon proxy-server.js",
+    "pm2:start": "pm2 start proxy-server.js --name unicloud-proxy",
+    "pm2:stop": "pm2 stop unicloud-proxy",
+    "pm2:restart": "pm2 restart unicloud-proxy",
+    "pm2:logs": "pm2 logs unicloud-proxy"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "axios": "^1.6.0",
+    "body-parser": "^1.20.2"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  },
+  "keywords": [
+    "proxy",
+    "unicloud",
+    "wxpay",
+    "fixed-ip"
+  ],
+  "author": "",
+  "license": "ISC"
+}

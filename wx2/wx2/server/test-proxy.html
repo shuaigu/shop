@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>代理服务器测试工具</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+
+        .subtitle {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .server-info {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .server-info .status {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #28a745;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            margin-bottom: 20px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+        }
+
+        .card h2 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .test-item {
+            margin-bottom: 20px;
+        }
+
+        .test-item h3 {
+            color: #555;
+            margin-bottom: 10px;
+            font-size: 16px;
+        }
+
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.3s;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .result {
+            margin-top: 15px;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            max-height: 400px;
+            overflow: auto;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+
+        .result.success {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+
+        .result.error {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+
+        .result.info {
+            background: #d1ecf1;
+            border: 1px solid #bee5eb;
+            color: #0c5460;
+        }
+
+        .input-group {
+            margin-bottom: 15px;
+        }
+
+        .input-group label {
+            display: block;
+            margin-bottom: 5px;
+            color: #555;
+            font-weight: 600;
+        }
+
+        .input-group input,
+        .input-group textarea {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #e1e8ed;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+
+        .input-group input:focus,
+        .input-group textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .input-group textarea {
+            min-height: 100px;
+            font-family: 'Courier New', monospace;
+        }
+
+        .ip-display {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+            font-size: 24px;
+            font-weight: bold;
+            margin-top: 15px;
+            letter-spacing: 2px;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 14px;
+            height: 14px;
+            border: 2px solid white;
+            border-top-color: transparent;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin-left: 8px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .btn-group button {
+            flex: 1;
+            min-width: 150px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚀 代理服务器测试工具</h1>
+            <p class="subtitle">用于测试 uniCloud 固定 IP 代理服务</p>
+            <div class="server-info">
+                <div class="status"></div>
+                <span><strong>服务器:</strong> 115.159.35.33:8888</span>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>📊 基础测试</h2>
+            
+            <div class="test-item">
+                <h3>1. 健康检查</h3>
+                <button onclick="testHealth()">测试服务器状态</button>
+                <div id="health-result"></div>
+            </div>
+
+            <div class="test-item">
+                <h3>2. 获取服务器出口 IP</h3>
+                <button onclick="testGetIP()">获取 IP 地址</button>
+                <div id="ip-result"></div>
+            </div>
+
+            <div class="test-item">
+                <h3>3. 测试代理转发</h3>
+                <button onclick="testProxy()">测试代理功能</button>
+                <div id="proxy-result"></div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>🔧 自定义测试</h2>
+            
+            <div class="input-group">
+                <label>目标 URL:</label>
+                <input type="text" id="custom-url" value="https://api.ipify.org?format=json" placeholder="输入要测试的 URL">
+            </div>
+
+            <div class="input-group">
+                <label>请求方法:</label>
+                <input type="text" id="custom-method" value="GET" placeholder="GET/POST/PUT/DELETE">
+            </div>
+
+            <div class="input-group">
+                <label>请求数据 (JSON):</label>
+                <textarea id="custom-data" placeholder='{"key": "value"}'></textarea>
+            </div>
+
+            <button onclick="testCustomRequest()">发送自定义请求</button>
+            <div id="custom-result"></div>
+        </div>
+
+        <div class="card">
+            <h2>💰 微信支付测试</h2>
+            
+            <div class="test-item">
+                <h3>测试微信支付 API 连通性</h3>
+                <p style="color: #666; font-size: 13px; margin-bottom: 10px;">
+                    ⚠️ 此测试仅验证网络连通性，不会发起实际支付
+                </p>
+                <button onclick="testWxPay()">测试连接</button>
+                <div id="wxpay-result"></div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>📋 完整测试报告</h2>
+            <div class="btn-group">
+                <button onclick="runAllTests()">运行所有测试</button>
+                <button onclick="clearResults()">清空结果</button>
+            </div>
+            <div id="all-tests-result"></div>
+        </div>
+    </div>
+
+    <script>
+        const PROXY_URL = 'http://115.159.35.33:8888';
+
+        // 显示结果
+        function showResult(elementId, content, type = 'info') {
+            const element = document.getElementById(elementId);
+            element.innerHTML = `<div class="result ${type}">${content}</div>`;
+        }
+
+        // 健康检查
+        async function testHealth() {
+            try {
+                showResult('health-result', '正在检查...', 'info');
+                
+                const response = await fetch(`${PROXY_URL}/health`);
+                const data = await response.json();
+                
+                const result = `✅ 服务器运行正常
+                
+状态: ${data.status}
+服务器: ${data.server}
+端口: ${data.port}
+时间: ${data.timestamp}`;
+                
+                showResult('health-result', result, 'success');
+            } catch (error) {
+                showResult('health-result', `❌ 连接失败: ${error.message}`, 'error');
+            }
+        }
+
+        // 获取 IP
+        async function testGetIP() {
+            try {
+                showResult('ip-result', '正在获取...', 'info');
+                
+                const response = await fetch(`${PROXY_URL}/ip`);
+                const data = await response.json();
+                
+                const result = `<div class="ip-display">${data.ip}</div>
+                
+✅ 这就是您的固定出口 IP 地址
+请将此 IP 添加到微信支付商户平台的白名单中`;
+                
+                showResult('ip-result', result, 'success');
+            } catch (error) {
+                showResult('ip-result', `❌ 获取失败: ${error.message}`, 'error');
+            }
+        }
+
+        // 测试代理
+        async function testProxy() {
+            try {
+                showResult('proxy-result', '正在测试代理转发...', 'info');
+                
+                const response = await fetch(`${PROXY_URL}/proxy`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        target_url: 'https://api.ipify.org?format=json',
+                        target_method: 'GET',
+                        response_type: 'json'
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    const result = `✅ 代理转发成功
+                    
+通过代理获取到的 IP: ${data.data.ip}
+HTTP 状态码: ${data.status}
+
+这证明:
+1. 代理服务器工作正常
+2. 可以成功转发请求
+3. 目标服务器返回的是代理服务器的 IP`;
+                    
+                    showResult('proxy-result', result, 'success');
+                } else {
+                    showResult('proxy-result', `❌ 代理失败: ${data.error}`, 'error');
+                }
+            } catch (error) {
+                showResult('proxy-result', `❌ 测试失败: ${error.message}`, 'error');
+            }
+        }
+
+        // 自定义请求
+        async function testCustomRequest() {
+            try {
+                const url = document.getElementById('custom-url').value;
+                const method = document.getElementById('custom-method').value;
+                const dataStr = document.getElementById('custom-data').value;
+                
+                if (!url) {
+                    showResult('custom-result', '❌ 请输入目标 URL', 'error');
+                    return;
+                }
+                
+                showResult('custom-result', '正在发送请求...', 'info');
+                
+                const requestBody = {
+                    target_url: url,
+                    target_method: method,
+                    response_type: 'json'
+                };
+                
+                if (dataStr) {
+                    try {
+                        requestBody.target_data = JSON.parse(dataStr);
+                    } catch (e) {
+                        showResult('custom-result', '❌ 请求数据不是有效的 JSON 格式', 'error');
+                        return;
+                    }
+                }
+                
+                const response = await fetch(`${PROXY_URL}/proxy`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(requestBody)
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    const result = `✅ 请求成功
+                    
+HTTP 状态码: ${data.status}
+返回数据:
+${JSON.stringify(data.data, null, 2)}`;
+                    
+                    showResult('custom-result', result, 'success');
+                } else {
+                    showResult('custom-result', `❌ 请求失败: ${data.error}`, 'error');
+                }
+            } catch (error) {
+                showResult('custom-result', `❌ 测试失败: ${error.message}`, 'error');
+            }
+        }
+
+        // 测试微信支付
+        async function testWxPay() {
+            try {
+                showResult('wxpay-result', '正在测试微信支付 API 连通性...', 'info');
+                
+                // 测试微信支付 API 的网络连通性（不发起实际支付）
+                const response = await fetch(`${PROXY_URL}/proxy`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        target_url: 'https://api.mch.weixin.qq.com',
+                        target_method: 'GET',
+                        response_type: 'text'
+                    })
+                });
+                
+                const data = await response.json();
+                
+                const result = `✅ 微信支付 API 可访问
+                
+HTTP 状态码: ${data.status}
+
+说明:
+1. 代理服务器可以访问微信支付 API
+2. 网络连接正常
+3. 可以开始配置白名单
+
+下一步:
+将 IP 地址 115.159.35.33 添加到微信支付商户平台的白名单中`;
+                
+                showResult('wxpay-result', result, 'success');
+            } catch (error) {
+                showResult('wxpay-result', `❌ 连接失败: ${error.message}`, 'error');
+            }
+        }
+
+        // 运行所有测试
+        async function runAllTests() {
+            showResult('all-tests-result', '正在运行所有测试，请稍候...<span class="loading"></span>', 'info');
+            
+            const tests = [
+                { name: '健康检查', func: testHealth },
+                { name: '获取 IP', func: testGetIP },
+                { name: '代理转发', func: testProxy },
+                { name: '微信支付连通性', func: testWxPay }
+            ];
+            
+            let results = '=== 测试报告 ===\n\n';
+            
+            for (const test of tests) {
+                results += `正在测试: ${test.name}...\n`;
+                try {
+                    await test.func();
+                    results += `✅ ${test.name} - 通过\n\n`;
+                } catch (error) {
+                    results += `❌ ${test.name} - 失败: ${error.message}\n\n`;
+                }
+                await new Promise(resolve => setTimeout(resolve, 1000));
+            }
+            
+            results += '=== 测试完成 ===\n';
+            results += '\n如果所有测试都通过，说明代理服务器配置正确！';
+            
+            showResult('all-tests-result', results, 'success');
+        }
+
+        // 清空结果
+        function clearResults() {
+            const resultElements = document.querySelectorAll('[id$="-result"]');
+            resultElements.forEach(el => el.innerHTML = '');
+        }
+
+        // 页面加载时自动检查健康状态
+        window.addEventListener('load', () => {
+            testHealth();
+        });
+    </script>
+</body>
+</html>
