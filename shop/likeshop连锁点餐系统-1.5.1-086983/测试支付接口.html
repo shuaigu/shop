@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>测试营销聊天支付接口</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 30px;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: #555;
+        }
+        input, textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+            box-sizing: border-box;
+        }
+        button {
+            background: #1989fa;
+            color: white;
+            padding: 12px 30px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-right: 10px;
+        }
+        button:hover {
+            background: #1678d4;
+        }
+        button.secondary {
+            background: #52c41a;
+        }
+        button.secondary:hover {
+            background: #3aa116;
+        }
+        .result {
+            margin-top: 30px;
+            padding: 20px;
+            background: #f9f9f9;
+            border-radius: 4px;
+            border: 1px solid #e0e0e0;
+        }
+        .result h3 {
+            margin-top: 0;
+            color: #333;
+        }
+        .success {
+            background: #f6ffed;
+            border-color: #b7eb8f;
+        }
+        .error {
+            background: #fff2e8;
+            border-color: #ffbb96;
+        }
+        pre {
+            background: #272822;
+            color: #f8f8f2;
+            padding: 15px;
+            border-radius: 4px;
+            overflow-x: auto;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        .tips {
+            background: #e6f7ff;
+            padding: 15px;
+            border-radius: 4px;
+            border-left: 4px solid #1890ff;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 测试营销聊天支付接口</h1>
+        
+        <div class="tips">
+            <strong>💡 使用说明：</strong><br>
+            1. 填写你的API地址和Token<br>
+            2. 点击"测试创建订单"查看后端返回的详细错误<br>
+            3. 根据错误信息进行排查
+        </div>
+
+        <div class="form-group">
+            <label>API地址：</label>
+            <input type="text" id="apiUrl" value="https://shop.jingle0350.cn/api" placeholder="例如: https://shop.jingle0350.cn/api">
+        </div>
+
+        <div class="form-group">
+            <label>Token（从小程序获取）：</label>
+            <textarea id="token" rows="3" placeholder="在小程序控制台执行: uni.getStorageSync('token') 获取"></textarea>
+        </div>
+
+        <div class="form-group">
+            <label>支付金额（元）：</label>
+            <input type="number" id="amount" value="0.4" step="0.01" placeholder="0.4">
+        </div>
+
+        <div style="margin-top: 20px;">
+            <button onclick="testCreateOrder()">测试创建订单</button>
+            <button class="secondary" onclick="testWithoutToken()">测试未登录情况</button>
+        </div>
+
+        <div id="result"></div>
+    </div>
+
+    <script>
+        function showResult(title, content, isSuccess) {
+            const resultDiv = document.getElementById('result');
+            const className = isSuccess ? 'result success' : 'result error';
+            resultDiv.className = className;
+            resultDiv.innerHTML = `
+                <h3>${title}</h3>
+                <pre>${content}</pre>
+            `;
+        }
+
+        async function testCreateOrder() {
+            const apiUrl = document.getElementById('apiUrl').value.trim();
+            const token = document.getElementById('token').value.trim();
+            const amount = document.getElementById('amount').value;
+
+            if (!apiUrl) {
+                alert('请填写API地址');
+                return;
+            }
+
+            if (!token) {
+                alert('请填写Token（可以点击"测试未登录情况"按钮测试无token的情况）');
+                return;
+            }
+
+            showResult('⏳ 请求中...', '正在发送请求到后端...', true);
+
+            try {
+                const response = await fetch(`${apiUrl}/pay/createMarketingChatOrder`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'token': token
+                    },
+                    body: JSON.stringify({
+                        amount: parseFloat(amount),
+                        remark: '营销聊天诚意金（测试）'
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (response.ok && data.code === 1) {
+                    showResult(
+                        '✅ 成功！订单创建成功',
+                        JSON.stringify(data, null, 2),
+                        true
+                    );
+                } else {
+                    showResult(
+                        `❌ 失败！HTTP ${response.status}`,
+                        `错误信息: ${data.msg || data.message || '未知错误'}\n\n完整响应:\n${JSON.stringify(data, null, 2)}`,
+                        false
+                    );
+                }
+            } catch (error) {
+                showResult(
+                    '❌ 网络错误',
+                    `错误: ${error.message}\n\n请检查:\n1. API地址是否正确\n2. 网络是否连通\n3. 服务器是否正常运行`,
+                    false
+                );
+            }
+        }
+
+        async function testWithoutToken() {
+            const apiUrl = document.getElementById('apiUrl').value.trim();
+            const amount = document.getElementById('amount').value;
+
+            if (!apiUrl) {
+                alert('请填写API地址');
+                return;
+            }
+
+            showResult('⏳ 测试未登录情况...', '正在发送请求（不带Token）...', true);
+
+            try {
+                const response = await fetch(`${apiUrl}/pay/createMarketingChatOrder`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        amount: parseFloat(amount),
+                        remark: '营销聊天诚意金（测试未登录）'
+                    })
+                });
+
+                const data = await response.json();
+                
+                showResult(
+                    `📊 测试结果 (HTTP ${response.status})`,
+                    `预期应该返回"用户未登录"错误\n\n实际响应:\n${JSON.stringify(data, null, 2)}`,
+                    data.msg && data.msg.includes('登录')
+                );
+            } catch (error) {
+                showResult(
+                    '❌ 网络错误',
+                    `错误: ${error.message}`,
+                    false
+                );
+            }
+        }
+    </script>
+</body>
+</html>
