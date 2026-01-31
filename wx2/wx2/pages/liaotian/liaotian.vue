@@ -64,6 +64,9 @@
 	import {
 		useUserInfoStore
 	} from '@/store/user.js'
+	import {
+		testLogin
+	} from '@/utils/isLogin.js'
 
 	const userStore = useUserInfoStore()
 	const lastMessageId = ref('')
@@ -236,6 +239,11 @@
 	}
 
 	const handleSelect = async (answer) => {
+		// 检查用户是否登录
+		if (!testLogin()) {
+			return
+		}
+		
 		// 添加用户回答
 		chatList.value.push({
 			type: 'user',
