@@ -4,7 +4,7 @@
 		<view class="header-bg">
 			<view class="header-content">
 				<view class="title-line1">我们帮您把业务/产品推广出去</view>
-				<view class="title-line2">您只需要等着客户主动找上门</view>
+				<view class="title-line2">收下福利，开始精准获客之旅</view>
 			</view>
 			<view class="close-btn" @click="goBack">
 				<uni-icons type="closeempty" size="24" color="#fff"></uni-icons>
@@ -26,6 +26,16 @@
 									{{opt}}
 								</view>
 							</view>
+						</view>
+					</view>
+
+					<!-- 正在输入提示 -->
+					<view class="message-item left" v-if="isTyping && index === chatList.length - 1">
+						<image class="avatar" :src="robotAvatarDisplay" mode="aspectFill"></image>
+						<view class="bubble typing">
+							<view class="dot"></view>
+							<view class="dot"></view>
+							<view class="dot"></view>
 						</view>
 					</view>
 
@@ -58,8 +68,12 @@
 	const userStore = useUserInfoStore()
 	const lastMessageId = ref('')
 	const isFinished = ref(false)
-	const robotAvatarDisplay = ref('https://aly2.jingle0350.cn/2025/touxiang/robot-avatar.png')
+	const isTyping = ref(false)
+	const robotAvatarDisplay = ref('/static/images/touxiang.png')
 	const userAvatarDisplay = ref('/static/images/touxiang.png')
+
+	// 用户是否选择了收下福利
+	const wantsReward = ref(false)
 
 	// 处理用户头像显示逻辑（参考 my.vue）
 	const updateDisplayAvatar = async () => {
@@ -98,18 +112,21 @@
 		userAvatarDisplay.value = '/static/images/touxiang.png'
 	}
 
-	const chatList = ref([{
-			type: 'system',
+	const chatList = ref([])
+
+	const questions = [{
 			text: '我们是做全行业获客的专业团队，能够帮助您精准获取客户；意向客户会主动添加您，全行业均可做；若您有需求，请认真回答以下问题。'
 		},
 		{
-			type: 'system',
+			text: '您是否愿意收下0.1元？',
+			options: ['愿意', '不愿意'],
+			isReward: true
+		},
+		{
 			text: '您是否整面临获客难、成本高的问题？',
 			options: ['是', '否']
-		}
-	])
-
-	const questions = [{
+		},
+		{
 			text: '您想要获取哪里的客户？',
 			options: ['本地客户', '全国客户']
 		},
@@ -140,38 +157,105 @@
 	const scrollToBottom = () => {
 		setTimeout(() => {
 			lastMessageId.value = 'msg-' + (chatList.value.length - 1)
-		}, 200)
+		}, 100)
 	}
 
-	const handleSelect = (answer) => {
+	const typeMessage = async (text, options, isEnd) => {
+		isTyping.value = true
+		scrollToBottom()
+
+		// 模拟思考时间（根据文字长度稍微变动）
+		const thinkingTime = Math.min(1500, 800 + text.length * 10)
+		await new Promise(resolve => setTimeout(resolve, thinkingTime))
+
+		isTyping.value = false
+		const newMessage = {
+			type: 'system',
+			text: '',
+			options: []
+		}
+		chatList.value.push(newMessage)
+
+		const msgIndex = chatList.value.length - 1
+		for (let i = 0; i <= text.length; i++) {
+			chatList.value[msgIndex].text = text.slice(0, i)
+			
+			// 模拟真实打字：遇到标点符号停顿稍长
+			const char = text[i - 1]
+			let delay = 30 + Math.random() * 40 // 基础速度 30-70ms
+			if (['，', '。', '！', '？', ',', '.', '!', '?'].includes(char)) {
+				delay += 200 // 标点停顿
+			}
+			
+			if (i % 2 === 0) scrollToBottom() 
+			await new Promise(resolve => setTimeout(resolve, delay))
+		}
+
+		// 打字结束后显示选项
+		if (options) {
+			await new Promise(resolve => setTimeout(resolve, 300)) // 选项弹出前微调
+			chatList.value[msgIndex].options = options
+		}
+
+		if (isEnd) {
+			isFinished.value = true
+			if (wantsReward.value) {
+				const rewardText = ' \n\n🧧 您的0.1元红包福利已进入审核流程。'
+				const baseText = chatList.value[msgIndex].text
+				for (let i = 0; i <= rewardText.length; i++) {
+					chatList.value[msgIndex].text = baseText + rewardText.slice(0, i)
+					scrollToBottom()
+					await new Promise(resolve => setTimeout(resolve, 50))
+				}
+			}
+		}
+
+		scrollToBottom()
+	}
+
+	const startConversation = async () => {
+		const firstQ = questions[currentQuestionIdx.value]
+		await typeMessage(firstQ.text, firstQ.options)
+		currentQuestionIdx.value++
+
+		if (!firstQ.options) {
+			setTimeout(showNextMessage, 1000)
+		}
+	}
+
+	const showNextMessage = async () => {
+		const nextQ = questions[currentQuestionIdx.value]
+		if (nextQ) {
+			await typeMessage(nextQ.text, nextQ.options, nextQ.isEnd)
+			currentQuestionIdx.value++
+
+			if (!nextQ.options && !nextQ.isEnd) {
+				setTimeout(showNextMessage, 1000)
+			}
+		}
+	}
+
+	const handleSelect = async (answer) => {
 		// 添加用户回答
 		chatList.value.push({
 			type: 'user',
 			text: answer
 		})
-
-		// 获取下一条系统消息
-		const nextQ = questions[currentQuestionIdx.value]
-		if (nextQ) {
-			setTimeout(() => {
-				chatList.value.push({
-					type: 'system',
-					text: nextQ.text,
-					options: nextQ.options
-				})
-				if (nextQ.isEnd) {
-					isFinished.value = true
-				}
-				currentQuestionIdx.value++
-				scrollToBottom()
-			}, 500)
-		}
 		scrollToBottom()
+
+		// 处理特殊逻辑：是否愿意收下福利
+		const prevQ = questions[currentQuestionIdx.value - 1]
+		if (prevQ && prevQ.isReward && answer === '愿意') {
+			wantsReward.value = true
+			await typeMessage('太棒了！福利已为您锁定，请继续回答以下问题，完成后我们将为您发放。')
+		}
+
+		setTimeout(showNextMessage, 500)
 	}
 
 	onMounted(() => {
 		updateDisplayAvatar()
-		scrollToBottom()
+		startConversation()
 	})
 </script>
 
@@ -180,28 +264,48 @@
 		display: flex;
 		flex-direction: column;
 		height: 100vh;
-		background-color: #f5f5f5;
+		background-color: #f8f9fa;
 	}
 
 	.header-bg {
 		position: relative;
-		height: 350rpx;
-		background: linear-gradient(180deg, #3a7bd5 0%, #00d2ff 100%);
+		height: 380rpx;
+		background: linear-gradient(135deg, #399bfe 0%, #4facfe 100%);
 		padding-top: 100rpx;
-		text-align: center;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
 		color: #fff;
+		overflow: hidden;
+
+		&::after {
+			content: '';
+			position: absolute;
+			width: 200%;
+			height: 200%;
+			top: -50%;
+			left: -50%;
+			background: radial-gradient(circle at center, rgba(255, 255, 255, 0.1) 0%, transparent 70%);
+			animation: rotate 20s linear infinite;
+		}
 
 		.header-content {
+			position: relative;
+			z-index: 2;
+			text-align: center;
+
 			.title-line1 {
-				font-size: 40rpx;
-				font-weight: bold;
-				margin-bottom: 20rpx;
-				text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+				font-size: 42rpx;
+				font-weight: 600;
+				margin-bottom: 16rpx;
+				letter-spacing: 2rpx;
 			}
 
 			.title-line2 {
-				font-size: 32rpx;
-				opacity: 0.9;
+				font-size: 28rpx;
+				opacity: 0.85;
+				font-weight: 300;
 			}
 		}
 
@@ -210,41 +314,52 @@
 			left: 30rpx;
 			top: 60rpx;
 			z-index: 10;
+			width: 64rpx;
+			height: 64rpx;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			background: rgba(255, 255, 255, 0.2);
+			border-radius: 50%;
+			backdrop-filter: blur(4px);
 		}
 	}
 
 	.chat-list {
 		flex: 1;
-		margin-top: -50rpx;
-		background-color: #f5f5f5;
+		margin-top: -40rpx;
+		background-color: #f8f9fa;
 		border-radius: 40rpx 40rpx 0 0;
-		padding: 40rpx 20rpx;
+		padding: 30rpx 24rpx;
 		box-sizing: border-box;
+		position: relative;
+		z-index: 5;
 
 		.chat-content {
-			padding-bottom: 40rpx;
+			padding-bottom: 60rpx;
 		}
 	}
 
 	.message-item {
 		display: flex;
-		margin-bottom: 40rpx;
+		margin-bottom: 48rpx;
 		align-items: flex-start;
 
 		.avatar {
-			width: 80rpx;
-			height: 80rpx;
-			border-radius: 50%;
+			width: 84rpx;
+			height: 84rpx;
+			border-radius: 20rpx;
 			flex-shrink: 0;
+			box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.05);
 		}
 
 		.bubble {
-			max-width: 70%;
-			padding: 24rpx 30rpx;
-			border-radius: 12rpx;
-			font-size: 28rpx;
+			max-width: 72%;
+			padding: 24rpx 32rpx;
+			font-size: 30rpx;
 			line-height: 1.6;
 			position: relative;
+			box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.04);
 		}
 
 		&.left {
@@ -254,8 +369,8 @@
 
 			.bubble {
 				background-color: #fff;
-				color: #333;
-				border-top-left-radius: 0;
+				color: #2c3e50;
+				border-radius: 4rpx 28rpx 28rpx 28rpx;
 			}
 		}
 
@@ -267,41 +382,78 @@
 			}
 
 			.bubble {
-				background-color: #fff;
-				color: #333;
-				border-top-right-radius: 0;
+				background-color: #399bfe;
+				color: #fff;
+				border-radius: 28rpx 4rpx 28rpx 28rpx;
+				box-shadow: 0 6rpx 20rpx rgba(57, 155, 254, 0.2);
+			}
+		}
+
+		.typing {
+			display: flex;
+			gap: 8rpx;
+			padding: 24rpx 32rpx;
+			align-items: center;
+			height: 40rpx;
+
+			.dot {
+				width: 10rpx;
+				height: 10rpx;
+				background-color: #399bfe;
+				border-radius: 50%;
+				animation: typing-dot 1.4s infinite ease-in-out;
+
+				&:nth-child(2) {
+					animation-delay: 0.2s;
+				}
+
+				&:nth-child(3) {
+					animation-delay: 0.4s;
+				}
 			}
 		}
 	}
 
 	.options {
 		display: flex;
-		justify-content: space-between;
-		margin-top: 30rpx;
+		flex-wrap: wrap;
 		gap: 20rpx;
+		margin-top: 24rpx;
 
 		.option-btn {
-			flex: 1;
-			height: 80rpx;
-			line-height: 80rpx;
-			text-align: center;
-			background-color: #e6a23c;
-			color: #fff;
-			border-radius: 10rpx;
-			font-size: 30rpx;
+			padding: 18rpx 36rpx;
+			background-color: #fff;
+			color: #399bfe;
+			border-radius: 36rpx;
+			font-size: 28rpx;
+			border: 2rpx solid rgba(57, 155, 254, 0.3);
+			transition: all 0.2s ease;
 
 			&:active {
-				opacity: 0.8;
+				background-color: #399bfe;
+				color: #fff;
+				transform: scale(0.96);
 			}
 		}
 	}
 
 	.footer-info {
-		background-color: #000;
-		color: #999;
-		font-size: 24rpx;
+		background-color: #fff;
+		color: #adb5bd;
+		font-size: 22rpx;
 		text-align: center;
-		padding: 30rpx 20rpx;
+		padding: 30rpx 24rpx;
 		padding-bottom: calc(30rpx + env(safe-area-inset-bottom));
+		border-top: 1rpx solid #f1f3f5;
+	}
+
+	@keyframes rotate {
+		from { transform: rotate(0deg); }
+		to { transform: rotate(360deg); }
+	}
+
+	@keyframes typing-dot {
+		0%, 80%, 100% { transform: scale(0); opacity: 0.3; }
+		40% { transform: scale(1); opacity: 1; }
 	}
 </style>
