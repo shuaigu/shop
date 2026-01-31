@@ -95,7 +95,7 @@ const canvasWidth = ref(750); // canvas宽度(px)
 const canvasHeight = ref(1334); // canvas高度(px) - 移动端海报比例，会根据内容动态调整
 const isGenerating = ref(false); // 是否正在生成
 const posterPreview = ref(null); // 弹窗引用
-const qrcodeBase64 = ref(''); // 小程序码base64
+// 已移除小程序码功能
 
 // 定义 emits
 const emit = defineEmits(['posterGenerated']);
@@ -157,10 +157,9 @@ const generatePoster = async (silent = false) => {
 		}
 	}, 30000);
 	
-	// 🔥 每次生成前清空缓存，确保使用最新数据
-	qrcodeBase64.value = '';
+	// 🔥 每次生成前清空缓存,确保使用最新数据
 	posterPath.value = ''; // 清空海报路径缓存
-	console.log('🗑️ 已清空海报缓存（小程序码+路径）');
+	console.log('🗑️ 已清空海报缓存');
 	
 	// 只在非静默模式下显示加载提示
 	if (!silent) {
@@ -173,25 +172,7 @@ const generatePoster = async (silent = false) => {
 	try {
 		console.log('🚀 开始生成海报...');
 		
-		// ✅ 优化：并行执行小程序码生成（带超时）
-		const qrcodePromise = Promise.race([
-			generateArticleQRCode(),
-			new Promise((resolve) => {
-				setTimeout(() => {
-					console.warn('⚠️ 小程序码生成超时（12秒），继续生成海报');
-					resolve(null);
-				}, 12000); // 12秒超时
-			})
-		]);
 		
-		// 等待小程序码生成（或超时）
-		await qrcodePromise;
-		
-		if (!qrcodeBase64.value) {
-			console.warn('⚠️ 小程序码未生成，将使用占位图继续');
-		} else {
-			console.log('✅ 小程序码已准备就绪');
-		}
 		
 		// 然后绘制海报
 		// #ifdef MP-WEIXIN
@@ -776,47 +757,7 @@ const drawImageFit = (ctx, img, x, y, w, h) => {
 	ctx.drawImage(img, sx, sy, sw, sh, x, y, w, h);
 };
 
-// 生成文章小程序码（优化版）
-const generateArticleQRCode = async () => {
-	console.log('📝 开始生成小程序码...');
-	console.log('   文章ID:', props.articleId);
-	
-	try {
-		const startTime = Date.now();
-		const wxacodeApi = uniCloud.importObject('getWxacode', { 
-			customUI: true,
-			// ✅ 增加超时时间
-			timeout: 15000
-		});
-		
-		const res = await wxacodeApi.generateArticleQRCode({
-			article_id: props.articleId
-		});
-		
-		const elapsed = Date.now() - startTime;
-		console.log(`⏱️ 云函数调用耗时: ${elapsed}ms`);
-		
-		if (res.errCode === 0 && res.qrcodeBase64) {
-			qrcodeBase64.value = res.qrcodeBase64;
-			console.log('✅ 小程序码生成成功');
-			console.log('   base64长度:', res.qrcodeBase64.length);
-			return res.qrcodeBase64;
-		} else {
-			console.error('❌ 小程序码生成失败:', res.errMsg);
-			if (res.error) {
-				console.error('   错误详情:', res.error);
-			}
-			qrcodeBase64.value = '';
-			return null;
-		}
-	} catch (err) {
-		console.error('❌ 调用云函数失败:', err);
-		console.error('   错误类型:', err.name);
-		console.error('   错误信息:', err.message);
-		qrcodeBase64.value = '';
-		return null;
-	}
-};
+// 已移除小程序码生成功能
 
 // 显示海报预览
 const showPosterPreview = () => {

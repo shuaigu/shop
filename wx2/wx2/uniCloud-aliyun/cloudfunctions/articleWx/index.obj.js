@@ -558,6 +558,214 @@ module.exports = {
 	},
 
 	/**
+	 * processLikeCashback 点赞后给分享者打款
+	 * @param {string} article_id 文章ID
+	 * @param {string} liker_user_id 点赞者用户ID
+	 * @param {number} amount 打款金额（元）
+	 * @returns {object} 返回打款结果
+	 */
+	async processLikeCashback(article_id, liker_user_id, amount = 0.1) {
+		console.log('=== 开始处理点赞打款（给分享者） ===');
+		console.log('参数:', { article_id, liker_user_id, amount });
+		
+		try {
+			// 1. 参数验证
+			if (!article_id || !liker_user_id) {
+				return {
+					errCode: -1,
+					errMsg: '参数不完整'
+				};
+			}
+			
+			// 2. 检查金额有效性
+			if (amount <= 0 || amount > 500) {
+				return {
+					errCode: -1,
+					errMsg: '打款金额必须在0.1-500元之间'
+				};
+			}
+			
+			// 3. 从最近的浏览记录中获取分享者ID（点赞者的浏览记录）
+			console.log('开始查询点赞者的浏览记录，获取分享者信息...');
+			const viewRecordRes = await this.db.collection('viewRecord')
+				.where({
+					article_id: article_id,
+					user_id: liker_user_id,
+					view_source: 'share' // 只查询通过分享进入的记录
+				})
+				.orderBy('view_time', 'desc')
+				.limit(1)
+				.get();
+			
+			if (!viewRecordRes.data || viewRecordRes.data.length === 0) {
+				console.log('未找到分享来源记录，该用户不是通过分享进入的');
+				return {
+					errCode: -1,
+					errMsg: '未检测到分享来源',
+					no_sharer: true
+				};
+			}
+			
+			const viewRecord = viewRecordRes.data[0];
+			const sharer_id = viewRecord.sharer_id;
+			
+			if (!sharer_id) {
+				console.log('浏览记录中没有分享者ID');
+				return {
+					errCode: -1,
+					errMsg: '未检测到分享者信息',
+					no_sharer: true
+				};
+			}
+			
+			console.log('找到分享者:', {
+				sharer_id,
+				sharer_name: viewRecord.sharer_name
+			});
+			
+			// 4. 检查点赞者和分享者是否是同一个人（自己点赞自己分享的文章不打款）
+			if (liker_user_id === sharer_id) {
+				console.log('点赞者和分享者是同一人，不触发打款');
+				return {
+					errCode: -1,
+					errMsg: '不能为自己的分享打款',
+					self_like: true
+				};
+			}
+			
+			// 5. 检查该点赞者对该文章是否已经触发过打款（防止重复）
+			const existingPayment = await this.db.collection('like_cashback_records')
+				.where({
+					article_id: article_id,
+					liker_user_id: liker_user_id,
+					status: 1 // 已成功打款
+				})
+				.get();
+				
+			if (existingPayment.data && existingPayment.data.length > 0) {
+				console.log('该点赞者已经为此文章触发过打款');
+				return {
+					errCode: 0,
+					errMsg: '您已经为此分享贡献过奖励',
+					already_received: true
+				};
+			}
+			
+			// 6. 获取分享者的openid
+			console.log('开始获取分享者openid...');
+			const sharerRes = await this.db.collection('user').doc(sharer_id).get();
+			
+			if (!sharerRes.data || sharerRes.data.length === 0) {
+				console.error('分享者不存在');
+				return {
+					errCode: -1,
+					errMsg: '分享者信息不存在'
+				};
+			}
+			
+			const sharer = sharerRes.data[0];
+			
+			// 兼容两种openid字段名
+			let openid = null;
+			if (sharer.wx_openid && sharer.wx_openid[0]) {
+				openid = sharer.wx_openid[0];
+			} else if (sharer.openid_wx) {
+				openid = Array.isArray(sharer.openid_wx) ? sharer.openid_wx[0] : sharer.openid_wx;
+			}
+			
+			if (!openid) {
+				console.error('分享者openid不存在');
+				return {
+					errCode: -1,
+					errMsg: '分享者openid不存在'
+				};
+			}
+			
+			console.log('分享者openid:', openid.substr(0, 8) + '***');
+			console.log('分享者昵称:', sharer.nickname || sharer.nickName);
+			
+			// 7. 创建打款记录（状态为处理中）
+			const cashbackRecord = {
+				article_id: article_id,
+				liker_user_id: liker_user_id, // 点赞者ID
+				sharer_user_id: sharer_id, // 分享者ID（实际收款人）
+				openid: openid,
+				amount: amount,
+				status: 0, // 0-处理中
+				create_time: Date.now(),
+				type: 'like_cashback_to_sharer'
+			};
+			
+			const recordRes = await this.db.collection('like_cashback_records').add(cashbackRecord);
+			const record_id = recordRes.id;
+			
+			console.log('打款记录已创建:', record_id);
+			
+			// 8. 调用商家转账API
+			const CashbackHandlerV3 = require('./cashback-handler-v3.js').CashbackHandlerV3;
+			const cashbackHandler = new CashbackHandlerV3();
+			
+			const amountInFen = Math.round(amount * 100); // 转换为分
+			console.log('转账金额:', amount + '元 = ' + amountInFen + '分');
+			
+			const transferResult = await cashbackHandler.transferToBalance({
+				openid: openid,
+				amount: amountInFen,
+				desc: '好友点赞奖励',
+				user_name: null
+			});
+			
+			console.log('转账API返回:', transferResult);
+			
+			// 9. 更新打款记录状态
+			if (transferResult.success) {
+				// 打款成功
+				await this.db.collection('like_cashback_records').doc(record_id).update({
+					status: 1, // 1-成功
+					cashback_time: Date.now(),
+					transaction_id: transferResult.batch_id || transferResult.out_batch_no,
+					batch_id: transferResult.batch_id,
+					out_batch_no: transferResult.out_batch_no
+				});
+				
+				console.log('✅ 分享者打款成功!');
+				
+				return {
+					errCode: 0,
+					errMsg: '打款成功',
+					data: {
+						amount: amount,
+						transaction_id: transferResult.batch_id || transferResult.out_batch_no,
+						record_id: record_id,
+						sharer_name: sharer.nickname || sharer.nickName || '分享者'
+					}
+				};
+			} else {
+				// 打款失败
+				await this.db.collection('like_cashback_records').doc(record_id).update({
+					status: 2, // 2-失败
+					error_msg: transferResult.message || '转账失败',
+					error_code: transferResult.code
+				});
+				
+				console.error('❌ 分享者打款失败:', transferResult.message);
+				
+				return {
+					errCode: -1,
+					errMsg: '打款失败: ' + (transferResult.message || '未知错误')
+				};
+			}
+			
+		} catch (err) {
+			console.error('❌ 点赞打款异常:', err);
+			return {
+				errCode: -1,
+				errMsg: '打款异常: ' + err.message
+			};
+		}
+	},
+	
+	/**
 	 * del  删除文章
 	 * @param {string} article_id 当前文章的id
 	 * @param {string} user_id 当前操作的用户ID

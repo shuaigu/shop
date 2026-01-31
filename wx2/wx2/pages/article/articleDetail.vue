@@ -37,7 +37,40 @@
 	const userStore = useUserInfoStore()
 
 	// 使用统一的图片处理函数替换原有的processCDNImage
-	const processImageUrl = (url) => {
+	// 添加转发按钮引用
+const shareButtonRef = ref(null);
+// 添加高亮状态
+const isShareButtonHighlight = ref(false);
+
+// 触发分享的方法 - 引导用户点击底部转发按钮
+const triggerShare = () => {
+	console.log('引导用户点击转发按钮...');
+	
+	// #ifdef MP-WEIXIN
+	// 显示提示
+	uni.showToast({
+		title: '请点击底部转发按钮',
+		icon: 'none',
+		duration: 2000
+	});
+	
+	// 触发高亮动画
+	isShareButtonHighlight.value = true;
+	setTimeout(() => {
+		isShareButtonHighlight.value = false;
+	}, 2000);
+	// #endif
+	
+	// #ifndef MP-WEIXIN
+	uni.showToast({
+		title: '请点击底部转发按钮',
+		icon: 'none',
+		duration: 2000
+	});
+	// #endif
+};
+
+const processImageUrl = (url) => {
 		if (!url) return getDefaultImage('default');
 		
 		// 使用domainConfig中的方法处理图片URL
@@ -295,6 +328,7 @@
 	// 添加买断相关状态
 	const isBuyoutProcessing = ref(false) // 买断处理中标识
 	const dianzanBargainRef = ref(null) // dianzan组件引用
+	const dianzanLikeRef = ref(null) // 点赞dianzan组件引用
 	const currentBargainPrice = ref(0) // 当前砍价剩余价格
 	const userOwnGroup = ref(null) // 用户自己发起的砍价小组信息
 	
@@ -546,7 +580,11 @@
 		setTimeout(() => {
 		uni.showModal({
 			title: '确认购买',
-			content: `您将以 ￥${computedBuyoutPrice.value.toFixed(2)} 的原价购买此商品。\n\n购买后您将成为小组长，分享给好友帮砍，每砍一刀您都将获得返现！\n\n是否继续？`,
+			content: `您将以 ￥${computedBuyoutPrice.value.toFixed(2)} 的原价购买此商品。
+
+购买后您将成为小组长，分享给好友帮砍，每砍一刀您都将获得返现！
+
+是否继续？`,
 			confirmText: '确认支付',
 			cancelText: '再想想',
 					success: async (res) => {
@@ -1525,6 +1563,188 @@
 			// 释放请求锁
 			isLikeRequesting.value = false;
 		}
+	};
+	
+	// 处理点赞状态更新
+	const handleLikeUpdate = (isLiked) => {
+		isArticleLiked.value = isLiked;
+		console.log('点赞状态已更新:', isLiked);
+	};
+	
+	// 处理点赞成功事件，触发商家打款
+	const handleLikeSuccess = async (data) => {
+		console.log('=== 点赞成功事件触发 ===', data);
+		
+		// 只有当用户点赞（不是取消点赞）时才触发打款
+		if (!data || !data.isLiked) {
+			console.log('取消点赞，不触发打款');
+			return;
+		}
+		
+		try {
+			// 检查用户是否已登录
+			if (!userStore.userInfo?.uid) {
+				console.error('用户未登录，无法打款');
+				return;
+			}
+			
+			// 获取文章ID
+			const articleId = articleDetail.value._id || props.article_id;
+			if (!articleId) {
+				console.error('文章ID不存在，无法打款');
+				return;
+			}
+			
+				console.log('开始触发分享者打款...', {
+					articleId,
+					likerUserId: userStore.userInfo.uid
+				});
+				
+				// 显示加载提示
+				uni.showLoading({
+					title: '处理中...',
+					mask: true
+				});
+				
+				// 调用云函数执行打款（默认0.1元）
+				const cashbackResult = await articleApi.processLikeCashback(
+					articleId,
+					userStore.userInfo.uid, // 点赞者ID
+					0.1 // 打款金额（0.1元）
+				);
+				
+				uni.hideLoading();
+				
+				console.log('打款结果:', cashbackResult);
+				
+				if (cashbackResult.errCode === 0) {
+					// 打款成功
+					if (cashbackResult.already_received) {
+						// 已经领取过，提示用户分享也可以获得奖励
+						uni.showModal({
+							title: '点赞成功！',
+							content: `感谢您的点赞！
+
+您已为此分享贡献过奖励~
+
+🎁 小提示：您也可以分享此文章，好友点赞后您将获得现金奖励哦！`,
+							showCancel: true,
+							cancelText: '知道了',
+							confirmText: '立即分享',
+							confirmColor: '#ff6b6b',
+							success: (res) => {
+								if (res.confirm) {
+									triggerShare();
+								}
+							}
+						});
+					} else {
+						// 首次领取成功，给分享者打款成功
+						const amount = cashbackResult.data?.amount || 0.1;
+						const sharerName = cashbackResult.data?.sharer_name || '分享者';
+						
+						uni.showModal({
+							title: '点赞成功！',
+							content: `感谢您的点赞！
+
+已向分享者「${sharerName}」的微信零钱转账 ￥${amount.toFixed(2)} 元
+
+🎁 小提示：您也可以分享此文章，好友点赞后您将获得现金奖励哦！`,
+							showCancel: true,
+							cancelText: '知道了',
+							confirmText: '立即分享',
+							confirmColor: '#ff6b6b',
+							success: (res) => {
+								if (res.confirm) {
+									triggerShare();
+								}
+							}
+						});
+						
+						console.log('✅ 分享者打款成功！金额:', amount, '分享者:', sharerName);
+					}
+				} else if (cashbackResult.no_sharer) {
+					// 没有分享者，提示用户可以分享获得奖励
+					uni.showModal({
+						title: '点赞成功！',
+						content: `感谢您的点赞！
+
+🎁 您知道吗？分享此文章给好友，好友点赞后您将获得现金奖励！
+
+赶快分享给好友吧~`,
+						showCancel: true,
+						cancelText: '下次再说',
+						confirmText: '立即分享',
+						confirmColor: '#ff6b6b',
+						success: (res) => {
+							if (res.confirm) {
+								triggerShare();
+							}
+						}
+					});
+				} else if (cashbackResult.self_like) {
+					// 自己点赞自己分享的文章，不触发打款
+					uni.showModal({
+						title: '点赞成功！',
+						content: `感谢您的点赞！
+
+👉 这是您自己分享的文章，不能为自己打款哦~
+
+🎁 提示：继续分享给更多好友，他们点赞后您将获得现金奖励！`,
+						showCancel: true,
+						cancelText: '知道了',
+						confirmText: '立即分享',
+						confirmColor: '#ff6b6b',
+						success: (res) => {
+							if (res.confirm) {
+								triggerShare();
+							}
+						}
+					});
+				} else {
+					// 打款失败，但不影响点赞功能，依然提示用户分享可获得奖励
+					console.error('打款失败:', cashbackResult.errMsg);
+					
+					uni.showModal({
+						title: '点赞成功！',
+						content: `感谢您的点赞！\n\n🎁 提示：分享此文章给好友，好友点赞后您将获得现金奖励！`,
+						showCancel: true,
+						cancelText: '知道了',
+						confirmText: '立即分享',
+						confirmColor: '#ff6b6b',
+						success: (res) => {
+							if (res.confirm) {
+								triggerShare();
+							}
+						}
+					});
+				}
+				
+			} catch (err) {
+				console.error('触发打款异常:', err);
+				
+				// 隐藏加载提示
+				try {
+					uni.hideLoading();
+				} catch (e) {
+					console.warn('隐藏 loading 失败');
+				}
+				
+				// 静默失败，依然提示用户分享可获得奖励
+				uni.showModal({
+					title: '点赞成功！',
+					content: `感谢您的点赞！\n\n🎁 提示：分享此文章给好友，好友点赞后您将获得现金奖励！`,
+					showCancel: true,
+					cancelText: '知道了',
+					confirmText: '立即分享',
+					confirmColor: '#ff6b6b',
+					success: (res) => {
+						if (res.confirm) {
+							triggerShare();
+						}
+					}
+				});
+			}
 	};
 	
 	// 获取文章详情
@@ -3283,8 +3503,16 @@
 		handleVisibilityChange(true)
 		console.log('页面显示');
 		
-		// 重新获取点赞状态，确保显示最新状态
-		if (articleDetail.value?._id || props.article_id) {
+		// 刷新点赞状态：优先通过dianzan组件刷新，确保组件内部状态也同步
+		if (dianzanLikeRef.value && dianzanLikeRef.value.refreshLikeStatus) {
+			try {
+				await dianzanLikeRef.value.refreshLikeStatus();
+				console.log('页面显示时已刷新点赞状态（通过dianzan组件）');
+			} catch (err) {
+				console.error('刷新点赞状态失败:', err);
+			}
+		} else if (articleDetail.value?._id || props.article_id) {
+			// 备用方案：如果dianzan组件未就绪，使用页面级方法
 			try {
 				await getLikeStatus();
 				console.log('页面显示时已刷新点赞状态:', { isLiked: isArticleLiked.value, likeCount: likeCount.value });
@@ -4537,17 +4765,19 @@
 					</view>
 				</view>
 				
-				<!-- 点赞按钮 - 隐藏显示，保留功能 -->
-				<view class="action-item" style="display: none;">
+				<!-- 点赞按钮 -->
+				<view class="action-item">
 					<dianzan 
+						ref="dianzanLikeRef"
 						mode="like"
 						:articleId="articleDetail._id || props.article_id"
 						:initialLiked="isArticleLiked"
 						:initialCount="likeCount"
 						:showText="true"
 						:showCount="false"
-						@update:liked="(val) => isArticleLiked = val"
+						@update:liked="handleLikeUpdate"
 						@update:count="(val) => likeCount = val"
+						@like-success="handleLikeSuccess"
 					/>
 				</view>
 				
@@ -4588,7 +4818,13 @@
 				</view>
 				
 			<!-- 转发按钮 -->
-			<button open-type="share" class="action-item" :class="{'disabled': !isPosterReady}" :disabled="!isPosterReady">
+			<button 
+				ref="shareButtonRef" 
+				open-type="share" 
+				class="action-item" 
+				:class="{'disabled': !isPosterReady, 'share-btn-highlight': isShareButtonHighlight}" 
+				:disabled="!isPosterReady"
+			>
 				<uni-icons custom-prefix="icon" type="lishuai-zhuanfa" size="24" :color="isPosterReady ? '#444444' : '#cccccc'"></uni-icons>
 				<view class="text" :style="{color: isPosterReady ? '#444444' : '#cccccc'}">
 					转发
@@ -7229,6 +7465,22 @@
 		50% {
 			transform: scale(1.1);
 			opacity: 0.9;
+		}
+	}
+	
+	/* 转发按钮高亮动画 */
+	.share-btn-highlight {
+		animation: shareButtonBounce 0.6s ease-in-out 3;
+		box-shadow: 0 0 0 4rpx rgba(255, 107, 107, 0.4),
+		            0 0 0 8rpx rgba(255, 107, 107, 0.2) !important;
+	}
+	
+	@keyframes shareButtonBounce {
+		0%, 100% {
+			transform: scale(1);
+		}
+		50% {
+			transform: scale(1.15);
 		}
 	}
 </style>

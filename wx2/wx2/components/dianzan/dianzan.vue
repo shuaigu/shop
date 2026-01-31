@@ -667,6 +667,13 @@ const getLikeStatus = async (silent = true) => {
 	}
 }
 
+// 强制刷新点赞状态（忽略hasQueriedStatus检查）
+const refreshLikeStatus = async () => {
+	// 重置hasQueriedStatus，允许再次查询
+	hasQueriedStatus.value = false
+	await getLikeStatus()
+}
+
 // 处理砍价按钮点击（新增）
 const handleBargainButtonClick = async (e) => {
 	// 阻止事件冒泡
@@ -1323,14 +1330,15 @@ onBeforeUnmount(() => {
 
 // 暴露给父组件的方法和状态
 defineExpose({
-	// 砍价相关
-	handleBargain, // 砍价方法
-	isBargainComplete, // 砍价完成状态
+	// 砥价相关
+	handleBargain, // 砥价方法
+	isBargainComplete, // 砥价完成状态
 	currentPrice, // 当前价格
-	getBargainStatus, // 获取砍价状态方法
-	bargainProgress, // 砍价进度
+	getBargainStatus, // 获取砥价状态方法
+	bargainProgress, // 砥价进度
 	// 点赞相关
 	getLikeStatus, // 获取点赞状态方法
+	refreshLikeStatus, // 强制刷新点赞状态方法
 	handleClick, // 点赞方法
 	handleLike, // 点赞方法（别名）
 	isLiked, // 点赞状态
