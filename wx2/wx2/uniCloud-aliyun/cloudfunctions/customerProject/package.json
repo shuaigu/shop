@@ -1,0 +1,14 @@
+{
+  "name": "customerProject",
+  "version": "1.0.0",
+  "description": "客户项目管理云对象",
+  "main": "index.obj.js",
+  "engines": {
+    "node": ">=16.15.1"
+  },
+  "cloudfunction-config": {
+    "concurrency": 20,
+    "memorySize": 512,
+    "timeout": 60
+  }
+}

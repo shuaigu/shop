@@ -1,0 +1,127 @@
+{
+  "bsonType": "object",
+  "required": ["title", "description", "status"],
+  "permission": {
+    "read": true,
+    "create": "doc.user_id == auth.uid",
+    "update": "doc.user_id == auth.uid",
+    "delete": "doc.user_id == auth.uid"
+  },
+  "properties": {
+    "_id": {
+      "description": "ID，系统自动生成"
+    },
+    "title": {
+      "bsonType": "string",
+      "title": "项目标题",
+      "description": "客户项目的标题",
+      "trim": "both"
+    },
+    "description": {
+      "bsonType": "string",
+      "title": "项目描述",
+      "description": "客户项目的详细描述"
+    },
+    "content": {
+      "bsonType": "string",
+      "title": "详细内容",
+      "description": "项目的富文本详细内容"
+    },
+    "cover_image": {
+      "bsonType": "string",
+      "title": "封面图片",
+      "description": "项目封面图片URL"
+    },
+    "images": {
+      "bsonType": "array",
+      "title": "项目图片",
+      "description": "项目相关图片列表",
+      "items": {
+        "bsonType": "string"
+      }
+    },
+    "contact_name": {
+      "bsonType": "string",
+      "title": "联系人姓名",
+      "description": "项目联系人姓名"
+    },
+    "contact_phone": {
+      "bsonType": "string",
+      "title": "联系电话",
+      "description": "项目联系电话"
+    },
+    "contact_wechat": {
+      "bsonType": "string",
+      "title": "微信号",
+      "description": "项目联系微信号"
+    },
+    "contact_address": {
+      "bsonType": "string",
+      "title": "联系地址",
+      "description": "项目联系地址"
+    },
+    "tags": {
+      "bsonType": "array",
+      "title": "项目标签",
+      "description": "项目分类标签",
+      "items": {
+        "bsonType": "string"
+      }
+    },
+    "category": {
+      "bsonType": "string",
+      "title": "项目类型",
+      "description": "项目所属类型/行业"
+    },
+    "price_range": {
+      "bsonType": "string",
+      "title": "价格区间",
+      "description": "项目价格范围"
+    },
+    "service_area": {
+      "bsonType": "string",
+      "title": "服务区域",
+      "description": "服务覆盖的区域"
+    },
+    "status": {
+      "bsonType": "int",
+      "title": "状态",
+      "description": "项目状态：0-下架 1-上架",
+      "enum": [0, 1],
+      "default": 1
+    },
+    "sort_order": {
+      "bsonType": "int",
+      "title": "排序",
+      "description": "排序权重，数字越大越靠前",
+      "default": 0
+    },
+    "view_count": {
+      "bsonType": "int",
+      "title": "浏览次数",
+      "description": "项目被浏览的次数",
+      "default": 0
+    },
+    "user_id": {
+      "bsonType": "string",
+      "title": "创建者ID",
+      "description": "创建该项目的管理员ID"
+    },
+    "create_time": {
+      "bsonType": "timestamp",
+      "title": "创建时间",
+      "description": "项目创建时间",
+      "forceDefaultValue": {
+        "$env": "now"
+      }
+    },
+    "update_time": {
+      "bsonType": "timestamp",
+      "title": "更新时间",
+      "description": "项目最后更新时间",
+      "forceDefaultValue": {
+        "$env": "now"
+      }
+    }
+  }
+}

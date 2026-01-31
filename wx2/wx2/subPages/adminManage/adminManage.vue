@@ -673,7 +673,7 @@
 	}
 	
 	// 后期想做新的功能，直接添加就好
-	const data = ref( [ '分类管理', '文章管理', '用户反馈', '公司信息', '悬浮按钮控制', '发布按钮控制', '头像点击控制', '评论功能控制', '抽奖模块控制', '用户信息查询', '抽奖管理', '二级分类管理', '水印管理' ] )
+	const data = ref( [ '分类管理', '文章管理', '用户反馈', '公司信息', '悬浮按钮控制', '发布按钮控制', '头像点击控制', '评论功能控制', '抽奖模块控制', '用户信息查询', '抽奖管理', '二级分类管理', '水印管理', '客户项目管理' ] )
 	// 处理点击事件跳转页面
 	const handleItem = ( dataItem ) => {
 		switch ( dataItem ) {
@@ -734,6 +734,12 @@
 				console.log('跳转水印管理')
 				uni.navigateTo({
 					url: '/subPages/watermarkConfig/watermarkConfig'
+				})
+				break
+			case '客户项目管理':
+				console.log('跳转客户项目管理')
+				uni.navigateTo({
+					url: '/subPages/customerProjectManage/customerProjectManage'
 				})
 				break
 		}
