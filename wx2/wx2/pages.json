@@ -86,7 +86,8 @@
 		{
 			"path": "pages/liaotian/liaotian",
 			"style": {
-				"navigationBarTitleText": ""
+				"navigationBarTitleText": "",
+				"navigationStyle": "custom"
 			}
 		},
 		{

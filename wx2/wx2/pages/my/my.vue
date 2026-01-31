@@ -237,6 +237,13 @@
 		})
 	}
 
+	// 帮您找客户
+	const goToLiaotian = () => {
+		uni.navigateTo({
+			url: "/pages/liaotian/liaotian"
+		})
+	}
+
 	// 意见反馈跳转
 	const feedBack = () => {
 		uni.navigateTo({
@@ -478,6 +485,14 @@
 					<view class="left">
 						<uni-icons color="#46b0fe" type="compose" size="22"></uni-icons>
 						<text class="value">推荐备忘录</text>
+					</view>
+					<uni-icons color="#cccccc" custom-prefix="iconfont" type="icon-arrow-drop-right-line" size="30"></uni-icons>
+				</view>
+				<!-- 帮您找客户 -->
+				<view class="menu-item" @click="goToLiaotian">
+					<view class="left">
+						<uni-icons color="#46b0fe" type="staff" size="22"></uni-icons>
+						<text class="value">帮您找客户</text>
 					</view>
 					<uni-icons color="#cccccc" custom-prefix="iconfont" type="icon-arrow-drop-right-line" size="30"></uni-icons>
 				</view>
