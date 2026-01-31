@@ -1,0 +1,6 @@
+{
+  "name": "chatConfig",
+  "version": "1.0.0",
+  "description": "聊天对话配置云函数",
+  "main": "index.obj.js"
+}

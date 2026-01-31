@@ -116,36 +116,9 @@
 	}
 
 	const chatList = ref([])
-
-	const questions = [{
-			text: '我们是做全行业获客的专业团队，能够帮助您精准获取客户；意向客户会主动添加您，全行业均可做；若您有需求，请认真回答以下问题。'
-		},
-		{
-			text: '您是否愿意收下0.1元？',
-			options: ['愿意', '不愿意'],
-			isReward: true
-		},
-		{
-			text: '您是否整面临获客难、成本高的问题？',
-			options: ['是', '否']
-		},
-		{
-			text: '您想要获取哪里的客户？',
-			options: ['本地客户', '全国客户']
-		},
-		{
-			text: '我们提供精准客户，您是否接受1000-3000/年的合作费用？',
-			options: ['是', '否']
-		},
-		{
-			text: '您是否愿意换电瓶？',
-			options: ['愿意', '不愿意']
-		},
-		{
-			text: '感谢您的回答！我们会根据您的需求为您匹配最优质的推广方案，稍后会有专业顾问为您提供咨询服务。',
-			isEnd: true
-		}
-	]
+	const questions = ref([])
+	const chatConfig = ref(null)
+	const rewardAmount = ref(0.1)
 
 	const currentQuestionIdx = ref(0)
 
@@ -209,7 +182,11 @@
 	}
 
 	const startConversation = async () => {
-		const firstQ = questions[currentQuestionIdx.value]
+		if (!questions.value || questions.value.length === 0) {
+			console.error('问题配置为空，无法开始对话')
+			return
+		}
+		const firstQ = questions.value[currentQuestionIdx.value]
 		await typeMessage(firstQ.text, firstQ.options)
 		currentQuestionIdx.value++
 
@@ -219,7 +196,7 @@
 	}
 
 	const showNextMessage = async () => {
-		const nextQ = questions[currentQuestionIdx.value]
+		const nextQ = questions.value[currentQuestionIdx.value]
 		if (nextQ) {
 			await typeMessage(nextQ.text, nextQ.options, nextQ.isEnd)
 			currentQuestionIdx.value++
@@ -244,7 +221,7 @@
 		scrollToBottom()
 
 		// 处理特殊逻辑：是否愿意收下福利
-		const prevQ = questions[currentQuestionIdx.value - 1]
+		const prevQ = questions.value[currentQuestionIdx.value - 1]
 		if (prevQ && prevQ.isReward && answer === '愿意') {
 			wantsReward.value = true
 			
@@ -285,11 +262,11 @@
 					title: '正在处理...'
 				})
 				
-				// 调用云函数
-				const articleApi = uniCloud.importObject('articleWx')
-				const result = await articleApi.processChatReward(
+				// 调用聊天配置云函数进行转账
+				const chatApi = uniCloud.importObject('chatConfig')
+				const result = await chatApi.processChatReward(
 					userId,
-					0.1,
+					rewardAmount.value,
 					'问卷调查奖励'
 				)
 				
@@ -309,8 +286,18 @@
 					if (result?.already_received) {
 						// 已经领取过
 						await typeMessage('您已经领取过这个奖励了哦！请继续回答以下问题。')
+					} else if (result?.no_openid) {
+						// 未绑定openid
+						uni.showModal({
+							title: '提示',
+							content: '您当前账号未绑定微信，无法领取奖励。请使用微信登录后再试。',
+							confirmColor: '#399bfe',
+							confirmText: '知道了',
+							showCancel: false
+						})
+						await typeMessage('抱歉，检测到您未绑定微信，无法领取奖励。请继续回答以下问题。')
 					} else {
-						// 其他错误（如openid不存在等）
+						// 其他错误
 						await typeMessage(`抱歉，系统处理失败：${errorMsg}。请继续回答以下问题。`)
 					}
 				}
@@ -329,8 +316,68 @@
 		setTimeout(showNextMessage, 500)
 	}
 
-	onMounted(() => {
+	// 加载聊天配置
+	const loadChatConfig = async () => {
+		try {
+			uni.showLoading({ title: '加载中...' })
+			const chatApi = uniCloud.importObject('chatConfig')
+			const result = await chatApi.getChatConfig()
+			
+			if (result && result.errCode === 0 && result.data) {
+				chatConfig.value = result.data
+				questions.value = result.data.questions || []
+				rewardAmount.value = result.data.reward_amount || 0.1
+				console.log('聊天配置加载成功:', result.data)
+			} else {
+				console.error('加载聊天配置失败:', result)
+				// 使用默认配置
+				questions.value = getDefaultQuestions()
+			}
+			uni.hideLoading()
+		} catch (error) {
+			console.error('加载聊天配置异常:', error)
+			uni.hideLoading()
+			// 使用默认配置
+			questions.value = getDefaultQuestions()
+		}
+	}
+
+	// 获取默认问题配置（作为后备方案）
+	const getDefaultQuestions = () => {
+		return [{
+				text: '我们是做全行业获客的专业团队，能够帮助您精准获取客户；意向客户会主动添加您，全行业均可做；若您有需求，请认真回答以下问题。'
+			},
+			{
+				text: '您是否愿意收下0.1元？',
+				options: ['愿意', '不愿意'],
+				isReward: true
+			},
+			{
+				text: '您是否整面临获客难、成本高的问题？',
+				options: ['是', '否']
+			},
+			{
+				text: '您想要获取哪里的客户？',
+				options: ['本地客户', '全国客户']
+			},
+			{
+				text: '我们提供精准客户，您是否接受1000-3000/年的合作费用？',
+				options: ['是', '否']
+			},
+			{
+				text: '您是否愿意换电瓶？',
+				options: ['愿意', '不愿意']
+			},
+			{
+				text: '感谢您的回答！我们会根据您的需求为您匹配最优质的推广方案，稍后会有专业顾问为您提供咨询服务。',
+				isEnd: true
+			}
+		]
+	}
+
+	onMounted(async () => {
 		updateDisplayAvatar()
+		await loadChatConfig()
 		startConversation()
 	})
 </script>

@@ -1,0 +1,98 @@
+{
+  "bsonType": "object",
+  "required": ["config_type"],
+  "permission": {
+    "read": true,
+    "create": "doc.config_type == 'liaotian_questions' && auth.role.includes('admin')",
+    "update": "doc.config_type == 'liaotian_questions' && auth.role.includes('admin')",
+    "delete": "doc.config_type == 'liaotian_questions' && auth.role.includes('admin')"
+  },
+  "properties": {
+    "_id": {
+      "description": "ID，系统自动生成"
+    },
+    "config_type": {
+      "bsonType": "string",
+      "description": "配置类型",
+      "label": "配置类型",
+      "defaultValue": "liaotian_questions"
+    },
+    "header_title": {
+      "bsonType": "string",
+      "description": "页面头部标题",
+      "label": "头部标题",
+      "defaultValue": "我们帮您把业务/产品推广出去"
+    },
+    "header_subtitle": {
+      "bsonType": "string",
+      "description": "页面头部副标题",
+      "label": "头部副标题",
+      "defaultValue": "收下福利，开始精准获客之旅"
+    },
+    "footer_text": {
+      "bsonType": "string",
+      "description": "页面底部文字",
+      "label": "底部文字",
+      "defaultValue": "页面信息及服务由湖北客聚多企业管理有限公司提供"
+    },
+    "reward_amount": {
+      "bsonType": "double",
+      "description": "奖励金额",
+      "label": "奖励金额",
+      "defaultValue": 0.1
+    },
+    "questions": {
+      "bsonType": "array",
+      "description": "问题列表",
+      "label": "问题列表",
+      "items": {
+        "bsonType": "object",
+        "properties": {
+          "text": {
+            "bsonType": "string",
+            "description": "问题文本"
+          },
+          "type": {
+            "bsonType": "string",
+            "description": "问题类型：text-纯文本, choice-选择题, reward-奖励问题",
+            "enum": ["text", "choice", "reward"]
+          },
+          "options": {
+            "bsonType": "array",
+            "description": "选项列表",
+            "items": {
+              "bsonType": "string"
+            }
+          },
+          "isReward": {
+            "bsonType": "bool",
+            "description": "是否为奖励问题"
+          },
+          "isEnd": {
+            "bsonType": "bool",
+            "description": "是否为结束问题"
+          }
+        }
+      }
+    },
+    "sort_order": {
+      "bsonType": "int",
+      "description": "排序序号",
+      "label": "排序",
+      "defaultValue": 1
+    },
+    "create_time": {
+      "bsonType": "timestamp",
+      "description": "创建时间",
+      "label": "创建时间",
+      "forceDefaultValue": {
+        "$env": "now"
+      }
+    },
+    "update_time": {
+      "bsonType": "timestamp",
+      "description": "更新时间",
+      "label": "更新时间"
+    }
+  }
+}

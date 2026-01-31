@@ -1,0 +1,55 @@
+{
+  "bsonType": "object",
+  "required": ["user_id", "reward_type", "amount"],
+  "permission": {
+    "read": "doc.user_id == auth.uid || auth.role.includes('admin')",
+    "create": "auth.role.includes('admin')",
+    "update": false,
+    "delete": "auth.role.includes('admin')"
+  },
+  "properties": {
+    "_id": {
+      "description": "ID，系统自动生成"
+    },
+    "user_id": {
+      "bsonType": "string",
+      "description": "用户ID",
+      "label": "用户ID",
+      "foreignKey": "user._id"
+    },
+    "reward_type": {
+      "bsonType": "string",
+      "description": "奖励类型",
+      "label": "奖励类型",
+      "enum": ["liaotian_survey", "other"]
+    },
+    "amount": {
+      "bsonType": "double",
+      "description": "奖励金额",
+      "label": "奖励金额"
+    },
+    "openid": {
+      "bsonType": "string",
+      "description": "用户openid",
+      "label": "用户openid"
+    },
+    "remark": {
+      "bsonType": "string",
+      "description": "备注",
+      "label": "备注"
+    },
+    "transfer_result": {
+      "bsonType": "object",
+      "description": "转账结果",
+      "label": "转账结果"
+    },
+    "create_time": {
+      "bsonType": "timestamp",
+      "description": "创建时间",
+      "label": "创建时间",
+      "forceDefaultValue": {
+        "$env": "now"
+      }
+    }
+  }
+}
