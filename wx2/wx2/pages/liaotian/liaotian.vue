@@ -29,22 +29,22 @@
 						</view>
 					</view>
 
-					<!-- 正在输入提示 -->
-					<view class="message-item left" v-if="isTyping && index === chatList.length - 1">
-						<image class="avatar" :src="robotAvatarDisplay" mode="aspectFill"></image>
-						<view class="bubble typing">
-							<view class="dot"></view>
-							<view class="dot"></view>
-							<view class="dot"></view>
-						</view>
-					</view>
-
 					<!-- 用户消息 -->
 					<view :id="'msg-' + index" class="message-item right" v-if="item.type === 'user'">
 						<view class="bubble">{{item.text}}</view>
 						<image class="avatar" :src="userAvatarDisplay" mode="aspectFill"></image>
 					</view>
 				</block>
+				
+				<!-- 正在输入提示（在所有消息之后） -->
+				<view class="message-item left" v-if="isTyping">
+					<image class="avatar" :src="robotAvatarDisplay" mode="aspectFill"></image>
+					<view class="bubble typing">
+						<view class="dot"></view>
+						<view class="dot"></view>
+						<view class="dot"></view>
+					</view>
+				</view>
 			</view>
 		</scroll-view>
 
@@ -251,6 +251,34 @@
 			// 立即调用云函数进行转账
 			try {
 				console.log('用户选择愿意收下福利，开始转账...')
+				console.log('userStore.userInfo:', userStore.userInfo)
+				
+				// 检查用户ID（兼容uid和_id两种字段）
+				const userId = userStore.userInfo?._id || userStore.userInfo?.uid
+				if (!userId) {
+					console.error('用户ID不存在，请先登录')
+					uni.showModal({
+						title: '提示',
+						content: '请先登录后再领取奖励',
+						confirmColor: '#399bfe',
+						confirmText: '去登录',
+						showCancel: true,
+						cancelText: '稍后再说',
+						success: (res) => {
+							if (res.confirm) {
+								// 跳转到登录页
+								uni.navigateTo({
+									url: '/pages/login/login?redirect=/pages/liaotian/liaotian'
+								})
+							}
+						}
+					})
+					await typeMessage('抱歉，系统检测到您未登录，请先登录后再领取奖励。')
+					setTimeout(showNextMessage, 500)
+					return
+				}
+				
+				console.log('用户ID:', userId)
 				
 				// 显示加载提示
 				uni.showLoading({
@@ -258,42 +286,39 @@
 				})
 				
 				// 调用云函数
-				const result = await uniCloud.callFunction({
-					name: 'articleWx',
-					data: {
-						action: 'processChatReward',
-						user_id: userStore.userInfo._id,
-						amount: 0.1,
-						desc: '问卷调查奖励'
-					}
-				})
+				const articleApi = uniCloud.importObject('articleWx')
+				const result = await articleApi.processChatReward(
+					userId,
+					0.1,
+					'问卷调查奖励'
+				)
 				
 				uni.hideLoading()
 				
 				console.log('转账结果:', result)
 				
-				if (result.result && result.result.errCode === 0) {
+				if (result && result.errCode === 0) {
 					// 转账成功
-					console.log('✅ 转账成功！金额:', result.result.data.amount)
-					await typeMessage(`太棒了！¥${result.result.data.amount.toFixed(2)} 元已成功转账到您的微信零钱，请注意查收！请继续回答以下问题。`)
+					console.log('✅ 转账成功！金额:', result.data.amount)
+					await typeMessage(`太棒了！¥${result.data.amount.toFixed(2)} 元已成功转账到您的微信零钱，请注意查收！请继续回答以下问题。`)
 				} else {
 					// 转账失败
-					const errorMsg = result.result?.errMsg || '转账失败'
+					const errorMsg = result?.errMsg || '转账失败'
 					console.error('❌ 转账失败:', errorMsg)
 					
-					if (result.result?.already_received) {
+					if (result?.already_received) {
 						// 已经领取过
 						await typeMessage('您已经领取过这个奖励了哦！请继续回答以下问题。')
 					} else {
-						// 其他错误
-						await typeMessage('太棒了！福利已为您锁定，请继续回答以下问题，完成后我们将为您发放。')
+						// 其他错误（如openid不存在等）
+						await typeMessage(`抱歉，系统处理失败：${errorMsg}。请继续回答以下问题。`)
 					}
 				}
 			} catch (err) {
 				console.error('转账调用异常:', err)
 				uni.hideLoading()
 				// 即使出错也继续流程
-				await typeMessage('太棒了！福利已为您锁定，请继续回答以下问题，完成后我们将为您发放。')
+				await typeMessage('抱歉，系统出现异常，请稍后再试。请继续回答以下问题。')
 			}
 		} else {
 			// 非奖励问题，继续正常流程
