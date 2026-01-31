@@ -98,9 +98,9 @@ module.exports = {
 	 */
 	async getWxOrder( out_trade_no ) {
 		const payRes = await WXPay( {
-			appid: config.appid,
-			mch_id: config.mch_id,
-			partner_key: config.partner_key,
+			appid: 'wxf7ee79349bd957b8',
+			mch_id: '1545803671',
+			partner_key: 'lishuai4323811lishuai4323811lish',
 			pfx: fs.readFileSync( __dirname + '/apiclient_cert.p12' ),
 		} )
 
@@ -113,92 +113,5 @@ module.exports = {
 				resolve( order )
 			} )
 		} )
-	},
-
-	/**
-	 * transfer 微信转账到零钱
-	 * @param {Object} params - 转账参数
-	 * @param {string} params.openid - 用户openid
-	 * @param {number} params.amount - 转账金额（元）
-	 * @param {string} params.desc - 转账描述
-	 * @returns {Object} 转账结果
-	 */
-	async transfer(params) {
-		try {
-			const { openid, amount, desc } = params
-			
-			// 参数验证
-			if (!openid) {
-				return {
-					errCode: -1,
-					errMsg: 'openid不能为空'
-				}
-			}
-			
-			if (!amount || amount <= 0) {
-				return {
-					errCode: -1,
-					errMsg: '转账金额必须大于0'
-				}
-			}
-			
-			// 将元转为分
-			const amountFen = Math.round(amount * 100)
-			
-			// 生成商户转账单号
-			const partner_trade_no = `TF${Date.now()}${Math.floor(Math.random() * 10000)}`
-			
-			// 初始化微信支付
-			const payRes = await WXPay({
-				appid: config.appid,
-				mch_id: config.mch_id,
-				partner_key: config.partner_key,
-				pfx: fs.readFileSync(__dirname + '/apiclient_cert.p12')
-			})
-			
-			// 调用企业付款到零钱
-			return new Promise((resolve, reject) => {
-				payRes.transfers({
-					partner_trade_no: partner_trade_no,
-					openid: openid,
-					check_name: 'NO_CHECK', // 不校验真实姓名
-					amount: amountFen,
-					desc: desc || '奖励发放',
-					spbill_create_ip: '127.0.0.1' // 请求IP
-				}, (err, result) => {
-					if (err) {
-						console.error('转账失败:', err)
-						resolve({
-							errCode: -1,
-							errMsg: err.return_msg || err.err_code_des || '转账失败'
-						})
-						return
-					}
-					
-					if (result.return_code === 'SUCCESS' && result.result_code === 'SUCCESS') {
-						resolve({
-							errCode: 0,
-							errMsg: '转账成功',
-							data: {
-								partner_trade_no: partner_trade_no,
-								payment_no: result.payment_no,
-								payment_time: result.payment_time
-							}
-						})
-					} else {
-						resolve({
-							errCode: -1,
-							errMsg: result.err_code_des || result.return_msg || '转账失败'
-						})
-					}
-				})
-			})
-		} catch (error) {
-			console.error('转账异常:', error)
-			return {
-				errCode: -1,
-				errMsg: error.message || '转账异常'
-			}
-		}
 	}
 }

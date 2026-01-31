@@ -144,7 +144,12 @@ module.exports = {
 			}
 
 			const user = userRes.data[0]
-			const openid = user.wx_openid && user.wx_openid.mp ? user.wx_openid.mp : null
+			console.log('用户信息:', JSON.stringify(user, null, 2))
+			
+			// 根据数据库表结构获取openid（字段名是 openid_wx）
+			const openid = user.openid_wx || null
+			
+			console.log('提取到的微信openid:', openid)
 
 			if (!openid) {
 				return {
@@ -236,6 +241,52 @@ module.exports = {
 			}
 		} catch (error) {
 			console.error('初始化默认配置失败:', error)
+			return {
+				errCode: -1,
+				errMsg: error.message
+			}
+		}
+	},
+
+	/**
+	 * 查看用户openid信息（调试用）
+	 * @param {String} userId 用户ID
+	 * @returns {Object} 用户openid信息
+	 */
+	async checkUserOpenid(userId) {
+		try {
+			if (!userId) {
+				return {
+					errCode: -1,
+					errMsg: '用户ID不能为空'
+				}
+			}
+
+			// 获取用户信息
+			const userRes = await this.userCollection.doc(userId).get()
+			if (!userRes.data || userRes.data.length === 0) {
+				return {
+					errCode: -1,
+					errMsg: '用户不存在'
+				}
+			}
+
+			const user = userRes.data[0]
+			
+			return {
+				errCode: 0,
+				errMsg: 'success',
+				data: {
+					userId: user._id,
+					nickName: user.nickName,
+					mobile: user.mobile,
+					openid_wx: user.openid_wx,
+					openid_ks: user.openid_ks,
+					openid_ds: user.openid_ds
+				}
+			}
+		} catch (error) {
+			console.error('查看openid失败:', error)
 			return {
 				errCode: -1,
 				errMsg: error.message
