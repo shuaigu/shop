@@ -1,0 +1,87 @@
+{
+  "bsonType": "object",
+  "description": "聊天机器人奖励转账记录表",
+  "required": ["user_id", "amount", "status"],
+  "permission": {
+    "read": true,
+    "create": false,
+    "update": false,
+    "delete": false
+  },
+  "properties": {
+    "_id": {
+      "description": "记录ID"
+    },
+    "user_id": {
+      "bsonType": "string",
+      "description": "用户ID（领取奖励的用户）",
+      "label": "用户ID"
+    },
+    "openid": {
+      "bsonType": "string",
+      "description": "用户openid",
+      "label": "用户openid"
+    },
+    "amount": {
+      "bsonType": "number",
+      "description": "转账金额（元）",
+      "label": "转账金额"
+    },
+    "status": {
+      "bsonType": "int",
+      "description": "转账状态：0-处理中，1-成功，2-失败",
+      "label": "转账状态",
+      "enum": [0, 1, 2]
+    },
+    "type": {
+      "bsonType": "string",
+      "description": "转账类型",
+      "label": "转账类型",
+      "defaultValue": "chat_reward"
+    },
+    "desc": {
+      "bsonType": "string",
+      "description": "转账描述",
+      "label": "转账描述",
+      "defaultValue": "问卷调查奖励"
+    },
+    "transaction_id": {
+      "bsonType": "string",
+      "description": "微信交易单号",
+      "label": "交易单号"
+    },
+    "batch_id": {
+      "bsonType": "string",
+      "description": "微信批次ID",
+      "label": "批次ID"
+    },
+    "out_batch_no": {
+      "bsonType": "string",
+      "description": "商户批次单号",
+      "label": "商户批次单号"
+    },
+    "error_msg": {
+      "bsonType": "string",
+      "description": "错误信息（失败时）",
+      "label": "错误信息"
+    },
+    "error_code": {
+      "bsonType": "string",
+      "description": "错误码（失败时）",
+      "label": "错误码"
+    },
+    "create_time": {
+      "bsonType": "timestamp",
+      "description": "创建时间",
+      "label": "创建时间",
+      "forceDefaultValue": {
+        "$env": "now"
+      }
+    },
+    "cashback_time": {
+      "bsonType": "timestamp",
+      "description": "转账完成时间",
+      "label": "转账时间"
+    }
+  }
+}

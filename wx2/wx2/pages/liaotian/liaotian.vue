@@ -202,15 +202,7 @@
 
 		if (isEnd) {
 			isFinished.value = true
-			if (wantsReward.value) {
-				const rewardText = ' \n\n🧧 您的0.1元红包福利已进入审核流程。'
-				const baseText = chatList.value[msgIndex].text
-				for (let i = 0; i <= rewardText.length; i++) {
-					chatList.value[msgIndex].text = baseText + rewardText.slice(0, i)
-					scrollToBottom()
-					await new Promise(resolve => setTimeout(resolve, 50))
-				}
-			}
+			// 移除结束时的红包提示，因为已经在用户点击“愿意”时实时转账了
 		}
 
 		scrollToBottom()
@@ -255,7 +247,58 @@
 		const prevQ = questions[currentQuestionIdx.value - 1]
 		if (prevQ && prevQ.isReward && answer === '愿意') {
 			wantsReward.value = true
-			await typeMessage('太棒了！福利已为您锁定，请继续回答以下问题，完成后我们将为您发放。')
+			
+			// 立即调用云函数进行转账
+			try {
+				console.log('用户选择愿意收下福利，开始转账...')
+				
+				// 显示加载提示
+				uni.showLoading({
+					title: '正在处理...'
+				})
+				
+				// 调用云函数
+				const result = await uniCloud.callFunction({
+					name: 'articleWx',
+					data: {
+						action: 'processChatReward',
+						user_id: userStore.userInfo._id,
+						amount: 0.1,
+						desc: '问卷调查奖励'
+					}
+				})
+				
+				uni.hideLoading()
+				
+				console.log('转账结果:', result)
+				
+				if (result.result && result.result.errCode === 0) {
+					// 转账成功
+					console.log('✅ 转账成功！金额:', result.result.data.amount)
+					await typeMessage(`太棒了！¥${result.result.data.amount.toFixed(2)} 元已成功转账到您的微信零钱，请注意查收！请继续回答以下问题。`)
+				} else {
+					// 转账失败
+					const errorMsg = result.result?.errMsg || '转账失败'
+					console.error('❌ 转账失败:', errorMsg)
+					
+					if (result.result?.already_received) {
+						// 已经领取过
+						await typeMessage('您已经领取过这个奖励了哦！请继续回答以下问题。')
+					} else {
+						// 其他错误
+						await typeMessage('太棒了！福利已为您锁定，请继续回答以下问题，完成后我们将为您发放。')
+					}
+				}
+			} catch (err) {
+				console.error('转账调用异常:', err)
+				uni.hideLoading()
+				// 即使出错也继续流程
+				await typeMessage('太棒了！福利已为您锁定，请继续回答以下问题，完成后我们将为您发放。')
+			}
+		} else {
+			// 非奖励问题，继续正常流程
+			setTimeout(showNextMessage, 500)
+			return
 		}
 
 		setTimeout(showNextMessage, 500)

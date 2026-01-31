@@ -3362,5 +3362,161 @@ module.exports = {
 				errMsg: '转账异常: ' + err.message
 			};
 		}
+	},
+	
+	/**
+	 * processChatReward 处理聊天机器人奖励转账
+	 * @param {string} user_id 用户ID
+	 * @param {number} amount 转账金额（元）
+	 * @param {string} desc 转账描述
+	 * @returns {object} 转账结果
+	 */
+	async processChatReward(user_id, amount = 0.1, desc = '问卷调查奖励') {
+		try {
+			console.log('====== 开始处理聊天机器人奖励转账 ======')
+			console.log('用户ID:', user_id)
+			console.log('转账金额:', amount + '元')
+			console.log('转账描述:', desc)
+			
+			// 1. 参数验证
+			if (!user_id) {
+				return {
+					errCode: -1,
+					errMsg: '用户ID不能为空'
+				};
+			}
+			
+			if (!amount || amount <= 0) {
+				return {
+					errCode: -1,
+					errMsg: '转账金额必须大于0'
+				};
+			}
+			
+			// 2. 检查是否已经领取过奖励（防止重复领取）
+			const existingReward = await this.db.collection('chat_reward_records')
+				.where({
+					user_id: user_id,
+					status: 1 // 已成功转账
+				})
+				.get();
+				
+			if (existingReward.data && existingReward.data.length > 0) {
+				console.log('用户已经领取过奖励');
+				return {
+					errCode: -1,
+					errMsg: '您已经领取过奖励了',
+					already_received: true
+				};
+			}
+			
+			// 3. 获取用户openid
+			const userRes = await this.db.collection('user').doc(user_id).get();
+			
+			if (!userRes.data || userRes.data.length === 0) {
+				console.error('用户不存在');
+				return {
+					errCode: -1,
+					errMsg: '用户信息不存在'
+				};
+			}
+			
+			const user = userRes.data[0];
+			
+			// 兼容两种openid字段名
+			let openid = null;
+			if (user.wx_openid && user.wx_openid[0]) {
+				openid = user.wx_openid[0];
+			} else if (user.openid_wx) {
+				openid = Array.isArray(user.openid_wx) ? user.openid_wx[0] : user.openid_wx;
+			}
+			
+			if (!openid) {
+				console.error('用户openid不存在');
+				return {
+					errCode: -1,
+					errMsg: '用户openid不存在，请重新授权登录'
+				};
+			}
+			
+			console.log('用户openid:', openid.substr(0, 8) + '***');
+			console.log('用户昵称:', user.nickname || user.nickName);
+			
+			// 4. 创建转账记录（状态为处理中）
+			const rewardRecord = {
+				user_id: user_id,
+				openid: openid,
+				amount: amount,
+				status: 0, // 0-处理中
+				create_time: Date.now(),
+				type: 'chat_reward',
+				desc: desc
+			};
+			
+			const recordRes = await this.db.collection('chat_reward_records').add(rewardRecord);
+			const record_id = recordRes.id;
+			
+			console.log('转账记录已创建:', record_id);
+			
+			// 5. 调用商家转账API
+			const cashbackHandler = new CashbackHandlerV3();
+			const amountInFen = Math.round(amount * 100); // 转换为分
+			console.log('转账金额:', amount + '元 = ' + amountInFen + '分');
+			
+			const transferResult = await cashbackHandler.transferToBalance({
+				openid: openid,
+				amount: amountInFen,
+				desc: desc,
+				user_name: null
+			});
+			
+			console.log('转账API返回:', transferResult);
+			
+			// 6. 更新转账记录状态
+			if (transferResult.success) {
+				// 转账成功
+				await this.db.collection('chat_reward_records').doc(record_id).update({
+					status: 1, // 1-成功
+					cashback_time: Date.now(),
+					transaction_id: transferResult.batch_id || transferResult.out_batch_no,
+					batch_id: transferResult.batch_id,
+					out_batch_no: transferResult.out_batch_no
+				});
+				
+				console.log('✅ 聊天奖励转账成功!');
+				
+				return {
+					errCode: 0,
+					errMsg: '转账成功',
+					data: {
+						amount: amount,
+						transaction_id: transferResult.batch_id || transferResult.out_batch_no,
+						record_id: record_id,
+						user_name: user.nickname || user.nickName || '用户'
+					}
+				};
+			} else {
+				// 转账失败
+				await this.db.collection('chat_reward_records').doc(record_id).update({
+					status: 2, // 2-失败
+					error_msg: transferResult.message || '转账失败',
+					error_code: transferResult.code
+				});
+				
+				console.error('❌ 聊天奖励转账失败:', transferResult.message);
+				
+				return {
+					errCode: -1,
+					errMsg: '转账失败: ' + (transferResult.message || '未知错误')
+				};
+			}
+			
+		} catch (err) {
+			console.error('❌ 聊天奖励转账异常:', err);
+			return {
+				errCode: -1,
+				errMsg: '转账异常: ' + err.message
+			};
+		}
 	}
 }
