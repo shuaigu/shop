@@ -31,17 +31,19 @@ module.exports = {
 			}
 
 			// 如果数据库没有配置，返回默认配置
+			const defaultConfig = getDefaultConfigData()
 			return {
 				errCode: 0,
 				errMsg: 'success',
-				data: this.getDefaultConfig()
+				data: defaultConfig
 			}
 		} catch (error) {
 			console.error('获取聊天配置失败:', error)
+			const defaultConfig = getDefaultConfigData()
 			return {
 				errCode: -1,
 				errMsg: error.message,
-				data: this.getDefaultConfig() // 出错时返回默认配置
+				data: defaultConfig // 出错时返回默认配置
 			}
 		}
 	},
@@ -199,50 +201,7 @@ module.exports = {
 	 * @returns {Object} 默认配置
 	 */
 	getDefaultConfig() {
-		return {
-			config_type: 'liaotian_questions',
-			header_title: '我们帮您把业务/产品推广出去',
-			header_subtitle: '收下福利，开始精准获客之旅',
-			footer_text: '页面信息及服务由湖北客聚多企业管理有限公司提供',
-			reward_amount: 0.1,
-			questions: [
-				{
-					text: '我们是做全行业获客的专业团队，能够帮助您精准获取客户；意向客户会主动添加您，全行业均可做；若您有需求，请认真回答以下问题。',
-					type: 'text'
-				},
-				{
-					text: '您是否愿意收下0.1元？',
-					options: ['愿意', '不愿意'],
-					type: 'reward',
-					isReward: true
-				},
-				{
-					text: '您是否整面临获客难、成本高的问题？',
-					options: ['是', '否'],
-					type: 'choice'
-				},
-				{
-					text: '您想要获取哪里的客户？',
-					options: ['本地客户', '全国客户'],
-					type: 'choice'
-				},
-				{
-					text: '我们提供精准客户，您是否接受1000-3000/年的合作费用？',
-					options: ['是', '否'],
-					type: 'choice'
-				},
-				{
-					text: '您是否愿意换电瓶？',
-					options: ['愿意', '不愿意'],
-					type: 'choice'
-				},
-				{
-					text: '感谢您的回答！我们会根据您的需求为您匹配最优质的推广方案，稍后会有专业顾问为您提供咨询服务。',
-					type: 'text',
-					isEnd: true
-				}
-			]
-		}
+		return getDefaultConfigData()
 	},
 
 	/**
@@ -264,7 +223,7 @@ module.exports = {
 			}
 
 			// 插入默认配置
-			const defaultConfig = this.getDefaultConfig()
+			const defaultConfig = getDefaultConfigData()
 			defaultConfig.create_time = Date.now()
 			defaultConfig.update_time = Date.now()
 			defaultConfig.sort_order = 1
@@ -282,5 +241,53 @@ module.exports = {
 				errMsg: error.message
 			}
 		}
+	}
+}
+
+// 获取默认配置数据（独立函数，避免 this 上下文问题）
+function getDefaultConfigData() {
+	return {
+		config_type: 'liaotian_questions',
+		header_title: '我们帮您把业务/产品推广出去',
+		header_subtitle: '收下福利，开始精准获客之旅',
+		footer_text: '页面信息及服务由湖北客聚多企业管理有限公司提供',
+		reward_amount: 0.1,
+		questions: [
+			{
+				text: '我们是做全行业获客的专业团队，能够帮助您精准获取客户；意向客户会主动添加您，全行业均可做；若您有需求，请认真回答以下问题。',
+				type: 'text'
+			},
+			{
+				text: '您是否愿意收下0.1元？',
+				options: ['愿意', '不愿意'],
+				type: 'reward',
+				isReward: true
+			},
+			{
+				text: '您是否整面临获客难、成本高的问题？',
+				options: ['是', '否'],
+				type: 'choice'
+			},
+			{
+				text: '您想要获取哪里的客户？',
+				options: ['本地客户', '全国客户'],
+				type: 'choice'
+			},
+			{
+				text: '我们提供精准客户，您是否接受1000-3000/年的合作费用？',
+				options: ['是', '否'],
+				type: 'choice'
+			},
+			{
+				text: '您是否愿意换电瓶？',
+				options: ['愿意', '不愿意'],
+				type: 'choice'
+			},
+			{
+				text: '感谢您的回答！我们会根据您的需求为您匹配最优质的推广方案，稍后会有专业顾问为您提供咨询服务。',
+				type: 'text',
+				isEnd: true
+			}
+		]
 	}
 }
