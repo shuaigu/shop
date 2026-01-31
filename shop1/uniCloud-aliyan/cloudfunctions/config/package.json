@@ -1,8 +1,0 @@
-{
-  "name": "config",
-  "version": "1.0.0",
-  "description": "系统配置管理云对象",
-  "main": "index.obj.js",
-  "author": "",
-  "license": "ISC"
-} 
